@@ -62,6 +62,14 @@ pytest
 
 不要把完整 monorepo 測試矩陣當成 fork 一鍵驗收。TypeScript／.NET／Rust／Go 的產品回歸屬上游 `ci.yml`，本線已加上游 repo 閘門。
 
+可選 dashboard（本線 overlay 只聽本機）：
+
+```powershell
+docker compose --profile dashboard up --build dashboard
+```
+
+瀏覽器開 <http://127.0.0.1:8501>。埠綁在 loopback；容器內 Streamlit 仍聽 `0.0.0.0`，那是給 Docker mapping 用。
+
 ## Canonical gate
 
 `tools\dev_check.ps1` 會依序：
@@ -80,3 +88,4 @@ pytest
 - 不要部署 GitHub Pages 文件站。
 - 不要拿真實 Azure 租戶、生產稽核日誌或未公開政策包當 fixture。
 - 不要啟用 Dependabot 自動合併。
+- 不要把 dashboard／OpenClaw demo 埠改回對 `0.0.0.0` 發佈，除非維護者明確要對區網開放。

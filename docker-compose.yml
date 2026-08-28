@@ -44,7 +44,9 @@ services:
     # bind-mounted workspace are owned by the host user, not root.
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     ports:
-      - "8501:8501"
+      # Fork overlay: publish only on loopback. Streamlit still binds
+      # 0.0.0.0 *inside* the container so Docker port mapping works.
+      - "127.0.0.1:8501:8501"
     working_dir: /workspace
     volumes:
       - .:/workspace

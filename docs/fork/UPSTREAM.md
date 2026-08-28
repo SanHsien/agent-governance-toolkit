@@ -37,7 +37,7 @@ Baseline 代表「已審查」，不代表「全部已合併」。
 
 **判準是證據，不是分類。** 結論要寫得可查證：diff 動了哪些檔案、本 fork 對應的檔案實際長什麼樣，以及**觸發條件**。
 
-README 衝突的解法：保留頂部 fork overlay，把上游新英文內容留在 `README.md` 其餘段落。workflow 衝突時保留官方-repo-only guard。
+README 衝突的解法：保留頂部 fork overlay，把上游新英文內容留在 `README.md` 其餘段落。workflow 衝突時保留官方-repo-only guard。`docker-compose.yml` 與 OpenClaw demo Compose 衝突時保留本線 `127.0.0.1` 埠綁定。
 
 ## 2026-08-28：fork 起點
 

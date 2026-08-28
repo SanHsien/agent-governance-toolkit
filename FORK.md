@@ -26,9 +26,11 @@
 | `.github/workflows/fork-maintenance.yml` | fork 文件與連結檢查 |
 | `.github/workflows/upstream-check.yml` | 每週對 `upstream/main` 做未審查 commit 檢查 |
 | 上游 CI／發佈／Pages／AI 掃描／自動合併等 workflow | 加上只在官方 `microsoft/agent-governance-toolkit` 執行的 guard |
+| `docker-compose.yml` | dashboard 埠綁 `127.0.0.1:8501` |
+| `examples/demos/openclaw-governed/docker-compose.yaml` | sidecar 埠綁 `127.0.0.1:8081` |
 | `docs/fork/` | Windows 開發、上游審查、決策、本線 changelog |
 
-產品程式（`agent-governance-python/`、各語言 SDK、`policy-engine/`、`examples/`、上游 `docs/`）以上游為準，除非 `REVIEW.md`／`docs/fork/DECISIONS.md` 已記錄 fork overlay。目前沒有產品行為 overlay。
+產品程式（`agent-governance-python/`、各語言 SDK、`policy-engine/`、上游 `docs/`）以上游為準，除非 `REVIEW.md`／`docs/fork/DECISIONS.md` 已記錄 fork overlay。目前 overlay：根目錄 dashboard 與 OpenClaw demo 的 Compose 埠綁 `127.0.0.1`。
 
 ## 分支與 remote
 

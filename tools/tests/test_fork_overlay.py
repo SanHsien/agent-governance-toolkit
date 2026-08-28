@@ -152,9 +152,10 @@ def test_review_is_windows_first_record() -> None:
     assert "Windows-first" in review
     assert "46463ef" in review
     assert "R-01" in review
-    assert "R-05" in review
-    assert "SanHsien/agent-governance-toolkit" in review or "microsoft/agent-governance-toolkit" in review
-    assert "auto-merge" in review or "自動合併" in review
+    assert "R-06" in review
+    assert "127.0.0.1" in review
+    assert "不回貢" in review
+    assert "microsoft/agent-governance-toolkit" in review
 
 
 def test_agents_overlay_points_at_fork_rules() -> None:
@@ -229,6 +230,12 @@ def test_auto_merge_is_gated() -> None:
     assert "dependabot[bot]" in text
 
 
+def test_fork_workflows_use_python_314() -> None:
+    for name in ("fork-maintenance.yml", "upstream-check.yml", "dependency-freshness.yml"):
+        text = (ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8")
+        assert 'python-version: "3.14"' in text, name
+
+
 def test_security_and_contributing_name_the_fork() -> None:
     security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
     contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
@@ -239,12 +246,23 @@ def test_security_and_contributing_name_the_fork() -> None:
     assert "FORK.md" in contributing
     assert "aka.ms/SECURITY.md" in security
     assert "microsoft/agent-governance-toolkit" in contributing
+    assert "127.0.0.1:8501" in security
+    assert "127.0.0.1:8081" in security
+    assert "127.0.0.1:8501" in contributing
 
 
-def test_fork_workflows_use_python_314() -> None:
-    for name in ("fork-maintenance.yml", "upstream-check.yml", "dependency-freshness.yml"):
-        text = (ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8")
-        assert 'python-version: "3.14"' in text, name
+def test_compose_overlay_binds_loopback() -> None:
+    compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    openclaw = (
+        ROOT / "examples" / "demos" / "openclaw-governed" / "docker-compose.yaml"
+    ).read_text(encoding="utf-8")
+
+    assert "127.0.0.1:8501:8501" in compose
+    assert '"8501:8501"' not in compose
+    assert "--server.address=0.0.0.0" in compose
+    assert "127.0.0.1:8081:8081" in openclaw
+    assert '"8081:8081"' not in openclaw
+    assert "HOST=0.0.0.0" in openclaw
 
 
 def test_gitignore_covers_fork_reports() -> None:
@@ -253,6 +271,7 @@ def test_gitignore_covers_fork_reports() -> None:
     assert ".env" in text
     assert "upstream-review-report.md" in text
     assert "dependency-freshness-report.md" in text
+    assert ".agt/" in text
 
 
 def test_quality_gate_points_at_windows_check() -> None:

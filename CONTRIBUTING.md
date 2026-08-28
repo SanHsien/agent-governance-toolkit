@@ -9,7 +9,7 @@
 > pwsh -NoProfile -File tools\bootstrap_dev.ps1
 > ```
 >
-> 上游 CLA／DCO 仍適用於回貢上游的變更。本線日常修改直接推 `origin/main`；Dependabot 與外部貢獻走 PR，合併前讀 diff。
+> 上游 CLA／DCO 仍適用於回貢上游的變更。本線日常修改直接推 `origin/main`；Dependabot 與外部貢獻走 PR，合併前讀 diff。本線 dashboard 走 `docker compose --profile dashboard up`，埠只聽 <http://127.0.0.1:8501>。
 
 This project welcomes contributions and suggestions. Most contributions require you to agree to a
 Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us

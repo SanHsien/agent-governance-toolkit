@@ -32,14 +32,22 @@
 
 **理由**：產品依賴會改治理語意與發佈面，不適合自動合併。本線品質關卡禁止 loop／gate 自動合併。
 
-## 2026-08-28：日常直接推 main
-
-**決定**：日常修改在本機跑 `tools\dev_check.ps1` 後直接推 `origin/main`。Dependabot 與外部貢獻仍走 PR，合併前讀 diff。
-
-**理由**：對齊其他 SanHsien 維護 fork。產品測試仍在上游 `ci.yml`；本線 gate 是維護骨架。
-
 ## 2026-08-28：不改產品 docker-compose 或 SDK 預設
 
 **決定**：本輪不硬化 `docker-compose.yml`、不改 `govern()` 預設政策、不改各語言 SDK。
 
 **理由**：Compose 是上游開發容器（dashboard 走 profile）。產品預設屬上游契約；本輪只加維護骨架。殘餘風險寫進 `REVIEW.md`。
+
+**狀態**：已被下一則推翻（dashboard／OpenClaw 埠改綁 loopback；SDK 預設仍不改）。
+
+## 2026-08-28：審查可修項改在本線 overlay，不回貢
+
+**決定**：推翻上一則「不改 Compose」的限制。本線把根目錄 dashboard 埠改成 `127.0.0.1:8501`，把 OpenClaw demo sidecar 改成 `127.0.0.1:8081`。容器內 `--server.address=0.0.0.0`／`HOST=0.0.0.0` 保留，否則 Docker port mapping 失效。`.gitignore` 加 `.agt/`。`SECURITY.md` 寫明 overlay 與殘餘風險。不改產品 CLI／模組的 `--host 0.0.0.0` 預設。不硬化套件樹裡其他 example Compose。不 pin 已閘門 workflow 的 Action SHA（它們本來就幾乎都 pin 了，且本 fork 不會跑）。不把產品 Python 下限改成 3.14。不回貢上游。
+
+**理由**：維護者要求審查裡可修的都修，且先不考慮回貢。根目錄 Compose 與 OpenClaw demo 是本機一鍵啟動面，對區網暴露沒有好處。SDK 預設與套件範例 Compose 每次上游同步都會衝突，改了也證明不了產品回歸。
+
+## 2026-08-28：日常直接推 main
+
+**決定**：日常修改在本機跑 `tools\dev_check.ps1` 後直接推 `origin/main`。Dependabot 與外部貢獻仍走 PR，合併前讀 diff。
+
+**理由**：對齊其他 SanHsien 維護 fork。產品測試仍在上游 `ci.yml`；本線 gate 是維護骨架。

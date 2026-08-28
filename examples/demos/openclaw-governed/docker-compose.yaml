@@ -19,7 +19,9 @@ services:
       context: ../..
       dockerfile: agent-governance-python/agent-os/Dockerfile.sidecar
     ports:
-      - "8081:8081"
+      # Fork overlay: publish only on loopback. HOST=0.0.0.0 stays
+      # in-container so Docker port mapping works.
+      - "127.0.0.1:8081:8081"
     environment:
       - HOST=0.0.0.0
       - PORT=8081

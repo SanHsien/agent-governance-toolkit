@@ -474,3 +474,6 @@ _site/
 # Fork maintenance artifacts
 upstream-review-report.md
 dependency-freshness-report.md
+
+# Local AGT working state — never commit
+.agt/

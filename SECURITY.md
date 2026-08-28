@@ -1,4 +1,8 @@
 > **SanHsien 維護型 fork。** 產品漏洞（政策引擎、SDK、adapter、發佈管線）仍請用下文的上游管道：[Microsoft Security](https://aka.ms/SECURITY.md)。本 fork overlay（`tools/`、`docs/fork/`、workflow guard）開 [`SanHsien/agent-governance-toolkit`](https://github.com/SanHsien/agent-governance-toolkit) 的 Security tab。維護規則見 [`FORK.md`](FORK.md)。本線不發官方套件，不承擔 Microsoft SLA。
+>
+> 本線 Compose overlay：根目錄 `docker-compose.yml` 的 dashboard 埠綁 `127.0.0.1:8501`；`examples/demos/openclaw-governed/docker-compose.yaml` 綁 `127.0.0.1:8081`。容器內行程仍聽 `0.0.0.0`，那是給 Docker port mapping 用，不是對區網開放。把埠改成對區網或網際網路公開前，必須自己審一次暴露面。套件範例裡其他 `docker-compose.yml` 以上游為準，沒有一併硬化。
+>
+> 工作目錄的 `.agt/`、`.env`、稽核輸出與 Azure 憑證不要提交。產品 CLI／模組若預設 `--host 0.0.0.0`，那是上游契約，本線不改 SDK。
 
 <!-- BEGIN MICROSOFT SECURITY.MD V1.0.0 BLOCK -->
 
