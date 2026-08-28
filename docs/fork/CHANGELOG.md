@@ -9,7 +9,7 @@
 
 ### 新增
 
-- Windows-first 維護型 fork overlay：`FORK.md`、`NOTICE.md`、`REVIEW.md`、`CLAUDE.md`、`docs/fork/`、`tools/dev_check.ps1`、上游檢查與連結檢查。
+- Windows-first 維護型 fork overlay：`FORK.md`、`NOTICE.md`、`REVIEW.md`（overlay 快照，不是另一次全庫審查委託）、`CLAUDE.md`、`docs/fork/`、`tools/dev_check.ps1`、上游檢查與連結檢查。
 - `fork-maintenance.yml`、`upstream-check.yml`、`dependency-freshness.yml`。
 - 上游 CI／發佈／Pages／自動合併／AI 掃描類 workflow 的官方-repo-only guard。
 - 根目錄 `README.md`、`AGENTS.md`、`SECURITY.md`、`CONTRIBUTING.md` 頂部 fork overlay；繁中維護入口在 `FORK.md`。
