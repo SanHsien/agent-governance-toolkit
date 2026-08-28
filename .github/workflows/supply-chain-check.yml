@@ -47,6 +47,7 @@ jobs:
   # PR then rebases on top.
   # ------------------------------------------------------------------
   scanner-trip-wire:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Scanner trip-wire
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -82,6 +83,7 @@ jobs:
   # Version-pinning gate (legacy in-line check, structural rewrite).
   # ------------------------------------------------------------------
   check-version-pinning:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Version-pinning gate
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -147,6 +149,7 @@ jobs:
   # G1: 7-day release-age cooling-off.
   # ------------------------------------------------------------------
   release-age:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: 7-day cooling-off check
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -169,6 +172,7 @@ jobs:
   # G2: npm install-script flagger (strict — blocks merge by default).
   # ------------------------------------------------------------------
   install-scripts:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: npm install-script audit
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -191,6 +195,7 @@ jobs:
   # G3 (H5): build-hook (setup.py / build.rs) addition flagger.
   # ------------------------------------------------------------------
   build-hooks:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Build-hook audit
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -213,6 +218,7 @@ jobs:
   # Lockfile integrity: verify lockfile hashes match upstream registries.
   # ------------------------------------------------------------------
   lockfile-integrity:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Verify lockfile hashes match upstream registries
     runs-on: ubuntu-latest
     steps:
@@ -247,6 +253,7 @@ jobs:
   # Warn-only by default (warn != fail).
   # ------------------------------------------------------------------
   dependency-scorecard:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: OSSF Scorecard on new direct dependencies
     runs-on: ubuntu-latest
     timeout-minutes: 10

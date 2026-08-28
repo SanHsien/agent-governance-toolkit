@@ -1,3 +1,8 @@
+> **SanHsien 維護型 fork overlay。** `origin` 是 [`SanHsien/agent-governance-toolkit`](https://github.com/SanHsien/agent-governance-toolkit)，`upstream` 是 [`microsoft/agent-governance-toolkit`](https://github.com/microsoft/agent-governance-toolkit)。
+> 本 fork 的維護規則以 [`FORK.md`](FORK.md) 為準；與下文衝突時以 FORK.md 優先。
+> 不要推 `upstream`、不要對上游開 PR（除非維護者在這次對話明確同意回貢）、不要在本 fork 發 PyPI／npm／NuGet／GHCR、不要部署 GitHub Pages。
+> 產品行為（政策引擎、adapter、SDK、測試）仍遵守下文上游規則。
+
 # Agent Governance Toolkit - Repository Instructions
 
 ## Project Overview

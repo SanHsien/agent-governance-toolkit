@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   no-stubs:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: No Stubs/TODOs
     runs-on: ubuntu-latest
     steps:
@@ -22,6 +23,7 @@ jobs:
           scripts/ci/no-stubs.sh "origin/$BASE_REF"
 
   no-custom-crypto:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: No Unauthorized Crypto
     runs-on: ubuntu-latest
     steps:
@@ -35,6 +37,7 @@ jobs:
           scripts/ci/no-custom-crypto.sh "origin/$BASE_REF"
 
   security-audit-required:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Security Audit Required
     runs-on: ubuntu-latest
     steps:
@@ -48,6 +51,7 @@ jobs:
           scripts/ci/security-audit-required.sh "origin/$BASE_REF"
 
   no-unauthed-registration:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: No Unauthenticated Registration
     runs-on: ubuntu-latest
     steps:
@@ -61,6 +65,7 @@ jobs:
           scripts/ci/no-unauthed-registration.sh "origin/$BASE_REF"
 
   vendored-patch-audit:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Dependency Audit Trail
     runs-on: ubuntu-latest
     permissions:

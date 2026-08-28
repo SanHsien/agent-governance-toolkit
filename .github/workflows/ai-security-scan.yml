@@ -17,6 +17,7 @@ permissions:
 
 jobs:
   weekly-full-scan:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Weekly Full Security Audit
     runs-on: ubuntu-latest
     steps:

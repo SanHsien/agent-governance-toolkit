@@ -17,6 +17,7 @@ permissions:
 
 jobs:
   health-report:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Generate Health Report
     runs-on: ubuntu-latest
     steps:

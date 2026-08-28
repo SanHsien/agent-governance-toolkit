@@ -1,5 +1,16 @@
 # Contributing to Agent Governance Toolkit
 
+> **SanHsien 維護型 fork。** 本線的 PR 打到 [`SanHsien/agent-governance-toolkit`](https://github.com/SanHsien/agent-governance-toolkit)。產品行為（政策引擎、SDK、adapter、examples）的貢獻請去上游 [`microsoft/agent-governance-toolkit`](https://github.com/microsoft/agent-governance-toolkit)。維護規則見 [`FORK.md`](FORK.md)。
+>
+> 本線 clone：
+>
+> ```powershell
+> git clone https://github.com/SanHsien/agent-governance-toolkit.git
+> pwsh -NoProfile -File tools\bootstrap_dev.ps1
+> ```
+>
+> 上游 CLA／DCO 仍適用於回貢上游的變更。本線日常修改直接推 `origin/main`；Dependabot 與外部貢獻走 PR，合併前讀 diff。
+
 This project welcomes contributions and suggestions. Most contributions require you to agree to a
 Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
 the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.

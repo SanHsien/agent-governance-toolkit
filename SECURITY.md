@@ -1,3 +1,5 @@
+> **SanHsien 維護型 fork。** 產品漏洞（政策引擎、SDK、adapter、發佈管線）仍請用下文的上游管道：[Microsoft Security](https://aka.ms/SECURITY.md)。本 fork overlay（`tools/`、`docs/fork/`、workflow guard）開 [`SanHsien/agent-governance-toolkit`](https://github.com/SanHsien/agent-governance-toolkit) 的 Security tab。維護規則見 [`FORK.md`](FORK.md)。本線不發官方套件，不承擔 Microsoft SLA。
+
 <!-- BEGIN MICROSOFT SECURITY.MD V1.0.0 BLOCK -->
 
 ## Security

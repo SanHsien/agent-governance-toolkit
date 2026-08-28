@@ -19,6 +19,7 @@ permissions:
 
 jobs:
   generate-notes:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Generate Release Notes
     runs-on: ubuntu-latest
     permissions:

@@ -470,3 +470,7 @@ _site/
 # Code Security Assessment artifacts
 .security-assessment/
 *.tgz
+
+# Fork maintenance artifacts
+upstream-review-report.md
+dependency-freshness-report.md

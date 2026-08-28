@@ -42,8 +42,10 @@ jobs:
     # Only act on successful PR runs. We must not post comments for runs that
     # were cancelled or failed (no artifact, or partial data).
     if: >-
+      github.repository == 'microsoft/agent-governance-toolkit' && (
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success'
+      )
     permissions:
       contents: read
       # actions:read is required to download artifacts from another workflow

@@ -35,8 +35,10 @@ jobs:
       issues: write
       models: read
     if: >-
+      github.repository == 'microsoft/agent-governance-toolkit' && (
       github.event.pull_request.draft != true &&
       github.actor != 'dependabot[bot]'
+      )
     continue-on-error: true
     strategy:
       fail-fast: false
@@ -197,7 +199,7 @@ jobs:
     name: Post unified summary
     runs-on: ubuntu-latest
     needs: [ai-agents]
-    if: always()
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (always())
     permissions:
       issues: write
       pull-requests: write

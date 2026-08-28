@@ -26,6 +26,7 @@ permissions:
 
 jobs:
   links:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Validate relative links
     runs-on: ubuntu-latest
     steps:
@@ -37,6 +38,7 @@ jobs:
         run: python scripts/docs/check_links.py --root .
 
   frontmatter:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Validate docs frontmatter
     runs-on: ubuntu-latest
     steps:
@@ -48,6 +50,7 @@ jobs:
         run: python scripts/docs/check_frontmatter.py --root . --strict
 
   unit-tests:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Unit tests for docs tooling
     runs-on: ubuntu-latest
     steps:

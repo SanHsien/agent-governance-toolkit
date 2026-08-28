@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   v4-ratchet:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: v4 policy-language ratchet
     runs-on: ubuntu-latest
     steps:

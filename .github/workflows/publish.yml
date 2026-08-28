@@ -24,6 +24,7 @@ permissions:
 
 jobs:
   release-manifest:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -56,8 +57,10 @@ jobs:
   # -------------------------------------------------------------------
   resolve-python-matrix:
     if: >-
+      github.repository == 'microsoft/agent-governance-toolkit' && (
       github.event_name == 'release' ||
       github.event.inputs.package != 'agent-governance-dotnet'
+      )
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.resolve.outputs.matrix }}
@@ -150,7 +153,7 @@ jobs:
 
   acs-python-wheels:
     needs: resolve-python-matrix
-    if: needs.resolve-python-matrix.outputs.acs == 'true'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.resolve-python-matrix.outputs.acs == 'true')
     name: ACS Python wheel (${{ matrix.platform }})
     strategy:
       fail-fast: false
@@ -232,7 +235,7 @@ jobs:
 
   acs-python-sdist:
     needs: resolve-python-matrix
-    if: needs.resolve-python-matrix.outputs.acs == 'true'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.resolve-python-matrix.outputs.acs == 'true')
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -298,7 +301,7 @@ jobs:
 
   publish-acs-python:
     needs: [resolve-python-matrix, acs-python-wheels, acs-python-sdist]
-    if: needs.resolve-python-matrix.outputs.acs == 'true'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.resolve-python-matrix.outputs.acs == 'true')
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -344,7 +347,7 @@ jobs:
 
   build-python:
     needs: resolve-python-matrix
-    if: needs.resolve-python-matrix.outputs.build_any == 'true'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.resolve-python-matrix.outputs.build_any == 'true')
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -442,6 +445,7 @@ jobs:
   # npm publishing credentials are configured for GitHub.
   # -------------------------------------------------------------------
   resolve-npm-matrix:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     needs: resolve-python-matrix
     runs-on: ubuntu-latest
     outputs:
@@ -493,7 +497,7 @@ jobs:
 
   build-npm:
     needs: resolve-npm-matrix
-    if: needs.resolve-npm-matrix.outputs.any == 'true'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.resolve-npm-matrix.outputs.any == 'true')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -557,7 +561,7 @@ jobs:
           npm publish ./tgz-output/*.tgz --provenance --access public
 
   publish-nuget:
-    if: ${{ github.event_name == 'release' || github.event.inputs.package == 'agent-governance-dotnet' || github.event.inputs.package == 'all' }}
+    if: ${{ github.repository == 'microsoft/agent-governance-toolkit' && (github.event_name == 'release' || github.event.inputs.package == 'agent-governance-dotnet' || github.event.inputs.package == 'all') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

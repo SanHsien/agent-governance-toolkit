@@ -21,6 +21,7 @@ permissions:
 
 jobs:
   analyze:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Analyze
     permissions:
       security-events: write

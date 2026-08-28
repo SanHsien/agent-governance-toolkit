@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   dco:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Developer Certificate of Origin
     runs-on: ubuntu-latest
     steps:

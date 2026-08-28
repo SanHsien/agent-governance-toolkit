@@ -18,6 +18,7 @@ permissions:
 jobs:
   # ── Path detection — determines which jobs to run ─────────────────────
   changes:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     runs-on: ubuntu-latest
     outputs:
       python: ${{ steps.filter.outputs.python }}
@@ -205,7 +206,7 @@ jobs:
   # ── Python lint + test (only when Python files change) ────────────────
   lint:
     needs: changes
-    if: needs.changes.outputs.python == 'true' || github.event_name == 'schedule'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.changes.outputs.python == 'true' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -264,6 +265,7 @@ jobs:
 
   # ── Python test (only when Python files change) ───────────────────────
   test:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     needs: changes
     # Always run so matrix check names are reported to branch protection.
     # Steps are skipped when no Python files changed.
@@ -457,7 +459,7 @@ jobs:
   # ── PyPI package build (only when Python files change) ────────────────
   build-pypi:
     needs: changes
-    if: needs.changes.outputs.python == 'true' || github.event_name == 'schedule'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.changes.outputs.python == 'true' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -529,7 +531,7 @@ jobs:
   # together, which is the exact combination that previously collided.
   install-coherence:
     needs: changes
-    if: needs.changes.outputs.python == 'true' || github.event_name == 'schedule'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.changes.outputs.python == 'true' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -594,7 +596,7 @@ jobs:
   # ── Python dependency safety (only when Python files change) ──────────
   security:
     needs: changes
-    if: needs.changes.outputs.python == 'true' || github.event_name == 'schedule'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.changes.outputs.python == 'true' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -666,7 +668,7 @@ jobs:
   # ── .NET build + test (only when C# files change) ────────────────────
   test-dotnet:
     needs: changes
-    if: needs.changes.outputs.dotnet == 'true' || github.event_name == 'schedule'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.changes.outputs.dotnet == 'true' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -739,7 +741,7 @@ jobs:
   # ── Integration tests (only when integration packages change) ────────
   test-integrations:
     needs: changes
-    if: needs.changes.outputs.integrations == 'true' || needs.changes.outputs.python
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.changes.outputs.integrations == 'true' || needs.changes.outputs.python)
       == 'true' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     strategy:
@@ -904,6 +906,7 @@ jobs:
   # manifests (policy-engine ACS SDKs, agt-policies) are exempt inside the
   # script itself.
   version-sync-check:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -915,6 +918,7 @@ jobs:
 
   # ── Dependency confusion scan (always runs — security gate) ──────────
   dep-confusion-scan:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -926,6 +930,7 @@ jobs:
 
   # ── Notebook pip-install audit (always runs — security gate) ─────────
   notebook-pip-audit:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -986,7 +991,7 @@ jobs:
   # Approach adapted from gaurav-nelson/github-action-markdown-link-check
   markdown-link-check:
     needs: changes
-    if: github.event_name == 'schedule' || needs.changes.outputs['docs-only'] == 'true'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (github.event_name == 'schedule' || needs.changes.outputs['docs-only'] == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -1006,7 +1011,7 @@ jobs:
   # ── Workflow security audit (only when workflows change) ─────────────
   workflow-security:
     needs: changes
-    if: needs.changes.outputs.workflows == 'true' || github.event_name == 'schedule'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.changes.outputs.workflows == 'true' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -1031,7 +1036,7 @@ jobs:
   # ── TypeScript integration tests (only when TS files change) ─────────
   test-integrations-ts:
     needs: changes
-    if: needs.changes.outputs.typescript == 'true' || github.event_name ==
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.changes.outputs.typescript == 'true' || github.event_name ==)
       'schedule'
     runs-on: ubuntu-latest
     steps:
@@ -1063,7 +1068,7 @@ jobs:
   # ── npm package build + test (only when TS files change) ──────────────
   build-npm:
     needs: changes
-    if: needs.changes.outputs.typescript == 'true' || github.event_name ==
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.changes.outputs.typescript == 'true' || github.event_name ==)
       'schedule'
     runs-on: ubuntu-latest
     strategy:
@@ -1159,7 +1164,7 @@ jobs:
   # ── Rust build + test (only when Rust files change) ──────────────────
   build-rust:
     needs: changes
-    if: needs.changes.outputs.rust == 'true' || github.event_name == 'schedule'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.changes.outputs.rust == 'true' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -1174,7 +1179,7 @@ jobs:
   # ── Go build + test (only when Go files change) ─────────────────────
   build-go:
     needs: changes
-    if: needs.changes.outputs.go == 'true' || github.event_name == 'schedule'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.changes.outputs.go == 'true' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -1198,10 +1203,12 @@ jobs:
   # and any bug that only surfaces in the integrated install shape.
   docker-compose-test:
     needs: changes
-    if: |
+    if: >-
+      github.repository == 'microsoft/agent-governance-toolkit' && (
       needs.changes.outputs.docker == 'true' ||
       needs.changes.outputs.python == 'true' ||
       github.event_name == 'schedule'
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1281,7 +1288,7 @@ jobs:
   # This gate job always runs, checks that no jobs FAILED, and reports
   # success. Configure this as the single required status check.
   ci-complete:
-    if: always()
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (always())
     needs:
       [
         changes,

@@ -40,6 +40,7 @@ concurrency:
 
 jobs:
   generate:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Generate SBOM artifacts
     runs-on: ubuntu-latest
     permissions:

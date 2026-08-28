@@ -13,6 +13,7 @@ permissions:
 # welcome comment. No PR head code is checked out or executed.
 jobs:
   welcome:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     runs-on: ubuntu-latest
     permissions:
       contents: read

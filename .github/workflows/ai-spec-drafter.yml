@@ -18,7 +18,7 @@ jobs:
   draft-spec:
     name: Generate Engineering Spec
     runs-on: ubuntu-latest
-    if: github.event.label.name == 'needs-spec'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (github.event.label.name == 'needs-spec')
     permissions:
       contents: write
       pull-requests: write

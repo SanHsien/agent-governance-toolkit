@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   changes:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     runs-on: ubuntu-latest
     outputs:
       policies: ${{ steps.filter.outputs.policies }}
@@ -29,7 +30,7 @@ jobs:
   validate-policies:
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.policies == 'true'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.changes.outputs.policies == 'true')
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
@@ -94,7 +95,7 @@ jobs:
   test-policies:
     runs-on: ubuntu-latest
     needs: [changes, validate-policies]
-    if: always() && needs.validate-policies.result != 'failure'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (always() && needs.validate-policies.result != 'failure')
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         if: needs.changes.outputs.policies == 'true'

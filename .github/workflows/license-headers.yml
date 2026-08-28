@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   check-headers:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Check license headers (changed files)
     runs-on: ubuntu-latest
     steps:

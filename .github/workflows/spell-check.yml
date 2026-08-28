@@ -29,6 +29,7 @@ concurrency:
 
 jobs:
   spell-check:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Spell-check changed files
     runs-on: ubuntu-latest
     steps:

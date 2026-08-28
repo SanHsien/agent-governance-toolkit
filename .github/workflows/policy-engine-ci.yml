@@ -24,6 +24,7 @@ concurrency:
 
 jobs:
   rust:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Rust core and SDK
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -58,6 +59,7 @@ jobs:
           cargo package -p agent_control_specification_core --allow-dirty
 
   python:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Python SDK and generator
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -100,6 +102,7 @@ jobs:
           python -m build --no-isolation ./generator
 
   node:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Node SDK
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -132,6 +135,7 @@ jobs:
           tar -tzf "$RUNNER_TEMP"/acs-node-pack/agent-control-specification-linux-x64-gnu-0.3.1-beta.0.tgz | grep -E '^package/agent-control-specification\.linux-x64-gnu\.node$'
 
   dotnet:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: dotnet SDK
     runs-on: ubuntu-latest
     timeout-minutes: 30

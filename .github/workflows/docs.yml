@@ -29,6 +29,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     permissions:
       pages: write
       id-token: write
@@ -58,6 +59,7 @@ jobs:
           path: _site
 
   deploy:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

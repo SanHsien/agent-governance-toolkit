@@ -28,6 +28,7 @@ concurrency:
 
 jobs:
   check-generated-workflows:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Check generated workflows
     runs-on: ubuntu-latest
     timeout-minutes: 10

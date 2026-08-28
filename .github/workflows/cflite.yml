@@ -31,7 +31,7 @@ permissions:
 
 jobs:
   pr-fuzzing:
-    if: github.event_name == 'pull_request'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (github.event_name == 'pull_request')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -56,7 +56,7 @@ jobs:
           sanitizer: ${{ matrix.sanitizer }}
 
   batch-fuzzing:
-    if: github.event_name == 'schedule' || github.event_name == 'push'
+    if: github.repository == 'microsoft/agent-governance-toolkit' && (github.event_name == 'schedule' || github.event_name == 'push')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

@@ -1,4 +1,6 @@
-🌍 [English](/README.md) | [日本語](./docs/i18n/README.ja.md) | [简体中文](./docs/i18n/README.zh-CN.md) | [한국어](./docs/i18n/README.ko.md)
+> **SanHsien 維護型 fork。** 產品說明以下文上游英文為準。繁中維護規則見 [`FORK.md`](FORK.md)；本輪審查見 [`REVIEW.md`](REVIEW.md)。`origin` 是 [`SanHsien/agent-governance-toolkit`](https://github.com/SanHsien/agent-governance-toolkit)，`upstream` 是 [`microsoft/agent-governance-toolkit`](https://github.com/microsoft/agent-governance-toolkit)。本 fork 不發佈官方套件或文件站。
+
+🌍 [English](/README.md) | [日本語](./docs/i18n/README.ja.md) | [简体中文](./docs/i18n/README.zh-CN.md) | [한국어](./docs/i18n/README.ko.md) | [繁體中文（本 fork）](FORK.md)
 
 ![Agent Governance Toolkit](docs/assets/readme-banner.svg)
 

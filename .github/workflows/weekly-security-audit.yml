@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   dependency-confusion-check:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Dependency Confusion Scan
     runs-on: ubuntu-latest
     steps:
@@ -52,6 +53,7 @@ jobs:
           fi
 
   security-skills-scan:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Security Skills Scan
     runs-on: ubuntu-latest
     steps:
@@ -90,6 +92,7 @@ jobs:
           retention-days: 180
 
   weak-crypto-check:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Weak Cryptography Scan
     runs-on: ubuntu-latest
     steps:
@@ -130,6 +133,7 @@ jobs:
   # ── MSRC-111178 regression check ──────────────────────────────────────
   # Ensures the pull_request_target RCE fix (PR #303, #353) is never reverted.
   workflow-security-check:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Workflow Security Regression Check
     runs-on: ubuntu-latest
     steps:
@@ -173,6 +177,7 @@ jobs:
   # ── CI injection check ────────────────────────────────────────────────
   # Detects github.event.* expressions injected directly into run: blocks
   expression-injection-check:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Expression Injection Scan
     runs-on: ubuntu-latest
     steps:
@@ -217,6 +222,7 @@ jobs:
 
   # ── Docker and infrastructure check ───────────────────────────────────
   docker-security-check:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Docker & Infrastructure Scan
     runs-on: ubuntu-latest
     steps:
@@ -292,6 +298,7 @@ jobs:
 
   # ── XSS and unsafe DOM check ──────────────────────────────────────────
   xss-check:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: XSS & Unsafe DOM Scan
     runs-on: ubuntu-latest
     steps:
@@ -363,6 +370,7 @@ jobs:
 
   # ── Action pinning check ──────────────────────────────────────────────
   action-pinning-check:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Action SHA Pinning Check
     runs-on: ubuntu-latest
     steps:
@@ -389,6 +397,7 @@ jobs:
 
   # ── Supply chain version pinning check ────────────────────────────────
   version-pinning-check:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Version Pinning Compliance
     runs-on: ubuntu-latest
     steps:

@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   sbom:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     name: Generate SBOM
     permissions:
       contents: write

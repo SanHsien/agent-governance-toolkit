@@ -8,6 +8,7 @@ permissions:
 # SECURITY: pull_request_target runs in BASE context. Never checkout PR head ref.
 jobs:
   size-label:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -30,9 +30,11 @@ jobs:
       models: read
     # Only trigger for first-time contributors (never seen before or first contribution)
     if: >-
+      github.repository == 'microsoft/agent-governance-toolkit' && (
       github.event_name == 'issues' &&
       (github.event.issue.author_association == 'NONE' ||
-       github.event.issue.author_association == 'FIRST_TIME_CONTRIBUTOR')
+      github.event.issue.author_association == 'FIRST_TIME_CONTRIBUTOR')
+      )
     continue-on-error: true
     # SECURITY: pull_request_target — this job does NOT checkout PR head code.
     # It only checks out the base branch for the composite action, and context
@@ -76,9 +78,11 @@ jobs:
     # Only trigger for first-time contributors on PRs
     # Uses pull_request_target for security (runs on base branch context)
     if: >-
+      github.repository == 'microsoft/agent-governance-toolkit' && (
       github.event_name == 'pull_request_target' &&
       (github.event.pull_request.author_association == 'NONE' ||
-       github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR')
+      github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR')
+      )
     continue-on-error: true
     # SECURITY: pull_request_target — this job does NOT checkout PR head code.
     # Permissions scoped to minimum: contents:read for base checkout, pr:write
