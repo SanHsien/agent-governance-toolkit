@@ -133,3 +133,47 @@ PR 水位 3845 → 3850。四筆都還沒被上游合併，所以不會經由 co
 
 只改 `.github/workflows/python-app.yml`。**本 fork 沒有這支 workflow**（`ls .github/workflows/`
 確認），lint 走本線自己的 CI 設定。
+
+
+## 2026-08-30（補）：#3851 不引用，PR 水位 3850 → 3851
+
+上游是 microsoft 的高速開發線，本輪處理完 `#3846`–`#3850` 之後隨即又出現 `#3851`。
+
+**`#3851` feat: add DecisionAssure Impact – governance change impact analysis engine**：
+OPEN、**100 個檔案、+8742/−434**，新增一整個「治理變更影響分析引擎」到
+`agent-governance-python/agent-mesh/`。
+
+**不引用**，兩個理由：
+
+1. **上游還沒接受**。這是提案不是上游狀態，本 fork 的既定做法是 open PR 預設不提前引用；
+   被上游合併後會經由 commit 軸抵達。
+2. **本 fork 沒有現在就在痛的缺陷需要它**。這是新功能（8700 行的新引擎），不是修正。
+   提前引用一個 100 檔的未採納功能，等於扛下一條上游可能不會走的分支。
+
+**觸發條件**：上游合併它時隨 commit 軸抵達；或本線真的需要變更影響分析而上游遲遲不合併時重評。
+
+
+## 2026-08-30（再補）：#3852 不引用，PR 水位 3851 → 3852
+
+**`#3852` Loosen serde/serde_json/thiserror workspace pins**：OPEN、`+4/−4`，只動
+`agent-governance-rust/Cargo.toml`，把三個依賴從精確釘版（`"=x.y.z"`）放寬成相容範圍。
+
+**上游的理由成立，但那個理由是「發佈者」的理由**：它說對一個**發佈到 crates.io 的 library
+crate** 而言，精確釘版會強迫每個下游的 `Cargo.lock` 跟著鎖死。
+
+**本 fork 不是發佈方**：`publish.yml` 有 **9 處** `github.repository ==` guard、
+`publish-containers.yml` 1 處——本 fork 的發佈流程全部被閘門擋掉，不會有任何下游消費者受這些
+釘版影響。也就是說上游的痛點在這裡不存在。
+
+**而放寬釘版對本線是負向的**：艦隊的依賴紀律是「宣告的下限是相容性承諾」，精確釘版讓本 fork
+的建置可重現；放寬之後同一個 commit 在不同時間會拉到不同 patch 版，反而讓
+`dependency-freshness` 的比對失去基準。
+
+**觸發條件**：本 fork 哪天要自行發佈那些 crate（目前發佈 workflow 全被 guard 擋著）就重評；
+或上游合併後隨 commit 軸抵達時，再決定要不要在本線改回精確釘版。
+
+---
+
+**關於這個上游的節奏**：`microsoft/agent-governance-toolkit` 是高速開發線，本輪處理
+`#3846`–`#3850` 之後，`#3851`、`#3852` 在同一天內陸續出現。水位代表的是「到某個編號為止已經
+逐筆看過」，不是「以後都不會再有」——之後的新項目由每週排程接手，不需要在同一輪裡追到底。

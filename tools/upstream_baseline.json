@@ -3,7 +3,7 @@
   "branch": "main",
   "reviewed_through": "46463ef8689433817fcc0c582a7881f515d4df15",
   "reviewed_date": "2026-08-30",
-  "notes": "2026-08-28 fork 起點。本線第一個提交只加維護骨架，不引用尚未進入 upstream/main 的 PR。SHA 對應 fix: enforce signed http trust verification (#3813)。PR/issue 水位以 GitHub --state all 當時看到的最大編號為準；之後只看更大的編號。 2026-08-30：PR 水位 3845 → 3850。#3849（未註冊 MCP server 繞過 TLS 下限）在本 fork 實測重現後採用——allowlist 鍵打錯一個字就等於關掉傳輸層下限；#3848（OPA timeout 測試 30ms 太緊）採用，但本機沒裝 cargo、未實跑，靠 CI；#3846（土耳其文翻譯）與 #3850（改本 fork 沒有的 python-app.yml）不引用。理由見 DECISIONS 同日條目。",
-  "reviewed_pr_through": 3850,
+  "notes": "2026-08-28 fork 起點。本線第一個提交只加維護骨架，不引用尚未進入 upstream/main 的 PR。SHA 對應 fix: enforce signed http trust verification (#3813)。PR/issue 水位以 GitHub --state all 當時看到的最大編號為準；之後只看更大的編號。 2026-08-30：PR 水位 3845 → 3850。#3849（未註冊 MCP server 繞過 TLS 下限）在本 fork 實測重現後採用——allowlist 鍵打錯一個字就等於關掉傳輸層下限；#3848（OPA timeout 測試 30ms 太緊）採用，但本機沒裝 cargo、未實跑，靠 CI；#3846（土耳其文翻譯）與 #3850（改本 fork 沒有的 python-app.yml）不引用。理由見 DECISIONS 同日條目。 同日稍晚：上游又開 #3851（100 檔 +8742 的新治理影響分析引擎，OPEN），不引用——是提案不是上游狀態，且本 fork 沒有現在就在痛的缺陷需要它。水位 3850 → 3851。 再補：#3852（放寬 rust workspace 的精確釘版）不引用——上游的理由是發佈者的理由，而本 fork 的 publish.yml 有 9 處 official-repo guard、不是發佈方；放寬釘版反而讓本線的建置可重現性與 freshness 比對失去基準。水位 3851 → 3852。",
+  "reviewed_pr_through": 3852,
   "reviewed_issue_through": 3836
 }
