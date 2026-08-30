@@ -80,3 +80,56 @@ commit 水位。那兩個面向不是「查過沒發現」，是根本沒查，�
 綠燈不是「沒有待辦」，是沒有人看。
 
 **觸發條件**：報告列出項目時逐筆讀 diff、把採用／略過理由寫進本檔，然後才推進 baseline 的水位。
+
+
+## 2026-08-30：上游四個 open PR 的逐筆判定
+
+PR 水位 3845 → 3850。四筆都還沒被上游合併，所以不會經由 commit 軸抵達；逐筆判斷如下。
+
+### 採用：未註冊的 MCP server 在 fallback 路徑繞過 TLS 下限（上游 PR #3849）
+
+**在本 fork 實測重現**（`agent-governance-python/agent-os`，`PYTHONPATH=src`）：
+
+| 呼叫 | 修正前 | 修正後 |
+| --- | --- | --- |
+| 已註冊的 server ＋ `http://plain/insecure` | **拒絕**（TLS 下限） | 拒絕 |
+| **未註冊**的 server ＋ 同一個 `http://` URL | **放行** | 拒絕 |
+| 未註冊 ＋ `https://` | 放行 | 放行 |
+| 未註冊 ＋ 完全不給 URL | 放行 | 放行 |
+
+也就是說：**allowlist 的鍵打錯一個字，傳輸層下限就等於關掉**——已註冊條目走
+`entry.require_tls` 的閘門，落到 `# Fall back to default policy` 的那條路上完全沒有 TLS 檢查。
+這是治理工具本身的護欄失效，不是使用體驗問題。
+
+落地照上游：`McpAuthPolicy` 新增 `default_require_tls=True`（fail-closed）、fallback 分支補上
+與已註冊條目相同的 scheme 檢查（只認 `https`／`wss`）、`from_yaml` 讀 `default_require_tls`。
+**只在真的有給 URL 時才擋**，與已註冊條目的閘門一致，所以不會誤擋那些從不傳 URL 的呼叫端。
+
+測試四條（含上游沒有的「未註冊 ＋ 不給 URL 仍放行」，釘住不誤擋這件事）：
+`pytest tests/test_mcp_auth_enforcement.py` 21 passed。
+
+### 採用：OPA timeout 測試的 30ms 太緊（上游 PR #3848）
+
+`policy-engine/core/tests/opa.rs` 的假 opa 執行檔 `sleep 30`（秒），測試要驗的是**逾時路徑**。
+30ms 的預算在忙碌的 runner 上可能在行程還沒 spawn 完就到期，那時失敗的是 spawn 而不是逾時，
+測到的東西就不是這條測試要測的。改成 500ms——仍遠低於 30 秒，逾時照樣會觸發。
+
+**本 fork 也會踩到**：`.github/workflows/ci.yml` 與 `policy-engine-ci.yml` 都跑
+`cargo test --workspace`，而本 fork 的 `opa.rs:254` 就是同一行 30ms。
+
+**驗證限制（照實說）**：本機沒有安裝 cargo（`command -v cargo` 無），所以這一行**沒有在本機
+實跑過**，只有靜態核對本 fork 的那行與上游相同、且改動只動一個常數。CI 的 `cargo test` 是它的
+權威環境。
+
+### 不引用：#3846 土耳其文翻譯
+
+新增 `docs/i18n/README.tr.md`／`quickstart.tr.md` 並改上游 README 的語言列。本 fork 沒有
+`docs/i18n/` 目錄，README 也是本線自己的版本。維護一份自己讀不懂、也無法審校的翻譯，
+只會變成長期漂移的死文件。
+
+**觸發條件**：上游合併後若本 fork 決定同步整個 `docs/i18n/` 目錄，一併處理。
+
+### 不引用：#3850 清理 workflow 裡的 flake8 指令
+
+只改 `.github/workflows/python-app.yml`。**本 fork 沒有這支 workflow**（`ls .github/workflows/`
+確認），lint 走本線自己的 CI 設定。

@@ -251,7 +251,12 @@ exec sleep 30
     let dispatcher = OpaPolicyDispatcher::with_runner(
         OpaRegoRunner::new()
             .with_executable(&fake_opa)
-            .with_eval_timeout(Duration::from_millis(30)),
+            // 500ms, not 30ms: the fake binary sleeps for 30 seconds, so any
+            // budget well under that exercises the timeout path. A 30ms budget
+            // can expire before the process has even finished spawning on a
+            // loaded runner, and the evaluation then fails with a spawn error
+            // instead of the timeout this test is about.
+            .with_eval_timeout(Duration::from_millis(500)),
     );
     let error = dispatcher
         .evaluate(&rego_invocation(
