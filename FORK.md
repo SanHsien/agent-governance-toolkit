@@ -74,6 +74,19 @@ pip install "agent-governance-toolkit[full]"
 - 2026-08-22 一天內兩個工作階段各誤開一個上游 PR（`lidge-jun/opencodex#2373`、
   `hamanpaul/paulsha-cortex#787`）。
 
+## 相關工具：治理的是不同範圍
+
+本工具治理的是**上線後自主運行的 agent**——政策強制、零信任身分、沙箱執行與可稽核記錄。
+維護者另外有一組五層的 repo，治理的是**替人寫程式的 coding agent**，兩者範圍不同、不要混為一談：
+
+| 層 | Repo |
+| --- | --- |
+| 供應鏈 | [SkillSpector](https://github.com/SanHsien/SkillSpector) |
+| 派工決策 | [agent-advisor](https://github.com/SanHsien/agent-advisor) |
+| 動作攔截 | [harness-guard](https://github.com/SanHsien/harness-guard) |
+| 產出品質 | [ai-quality-gates](https://github.com/SanHsien/ai-quality-gates) |
+| 交付流程 | [paulsha-cortex](https://github.com/SanHsien/paulsha-cortex) |
+
 ## 審查紀錄
 
 本輪倉庫審查見 [`REVIEW.md`](REVIEW.md)。
