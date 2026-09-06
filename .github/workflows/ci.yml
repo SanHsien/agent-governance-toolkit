@@ -1036,8 +1036,9 @@ jobs:
   # ── TypeScript integration tests (only when TS files change) ─────────
   test-integrations-ts:
     needs: changes
-    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.changes.outputs.typescript == 'true' || github.event_name ==)
-      'schedule'
+    if: >-
+      github.repository == 'microsoft/agent-governance-toolkit' &&
+      (needs.changes.outputs.typescript == 'true' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -1068,8 +1069,9 @@ jobs:
   # ── npm package build + test (only when TS files change) ──────────────
   build-npm:
     needs: changes
-    if: github.repository == 'microsoft/agent-governance-toolkit' && (needs.changes.outputs.typescript == 'true' || github.event_name ==)
-      'schedule'
+    if: >-
+      github.repository == 'microsoft/agent-governance-toolkit' &&
+      (needs.changes.outputs.typescript == 'true' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

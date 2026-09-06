@@ -14,6 +14,10 @@ on:
       - CONTRIBUTING.md
       - docs/fork/**
       - tools/**
+      # 本 fork 與上游分歧的產品碼。上游 CI 鎖在 microsoft/ 名下不會測它，
+      # 所以改到它必須觸發本 gate，否則等於沒有人看著。
+      - agent-governance-python/agent-os/src/agent_os/mcp_auth_enforcement.py
+      - agent-governance-python/agent-os/tests/test_mcp_auth_enforcement.py
       - requirements-dev.txt
       - .github/workflows/fork-maintenance.yml
       - .github/workflows/upstream-check.yml
@@ -67,3 +71,7 @@ jobs:
           python -m ruff check --select E9,F --target-version py310 tools
           python -m pytest -c tools/pytest.ini tools/tests
           python tools/check_links.py
+          # 與 tools/dev_check.ps1 的最後一步等價，理由見該檔的註解：
+          # 上游 CI 鎖在 microsoft/ 名下，本 fork 分歧的產品碼只有這裡看著。
+          python -m pytest \
+            agent-governance-python/agent-os/tests/test_mcp_auth_enforcement.py -q
