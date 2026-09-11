@@ -22,8 +22,8 @@
 | `AGENTS.md` / `CLAUDE.md` | 開頭加上本 fork overlay；下文仍是上游產品規則 |
 | `SECURITY.md` / `CONTRIBUTING.md` | 開頭 overlay：本線 PR／overlay 問題走 SanHsien；產品漏洞與產品貢獻仍指向上游 |
 | `NOTICE.md` | 本 fork 的來源與授權說明。根目錄 `NOTICE` 仍是上游第三方清單 |
-| `tools/dev_check.ps1` | Windows 本機一鍵 fork gate（維護工具，不安裝產品依賴） |
-| `.github/workflows/fork-maintenance.yml` | fork 文件與連結檢查 |
+| `tools/dev_check.ps1` | Windows 本機一鍵 fork gate：維護工具的檢查，加上**本 fork 分歧產品碼**的測試（目前是 `agent-os` 的 MCP 認證強制）。不安裝產品套件，只需 `requirements-dev.txt` |
+| `.github/workflows/fork-maintenance.yml` | fork 文件與連結檢查，以及分歧產品碼的測試——上游 CI 鎖在 `microsoft/` 名下，那些檔只有這裡測得到。分支保護的兩個必要檢查就是它的 ubuntu／windows job |
 | `.github/workflows/upstream-check.yml` | 每週對 `upstream/main` 做未審查 commit 檢查 |
 | 上游 CI／發佈／Pages／AI 掃描／自動合併等 workflow | 加上只在官方 `microsoft/agent-governance-toolkit` 執行的 guard |
 | `docker-compose.yml` | dashboard 埠綁 `127.0.0.1:8501` |
