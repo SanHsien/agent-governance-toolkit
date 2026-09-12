@@ -14,8 +14,8 @@
 - 引入 PR `#3916`：將 `govern(audit_file=...)` 正式接至 `FileAuditSink`，修復稽核檔案無法持久化至磁碟之問題（修復 Issue `#3915`）。
 - 引入 PR `#3924`：PolicyRule 條件 DSL 支援 `contains`、`startswith`、`endswith` 運算子，防止 deny 規則靜默失效。
 - 引入 PR `#3853`：修復 `CredentialRedactor` 秘鑰後緊接標註後綴時漏遮蔽之安全性缺陷（修復 Issue `#3494`），並修正 Windows 下測試環境變數長度上限相容性。
-- 清理遠端已合入之 dependabot 分支，維持 `SanHsien/agent-governance-toolkit` 唯一主分支 `main`。
-- 同步推送所有 tag 至 `origin`，並建立 `v5.0.0` release。
+- 逐一審查並合入 Dependabot PR `#3`（brace-expansion）、PR `#4`（hono）、PR `#5`（@babel/core）、PR `#6`（js-yaml）之安全更新至 `main`。
+- 清理遠端已合入之分支，落實 `SanHsien/agent-governance-toolkit` 唯一主分支 `main` 與單一最新 tag/release `v5.0.0`。
 
 ## 2026-08-28
 

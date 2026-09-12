@@ -208,5 +208,5 @@ crate** 而言，精確釘版會強迫每個下游的 `Cargo.lock` 跟著鎖死�
 8. **清理分支與 Tag/Release（落實單一最新原則）**：
    - 經使用者糾正，嚴格落實「單一最新分支、單一最新 tag、單一最新 release」。
    - 先前誤解而將上游 24 個歷史 tag 全數推至 origin，且僅以本地 git branch -r 檢查而漏掉 Dependabot 在 GitHub 上自動建立的另外 4 個分支。
-   - 修正處置：以 `gh api /repos/SanHsien/agent-governance-toolkit/branches` 與 `/tags` 直接查核遠端，全數刪除 4 個非 main 分支與 23 個歷史舊 tags。GitHub 上僅嚴格保留單一分支 `main` 與單一最新 tag/release `v5.0.0`。
+   - 修正處置：將 Dependabot 4 筆安全相依性更新（PR `#3` brace-expansion、PR `#4` hono、PR `#5` @babel/core、PR `#6` js-yaml）逐一檢驗並合入 `main` 分支，隨後以 `gh api /repos/SanHsien/agent-governance-toolkit/branches` 與 `/tags` 直接查核遠端，全數刪除 4 個已合入之遠端分支與 23 個歷史舊 tags。GitHub 上僅嚴格保留單一分支 `main` 與單一最新 tag/release `v5.0.0`。
    - 規則寫入 `FORK.md` 與本檔。
