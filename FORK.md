@@ -32,9 +32,12 @@
 
 產品程式（`agent-governance-python/`、各語言 SDK、`policy-engine/`、上游 `docs/`）以上游為準，除非 `REVIEW.md`／`docs/fork/DECISIONS.md` 已記錄 fork overlay。目前 overlay：根目錄 dashboard 與 OpenClaw demo 的 Compose 埠綁 `127.0.0.1`。
 
-## 分支與 remote
+## 分支與 remote（單一最新原則）
 
-- `origin/main`：SanHsien 維護線，也是唯一長期分支。
+- **單一最新原則**：本 fork 在 GitHub 上嚴格保持**單一最新分支（`main`）、單一最新 tag（如 `v5.0.0`）、單一最新 release**。
+- `origin/main`：SanHsien 維護線，也是 GitHub 上唯一允許存在的分支。
+- 檢查遠端分支**必須直接查詢 GitHub API**（例如 `gh api /repos/SanHsien/<repo>/branches`），不能只憑本地未 fetch/prune 的 `git branch -r`，以防漏掉 Dependabot 等背景開立的遠端分支。
+- 上游同步時，舊的歷史 tags 不要全數鏡射推送到 `origin`；`origin` 上僅保留最新一個版本 tag。
 - 日常修改在本機跑 gate 後直接推 `origin/main`。
 - `upstream/main`：microsoft 原始專案，只追蹤、不推送。
 - Dependabot 或外部 fork 的變更走 PR，讀 diff 並通過 CI 後再合併。**不自動合併。**

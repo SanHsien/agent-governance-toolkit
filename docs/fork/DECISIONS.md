@@ -205,6 +205,8 @@ crate** 而言，精確釘版會強迫每個下游的 `Cargo.lock` 跟著鎖死�
    - `#3911`：BackendRegistry 與 govern 整合，已納入追蹤。
    - `#3923`：agentmesh 模組循環引用冷啟動延遲，後續追蹤。
    - `#3892`, `#3893`, `#3898`, `#3899`, `#3918`, `#3930`：RFC 與規範議題，無須程式碼操作。
-8. **清理分支與 Tag/Release**：
-   - 刪除遠端已合併之 dependabot 分支，維持 `SanHsien/agent-governance-toolkit` 唯一單一主分支 `main`。
-   - 推送所有 tag 至 `origin`，並建立 `v5.0.0` release。
+8. **清理分支與 Tag/Release（落實單一最新原則）**：
+   - 經使用者糾正，嚴格落實「單一最新分支、單一最新 tag、單一最新 release」。
+   - 先前誤解而將上游 24 個歷史 tag 全數推至 origin，且僅以本地 git branch -r 檢查而漏掉 Dependabot 在 GitHub 上自動建立的另外 4 個分支。
+   - 修正處置：以 `gh api /repos/SanHsien/agent-governance-toolkit/branches` 與 `/tags` 直接查核遠端，全數刪除 4 個非 main 分支與 23 個歷史舊 tags。GitHub 上僅嚴格保留單一分支 `main` 與單一最新 tag/release `v5.0.0`。
+   - 規則寫入 `FORK.md` 與本檔。
