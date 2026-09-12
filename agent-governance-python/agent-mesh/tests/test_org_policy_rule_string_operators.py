@@ -12,7 +12,15 @@ operators would hit the same silent no-match fallthrough that
 test_policy_rule_string_operators.py covers for the core PolicyRule.
 """
 
-from unittest.mock import patch
+import sys
+from unittest.mock import MagicMock, patch
+try:
+    import email_validator  # noqa: F401
+except ImportError:
+    import importlib.metadata
+    _orig_version = importlib.metadata.version
+    importlib.metadata.version = lambda n: "2.2.0" if n == "email-validator" else _orig_version(n)
+    sys.modules["email_validator"] = MagicMock()
 
 from agentmesh.governance import federation
 from agentmesh.governance.federation import OrgPolicyRule

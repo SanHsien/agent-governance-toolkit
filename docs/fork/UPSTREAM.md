@@ -59,6 +59,19 @@ README 衝突的解法：保留頂部 fork overlay，把上游新英文內容留
 
 ### 水位
 
-- PR：已看到 **#3845**
-- issue：已看到 **#3836**
+- PR：已看到 **#3931**
+- issue：已看到 **#3930**
 - 記在 `tools/upstream_baseline.json`
+
+## 2026-09-12：上游同步與第二輪盤點
+
+- Commit 水位推進至 `0533ceaf6c5b0975bfc71bff42f6ccd2d34c8adf`（`0533cea`，`chore(deps-dev): Bump hono in /policy-engine/sdk/node (#3917)`）。已完成 41 個上游提交之合併。
+- 採用 Open PR：
+  - `#3913`（Windows OPA `--stdin-input`，修復 Issue #3912）
+  - `#3916`（`audit_file` 落地修復，修復 Issue #3915）
+  - `#3924`（PolicyRule `contains`/`startswith`/`endswith` 運算子支援）
+  - `#3853`（秘鑰後綴遮蔽安全性修復，修復 Issue #3494）
+- 水位更新：
+  - Commit：`0533cea`
+  - PR：已看到 **#3931**
+  - Issue：已看到 **#3930**

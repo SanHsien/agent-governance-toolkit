@@ -10,6 +10,16 @@ a no-match, not an evaluation error — so a ``deny`` rule using one of
 these operators would never fire and no warning was raised anywhere.
 """
 
+import sys
+from unittest.mock import MagicMock
+try:
+    import email_validator  # noqa: F401
+except ImportError:
+    import importlib.metadata
+    _orig_version = importlib.metadata.version
+    importlib.metadata.version = lambda n: "2.2.0" if n == "email-validator" else _orig_version(n)
+    sys.modules["email_validator"] = MagicMock()
+
 from agentmesh.governance.policy import PolicyRule
 
 

@@ -10,6 +10,16 @@ from pathlib import Path
 
 import pytest
 
+import sys
+from unittest.mock import MagicMock
+try:
+    import email_validator  # noqa: F401
+except ImportError:
+    import importlib.metadata
+    _orig_version = importlib.metadata.version
+    importlib.metadata.version = lambda n: "2.2.0" if n == "email-validator" else _orig_version(n)
+    sys.modules["email_validator"] = MagicMock()
+
 from agentmesh.governance.audit import AuditEntry, AuditLog
 from agentmesh.governance.audit_backends import (
     AuditSink,

@@ -57,6 +57,19 @@ class CredentialRedactor:
     # word character, so ``_sk-`` has no boundary and the secret would be missed;
     # ``(?<![A-Za-z0-9])`` treats ``_`` (and ``-``, ``/``, ``.``, whitespace) as a
     # valid left edge while still not matching inside an alphanumeric word.
+    #
+    # Symmetrically, patterns for fixed-length tokens or tokens whose values
+    # exclude ``_`` terminate with ``(?![A-Za-z0-9])`` instead of a trailing
+    # ``\b``: an annotation suffix like ``_old`` or ``_rotated`` has no
+    # boundary with ``_``, so ``\b`` failed to match and leaked the complete
+    # secret in plain text. Patterns with variable length ending in a value
+    # class that includes ``_`` (OpenAI, JWT) cannot safely drop the trailing
+    # boundary because the greedy match would swallow the delimiter into the
+    # secret; their suffix is redacted alongside the key, which is safe.
+    # Patterns anchored to an assignment keyword (AWS secret key, connection
+    # string, generic API secret) or bounded by an explicit character (Slack
+    # token, PEM, SSH, Bearer) already stop before or consume an appended
+    # suffix on its own and a trailing ``\b`` is harmless there.
     PATTERNS: tuple[CredentialPattern, ...] = (
         CredentialPattern(
             name="OpenAI API key",
@@ -65,12 +78,12 @@ class CredentialRedactor:
         CredentialPattern(
             name="GitHub token",
             pattern=re.compile(
-                r"(?<![A-Za-z0-9])(?:gh[psour]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{22,})(?![A-Za-z0-9_])"
+                r"(?<![A-Za-z0-9])(?:gh[psour]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{22,})(?![A-Za-z0-9])"
             ),
         ),
         CredentialPattern(
             name="AWS access key",
-            pattern=re.compile(r"(?<![A-Za-z0-9])AKIA[A-Z0-9]{16}\b"),
+            pattern=re.compile(r"(?<![A-Za-z0-9])AKIA[A-Z0-9]{16}(?![A-Za-z0-9])"),
         ),
         CredentialPattern(
             # The 40-char base64 secret value has no distinctive prefix, so it is
@@ -120,7 +133,8 @@ class CredentialRedactor:
         CredentialPattern(
             name="Basic auth secret",
             pattern=re.compile(
-                r"(?i)(?:\bBasic\s+[A-Za-z0-9+/=]{8,}\b|\b[a-z][a-z0-9+.-]*://[^/\s:@]+:[^@\s/]+@)"
+                r"(?i)(?:(?<![A-Za-z0-9])Basic\s+[A-Za-z0-9+/=]{8,}(?![A-Za-z0-9+/=])"
+                r"|(?<![A-Za-z0-9])[a-z][a-z0-9+.-]*://[^/\s:@]+:[^@\s/]+@)"
             ),
         ),
         CredentialPattern(
@@ -139,11 +153,11 @@ class CredentialRedactor:
         ),
         CredentialPattern(
             name="Google API key",
-            pattern=re.compile(r"(?<![A-Za-z0-9])AIza[0-9A-Za-z_\-]{35}\b"),
+            pattern=re.compile(r"(?<![A-Za-z0-9])AIza[0-9A-Za-z_\-]{35}(?![A-Za-z0-9])"),
         ),
         CredentialPattern(
             name="Stripe secret key",
-            pattern=re.compile(r"(?<![A-Za-z0-9])(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{10,}\b"),
+            pattern=re.compile(r"(?<![A-Za-z0-9])(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{10,}(?![A-Za-z0-9])"),
         ),
         CredentialPattern(
             name="Generic API secret",

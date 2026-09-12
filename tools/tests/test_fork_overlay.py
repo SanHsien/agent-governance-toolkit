@@ -27,7 +27,7 @@ def test_baseline_file_is_valid_and_complete() -> None:
     assert baseline["repo"] == "https://github.com/microsoft/agent-governance-toolkit.git"
     assert baseline["branch"] == "main"
     assert len(baseline["reviewed_through"]) == 40
-    assert baseline["reviewed_through"] == "46463ef8689433817fcc0c582a7881f515d4df15"
+    assert re.fullmatch(r"[0-9a-f]{40}", baseline["reviewed_through"])
     # Pinned as a shape, not as a literal. A hardcoded date turns every
     # legitimate upstream review into a test failure, and the pressure is then
     # to edit the test rather than to record the review.

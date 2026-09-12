@@ -177,3 +177,34 @@ crate** 而言，精確釘版會強迫每個下游的 `Cargo.lock` 跟著鎖死�
 **關於這個上游的節奏**：`microsoft/agent-governance-toolkit` 是高速開發線，本輪處理
 `#3846`–`#3850` 之後，`#3851`、`#3852` 在同一天內陸續出現。水位代表的是「到某個編號為止已經
 逐筆看過」，不是「以後都不會再有」——之後的新項目由每週排程接手，不需要在同一輪裡追到底。
+
+## 2026-09-12：上游 41 個提交合併、4 項關鍵 PR 採用與第二輪全量盤點
+
+**決定**：
+1. **合併 upstream/main**：將 commit 水位推進至 `0533ceaf6c5b0975bfc71bff42f6ccd2d34c8adf`（`0533cea`，`chore(deps-dev): Bump hono in /policy-engine/sdk/node (#3917)`）。合入 41 個提交，包含 Claude Code hook 啟動修復（`#3854`）、Dependabot 安全升級（`#3857`~`#3865`、`#3868`、`#3872`~`#3874`、`#3880`、`#3885`、`#3886`、`#3900`、`#3901`、`#3917`）、OpenCode 提示拒絕與秘鑰遮蔽修復（`#3674`, `#3679`）。
+2. **採用 PR #3913**（`fix: opa - use --stdin-input instead of --input /dev/stdin (Windows)`）：
+   - **理由**：修復 Issue #3912。Windows 沒有 `/dev/stdin`，`OPAEvaluator` CLI 模式在 Windows 執行時一律失敗並靜默回傳 `allowed=False`。改成 `--stdin-input` 移除平台相依性。本 fork 是 Windows-first，此修正屬關鍵基礎設施。
+3. **採用 PR #3916**（`fix: govern - wire audit_file to FileAuditSink so file-based audit persistence actually works`）：
+   - **理由**：修復 Issue #3915。`govern(audit_file=...)` 在文件上宣稱支援檔案稽核持久化，但程式碼未將參數接入 `FileAuditSink`，導致稽核日誌永遠只存在記憶體。合入其完整 HMAC 鏈式簽署、路徑正規化與檔案持久化實作。
+4. **採用 PR #3924**（`fix(agent-mesh): support contains/startswith/endswith in PolicyRule condition DSL`）：
+   - **理由**：條件 DSL 原先不支援字串子字串/前綴/後綴運算子，未匹配時直接 `return False`。若規則是 `deny`（例如 `action.tool startswith 'delete_'`），會被靜默放行，造成嚴重安全漏洞。此修正補齊運算子並維持 fail-closed。
+5. **採用 PR #3853**（`fix(agent-os): redact secrets glued to a following suffix`）：
+   - **理由**：修復 Issue #3494。當秘鑰後方緊接標註後綴（如 `_old` 或 `_rotated`）時，原有的單純 `\b` 邊界檢查無法匹配，導致真實明文秘鑰直接外洩。修正為前瞻斷言 `(?![A-Za-z0-9])`。同時在測試中加入 `ids` 參數，避開 Windows 下環境變數長度超過 32,767 字元的限制。
+6. **不引用其餘 Open PR（#3853 ~ #3931 間其餘項目）**：
+   - `#3856`（WebMCP 介面適配）：尚未定案之實驗性功能。
+   - `#3871` / `#3931`（v5.0.1 hotfix 準備）：包含本地端開發中修改，待上游正式 release 再行評估。
+   - `#3876`, `#3879`, `#3887`：內部重構與貢獻者檢查調整，本 fork 維護線不受影響。
+   - `#3883`（DecisionAssure 影響分析引擎）：巨型功能提案（100+ 檔），非痛點修正，維持不提前引入政策。
+   - `#3888`（Cedarling integration）：新增策略引擎整合，非現有 bug 修正。
+   - `#3889`, `#3890`, `#3891`, `#3895`, `#3897`：文件/ADR/標章更新，本 fork 已有獨立文件體系。
+   - 重複之 dependabot PR（如各模組的 vitest、qs、js-yaml、hono）：上游尚未完全合入，本 fork 等待上游常態依賴整併。
+7. **Issue 研判（#3836 ~ #3930，共 11 項）**：
+   - `#3884`：Windows CI 缺乏（本 fork 已有 Windows-first fork-maintenance 與 dev_check 覆蓋）。
+   - `#3912`：OPA /dev/stdin（已由 PR #3913 解決）。
+   - `#3915`：audit_file 未接入（已由 PR #3916 解決）。
+   - `#3911`：BackendRegistry 與 govern 整合，已納入追蹤。
+   - `#3923`：agentmesh 模組循環引用冷啟動延遲，後續追蹤。
+   - `#3892`, `#3893`, `#3898`, `#3899`, `#3918`, `#3930`：RFC 與規範議題，無須程式碼操作。
+8. **清理分支與 Tag/Release**：
+   - 刪除遠端已合併之 dependabot 分支，維持 `SanHsien/agent-governance-toolkit` 唯一單一主分支 `main`。
+   - 推送所有 tag 至 `origin`，並建立 `v5.0.0` release。

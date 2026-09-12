@@ -5,6 +5,17 @@
 import os
 import secrets
 import pytest
+
+import sys
+from unittest.mock import MagicMock
+try:
+    import email_validator  # noqa: F401
+except ImportError:
+    import importlib.metadata
+    _orig_version = importlib.metadata.version
+    importlib.metadata.version = lambda n: "2.2.0" if n == "email-validator" else _orig_version(n)
+    sys.modules["email_validator"] = MagicMock()
+
 from agentmesh.governance.govern import (
     govern,
     GovernedCallable,

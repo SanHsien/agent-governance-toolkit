@@ -1,11 +1,11 @@
 # Repository review（Windows-first）
 
-- Review date: 2026-08-28
-- Review baseline: `3f46ab4e`
+- Review date: 2026-09-12
+- Review baseline: `0533ceaf`
 - Remediation: 同日 fork-local overlay（不回貢）
-- Upstream reviewed through: `46463ef8689433817fcc0c582a7881f515d4df15`
+- Upstream reviewed through: `0533ceaf6c5b0975bfc71bff42f6ccd2d34c8adf`
 - Primary environment: Windows 11、PowerShell、Python 3.14.7（本機 gate）；產品執行建議 `pip install "agent-governance-toolkit[full]"`
-- Status: 維護骨架可跑。R-01～R-04、R-06 已在本線修。R-05（產品 Python 3.10+ vs gate 3.14）與 R-07（英文 README）接受。
+- Status: 維護骨架可跑。R-01～R-04、R-06 已在本線修。R-05（產品 Python 3.10+ vs gate 3.14）與 R-07（英文 README）接受。2026-09-12 完成上游 41 commits 合併與 #3913、#3916、#3924、#3853 採用。
 
 ## 結論
 
