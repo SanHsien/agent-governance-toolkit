@@ -1,0 +1,21 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+agent_control_specification_version: 0.3.1-beta
+metadata:
+  name: conflict-resolution-demo
+  version: "1.0"
+extends: []
+policies:
+  conflict_resolution:
+    type: rego
+    bundle: rego
+    query: data.agt.examples.templates.conflict_resolution.result
+intervention_points:
+  input:
+    policy_target: $.input.body
+    policy:
+      id: conflict_resolution
+  output:
+    policy_target: $.output.content
+    policy:
+      id: conflict_resolution

@@ -1,0 +1,95 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent_hypervisor"
+version = "5.0.0"
+description = "Deprecated. Previously published as agent-hypervisor. Install agent-governance-toolkit-core instead."
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "Microsoft Corporation", email = "agentgovtoolkit@microsoft.com"},
+]
+dependencies = ["agent-governance-toolkit-core>=5.0.0,<6.0"]
+
+# The published wheel is a dep-only deprecation stub (see [project] above), but
+# the hypervisor source tree under src/ (and tests/) is still exercised in CI via
+# `pip install -e ".[dev]"`. PR #2794 stripped [project.optional-dependencies]
+# entirely, which silently turned `.[dev]` into a no-op and left the test suite
+# unable to import fastapi/pydantic/jsonschema — every `pytest tests/` run failed
+# at COLLECTION (ModuleNotFoundError). The `dev` extra below restores exactly the
+# test/dev dependencies the suite needs to collect and run. This does NOT change
+# the published runtime dependency surface (the [project] stub still ships only
+# the -core redirect). Mirrors the agent-os fix (#2969 + #2972).
+[project.optional-dependencies]
+# Test/dev dependencies required for `pytest tests/` to collect and run.
+# pydantic was previously a runtime dependency and fastapi lived in the `api`
+# extra; both are imported directly by the test suite at collection time, so the
+# stub's dev bundle must list them.
+dev = [
+    "pytest>=9.1.1,<10.0",
+    "pytest-asyncio>=1.4.0,<2.0",
+    "pytest-cov>=7.1.0,<8.0",
+    "hypothesis>=6.165.10,<7.0",
+    "ruff>=0.16.2,<1.0",
+    "mypy>=2.3.0,<3.0",
+    "jsonschema>=4.26.0,<5.0",
+    "pydantic>=2.13.4,<3.0",
+    "fastapi>=0.141.1,<1.0",
+    "uvicorn>=0.52.3,<1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/microsoft/agent-governance-toolkit"
+"Migration Guide" = "https://github.com/microsoft/agent-governance-toolkit/blob/main/docs/package-consolidation/MIGRATION.md"
+
+# Dep-only deprecation stub: the published wheel ships NO source, it only
+# redirects to agent-governance-toolkit-core (see [project].dependencies). The
+# `hypervisor` top-level package is owned solely by -core, which force-includes
+# ../agent-hypervisor/src/hypervisor. Shipping it here too would put the same
+# top-level import path in two distributions and cause an order/version-dependent
+# "Frankenstein" install. bypass-selection tells hatchling to build a wheel with
+# no package of its own. The src/ tree stays in-repo for CI (which imports it via
+# the editable -core install) and as the source of truth force-included by -core.
+[tool.hatch.build.targets.wheel]
+bypass-selection = true
+
+# ============================================================================
+# Ruff - Fast Python Linter & Formatter
+#
+# The published wheel is a dep-only deprecation stub (see [project] above), but
+# the hypervisor source tree under src/ is still linted in CI. These dev-tooling
+# sections were dropped during the package consolidation in #2794; without the
+# per-file-ignores, ruff reports F401 on package re-export __init__.py files.
+# Restoring them keeps CI green.
+# ============================================================================
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B", "C4", "UP"]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "E741",   # ambiguous variable name
+    "B904",   # raise-without-from-inside-except
+    "B017",   # assert-raises-exception
+    "UP042",  # str+Enum → StrEnum (needs py311+)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*" = ["F401"]
+
+# ============================================================================
+# Pytest
+# ============================================================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-v --tb=short"
+markers = [
+    "slow: long-running tests (skip with -m 'not slow')",
+    "integration: end-to-end integration tests",
+]

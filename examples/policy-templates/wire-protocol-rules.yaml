@@ -1,0 +1,18 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+agent_control_specification_version: 0.3.1-beta
+metadata:
+  name: wire-protocol-example
+policies:
+  wire_protocol:
+    type: custom
+    adapter: wire_protocol_example
+intervention_points:
+  pre_tool_call:
+    policy_target: $.tool_call.args
+    tool_name_from: $.tool_call.name
+    policy:
+      id: wire_protocol
+tools:
+  send_message:
+    clearance: internal

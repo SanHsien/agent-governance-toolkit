@@ -1,0 +1,85 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for suggesting a feature! Help us understand your use case.
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      description: Which package would this feature apply to?
+      options:
+        - agent-governance-toolkit-core
+        - agent-primitives
+        - agent-os
+        - agent-mesh
+        - agent-runtime
+        - agent-sre
+        - agent-compliance
+        - agent-mcp-governance
+        - agent-rag-governance
+        - agent-sandbox
+        - agent-discovery
+        - agt-policies
+        - agent-hypervisor
+        - agent-lightning
+        - agent-marketplace
+        - agent-governance-toolkit-cli
+        - agent-governance-toolkit-integrations
+        - agent-governance-toolkit-protocols
+        - agentmesh-integrations
+        - policy-engine
+        - schemas
+        - New package / cross-cutting
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve?
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: How does this feature impact your work and what are you trying to achieve?
+      description: |
+        Help us understand your use case: how are you using AGT today, what are you
+        trying to achieve, and what pain point or blocker led to this request?
+    validations:
+      required: true
+  - type: input
+    id: timeline
+    attributes:
+      label: Timeline
+      description: If this is critical for you, when do you need it by? Leave blank if there is no specific deadline.
+      placeholder: e.g. by 2026-09-30, next quarter, or no hard deadline
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - Nice to have
+        - Important
+        - Critical / Blocking
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to submit a PR for this feature
