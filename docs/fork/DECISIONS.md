@@ -210,3 +210,19 @@ crate** 而言，精確釘版會強迫每個下游的 `Cargo.lock` 跟著鎖死�
    - 先前誤解而將上游 24 個歷史 tag 全數推至 origin，且僅以本地 git branch -r 檢查而漏掉 Dependabot 在 GitHub 上自動建立的另外 4 個分支。
    - 修正處置：將 Dependabot 4 筆安全相依性更新（PR `#3` brace-expansion、PR `#4` hono、PR `#5` @babel/core、PR `#6` js-yaml）逐一檢驗並合入 `main` 分支，隨後以 `gh api /repos/SanHsien/agent-governance-toolkit/branches` 與 `/tags` 直接查核遠端，全數刪除 4 個已合入之遠端分支與 23 個歷史舊 tags。GitHub 上僅嚴格保留單一分支 `main` 與單一最新 tag/release `v5.0.0`。
    - 規則寫入 `FORK.md` 與本檔。
+## 2026-09-17：評估並合併 Dependabot PR #9（rmcp 2.0.0）與清理分支
+
+**背景**：GitHub 針對 `rmcp < 2.0.0` 發布 2 項高風險安全通報（CVE-2026-63128 與 CVE-2026-63127），Dependabot 自動開啟 PR #9（`build(deps): bump rmcp from 1.7.0 to 2.0.0 in /policy-engine`），產生遠端分支 `dependabot/cargo/policy-engine/rmcp-2.0.0`。
+
+**決定**：
+1. **評估並合入 PR #9**：
+   - **安全效益**：將 `policy-engine/Cargo.lock` 與 `policy-engine/integrations/mcp/Cargo.toml` 中 `rmcp` 由 1.7.0 升級至 2.0.0（`rmcp-macros` 至 2.2.0），修正 Unauthenticated permanent session-table leak（DoS）與 OAuth Protected Resource Metadata 未校驗問題，成功解除 Dependabot alerts #130 與 #131。
+   - **相容性分析**：對照上游審計 PR #4018，此 crate 僅使用預設 feature（未啟用有漏洞之 streamable http server 或 auth 模組），且使用的 14 個符號在 2.0.0 中均無破壞性變更，編譯與測試皆綠燈。
+   - **驗證**：PR #9 在 GitHub CI 之 `fork gate (ubuntu-latest)` 與 `fork gate (windows-latest)` 均通過；本地 `tools/dev_check.ps1` 亦通過。
+   - **合入處置**：以 squash merge 合入 `main`，PR #9 狀態變更為 MERGED。
+2. **落實單一分支原則**：
+   - 合併後立即刪除 origin 上的 `dependabot/cargo/policy-engine/rmcp-2.0.0` 遠端分支。
+   - 經 `git ls-remote --heads origin` 查核，遠端僅保留唯一分支 `main`。
+3. **Dependabot 告警現況分析與錯誤研判**：
+   - 診斷 Dependabot 更新失敗紀錄（如 Run #34697776783，針對 mastra-agentmesh 之 esbuild 更新）：因 `tsup: 8.5.1` 要求 `esbuild: ^0.27.0`，而修復版 esbuild 為 `>= 0.28.1`，npm 嘗試降級路徑失敗致使 Dependabot updater 報錯。
+   - 其餘模組之 npm 告警均屬上游 checked-in lockfiles 之相依性，依照本 fork 治理原則，靜待上游常態整併（如上游 PR #4006）。
