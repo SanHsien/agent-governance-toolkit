@@ -117,24 +117,31 @@ def test_overlay_markdown_links_resolve() -> None:
     assert failures == 0
 
 
-def test_readme_keeps_upstream_english_product_contract() -> None:
+def test_readme_and_readme_en_structure() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme_en = (ROOT / "README.en.md").read_text(encoding="utf-8")
 
-    assert not (ROOT / "README.en.md").exists()
+    assert (ROOT / "README.en.md").exists()
+    assert "繁體中文" in readme
     assert "SanHsien 維護型 fork" in readme
     assert "SanHsien/agent-governance-toolkit" in readme
     assert "microsoft/agent-governance-toolkit" in readme
     assert "FORK.md" in readme
-    assert "REVIEW.md" in readme
+    assert "README.en.md" in readme
     assert "pip install" in readme
     assert "agent-governance-toolkit" in readme
-    assert "Ship agents to production" in readme
+
+    assert "English" in readme_en
+    assert "SanHsien/agent-governance-toolkit" in readme_en
+    assert "microsoft/agent-governance-toolkit" in readme_en
+    assert "README.md" in readme_en
 
 
 def test_link_checker_skips_product_readme_and_scans_review() -> None:
     rels = {path.relative_to(ROOT).as_posix() for path in check_links.iter_documents()}
 
     assert "README.md" not in rels
+    assert "README.en.md" not in rels
     assert "AGENTS.md" not in rels
     assert "REVIEW.md" in rels
     assert "FORK.md" in rels
@@ -178,6 +185,7 @@ def test_agents_overlay_points_at_fork_rules() -> None:
 def test_required_overlay_files_exist() -> None:
     required = (
         "README.md",
+        "README.en.md",
         "FORK.md",
         "NOTICE.md",
         "AGENTS.md",

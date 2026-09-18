@@ -249,21 +249,19 @@ crate** 而言，精確釘版會強迫每個下游的 `Cargo.lock` 跟著鎖死�
 3. **Dependabot 告警現況分析與錯誤研判**：
    - 診斷 Dependabot 更新失敗紀錄（如 Run #34697776783，針對 mastra-agentmesh 之 esbuild 更新）：因 `tsup: 8.5.1` 要求 `esbuild: ^0.27.0`，而修復版 esbuild 為 `>= 0.28.1`，npm 嘗試降級路徑失敗致使 Dependabot updater 報錯。
    - 其餘 19 個模組之 npm/uv 告警均屬上游 checked-in lockfiles 之相依性，依照本 fork 治理原則，靜待上游常態整併（如上游 PR #4006）。
-## 2026-09-19：人工覆蓋解決其餘 18 項 Dependabot 告警與單一分支維護
 
-**背景**：在 PR #9~#27 全數合入後，Dependabot 告警清單中仍殘留 19 項無法自動開 PR 的告警，根因分別為 CLI 套件鎖定舊版 override、tsup 與 esbuild 版本衝突、以及 upstream pyproject 限制。
+## 2026-09-19：落實繁體中文為主、保留中英雙語 README 與作業系統純 Windows 支援
 
-**處置**：
-1. **CLI 套件 js-yaml 覆蓋升級（解除 12 項告警，Alerts #1~#12）**：
-   - 四個 CLI 套件（`agent-governance-claude-code`、`agent-governance-copilot-cli`、`agent-governance-antigravity-cli`、`agent-governance-opencode`）之 `package.json` 原先均鎖定 `"overrides": { "js-yaml": "4.2.0" }`，導致 Dependabot 拒絕自動升級。
-   - 將 override 全數更新為 `"4.3.2"`，同步更新對應之 `package-lock.json`，徹底消除 CVE-2026-59870、CVE-2026-61877、CVE-2026-61878。
-2. **services/api 與 copilot 擴充套件 qs 升級（解除 4 項告警，Alerts #32, #33, #48, #49）**：
-   - `services/api/package.json` 原鎖定 `"qs": "6.15.2"`，更新 override 為 `"6.16.0"`。
-   - `agent-os/extensions/copilot` 加入 `"overrides": { "qs": "6.16.0" }` 並以 `--ignore-scripts` 重新鎖定，修復 DoS 與 array-limit 漏洞。
-3. **mastra-agentmesh 與 copilot-governance esbuild 升級（解除 2 項告警，Alerts #70, #74）**：
-   - 針對先前 Dependabot updater 拋錯之 `esbuild` 漏洞，於兩套件加入 `"overrides": { "esbuild": "^0.28.1" }`，成功更新至 `0.28.2`，解除 Windows 任意檔案讀取漏洞。
-4. **最後 1 項告警狀態（Alert #13 `cryptography` in `agent-hypervisor/uv.lock`）**：
-   - `agent-hypervisor` 為 v5 廢棄轉向 stub 套件，其 `uv.lock` 相依於 PyPI 發布之 `agent-governance-toolkit-core 5.0.0`（限制 `cryptography < 50.0`），故無法在本機解析至修復版本 `50.0.0`，屬上游發布版本之外部邊界，待上游 5.0.1 發布後即可解除。
-5. **落實單一分支與驗證**：
-   - 本地 `tools/dev_check.ps1` 全數通過（WINDOWS DEV CHECK GREEN）。
-   - 推送至 `origin main`，遠端維持嚴格單一分支。
+**決定**：
+1. **語系文件收斂（僅保留繁體中文與英文，以繁體中文為主）**：
+   - 根目錄 `README.md` 改為以繁體中文為主的產品說明與導覽，置頂提供語系切換器至 `README.en.md`。
+   - 根目錄建立英文規格與產品文件 `README.en.md`，置頂提供語系切換器至 `README.md`。
+   - 清理移除 `docs/i18n/` 下所有非繁體中文、非英文文件（刪除 `README.ja.md`、`README.ko.md`、`README.zh-CN.md`、`quickstart.ja.md`、`quickstart.ko.md`、`quickstart.zh-CN.md`），僅保留 `README.zh-TW.md`、`quickstart.zh-TW.md` 與英文 `README.md`。
+   - 同步更新 `mkdocs.yml` 與相關導覽切換器，僅保留 English 與 繁體中文。
+2. **作業系統純 Windows 支援**：
+   - 於 `README.md`、`README.en.md`、`FORK.md`、`CLAUDE.md` 明確標示本 fork 僅支援 Windows 作業系統（Windows 11 / Windows Server），以 PowerShell 為主要開發與驗收環境。
+   - `.github/workflows/fork-maintenance.yml` 移除 `ubuntu-latest` 執行環境矩陣，收斂為純 `windows-latest` 執行 `tools/dev_check.ps1`，移除非必要之跨平台冗餘。
+3. **驗證與單一分支**：
+   - 更新 `tools/tests/test_fork_overlay.py`，驗證中英雙語 README 架構與必要檔案存在。
+   - 本地 `tools/dev_check.ps1` 驗收全綠（WINDOWS DEV CHECK GREEN）。
+   - 推送至 `origin main`，遠端嚴格維持單一分支。

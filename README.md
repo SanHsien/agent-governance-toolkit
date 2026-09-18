@@ -1,154 +1,143 @@
-> **SanHsien 維護型 fork。** 產品說明以下文上游英文為準。繁中維護規則見 [`FORK.md`](FORK.md)；本輪審查見 [`REVIEW.md`](REVIEW.md)。`origin` 是 [`SanHsien/agent-governance-toolkit`](https://github.com/SanHsien/agent-governance-toolkit)，`upstream` 是 [`microsoft/agent-governance-toolkit`](https://github.com/microsoft/agent-governance-toolkit)。本 fork 不發佈官方套件或文件站。
+[English](README.en.md) | 繁體中文
 
-🌍 [English](/README.md) | [日本語](./docs/i18n/README.ja.md) | [简体中文](./docs/i18n/README.zh-CN.md) | [한국어](./docs/i18n/README.ko.md) | [繁體中文（本 fork）](FORK.md)
+> **SanHsien 維護型 fork**：以繁體中文與 Windows 原生支援為主的 Agent Governance Toolkit 維護線。繁中維護說明見 [`FORK.md`](FORK.md)，審查紀錄見 [`REVIEW.md`](REVIEW.md)，英文版本請參閱 [`README.en.md`](README.en.md)。`origin` 為 [`SanHsien/agent-governance-toolkit`](https://github.com/SanHsien/agent-governance-toolkit)，`upstream` 為 [`microsoft/agent-governance-toolkit`](https://github.com/microsoft/agent-governance-toolkit)。
+
+> [!IMPORTANT]
+> **作業系統支援說明**：本維護版本專注於 **Windows 原生環境（Windows 11 / Windows Server）**，以 PowerShell 作為主要開發、驗證與測試環境，移除非必要之跨平台冗餘。本儲存庫依指示僅保留繁體中文與英文說明文件，以繁體中文為主。
 
 ![Agent Governance Toolkit](docs/assets/readme-banner.svg)
 
-# Agent Governance Toolkit
-
-### Ship agents to production without losing sleep
-
-<p align="center">
-  <a href="https://microsoft.github.io/agent-governance-toolkit">
-    <img src="https://img.shields.io/badge/%F0%9F%93%96_Full_Documentation-microsoft.github.io%2Fagent--governance--toolkit-0078D4?style=for-the-badge&logoColor=white" alt="Full Documentation" height="40">
-  </a>
-</p>
-
-<p align="center">
-  <strong>
-    🚀 <a href="#quick-start">Quick Start</a> ·
-    📋 <a href="#specifications">Specifications</a> ·
-    📦 <a href="https://pypi.org/project/agent-governance-toolkit/">PyPI</a> ·
-    📝 <a href="CHANGELOG.md">Changelog</a>
-  </strong>
-</p>
+# 歡迎使用代理治理工具包 !
 
 [![CI](https://github.com/microsoft/agent-governance-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/microsoft/agent-governance-toolkit/actions/workflows/ci.yml)
-[![Discord](https://dcbadge.limes.pink/api/server/TxMRqY3pFr?style=flat)](https://discord.gg/TxMRqY3pFr)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![PyPI version](https://img.shields.io/pypi/v/agent-governance-toolkit?label=PyPI)](https://pypi.org/project/agent-governance-toolkit/)
-[![npm](https://img.shields.io/npm/v/%40microsoft/agent-governance-sdk?label=npm)](https://www.npmjs.com/package/@microsoft/agent-governance-sdk)
-[![NuGet](https://img.shields.io/nuget/v/Microsoft.AgentGovernance?label=NuGet)](https://www.nuget.org/packages/Microsoft.AgentGovernance)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/microsoft/agent-governance-toolkit/badge)](https://scorecard.dev/viewer/?uri=github.com/microsoft/agent-governance-toolkit)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12085/badge)](https://www.bestpractices.dev/projects/12085)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/microsoft/agent-governance-toolkit/blob/main/LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://python.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-npm_%40microsoft%2Fagent--governance--sdk-blue?logo=typescript)](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-typescript)
+[![.NET 8.0+](https://img.shields.io/badge/.NET_8.0+-NuGet-blue?logo=dotnet)](https://www.nuget.org/packages/Microsoft.AgentGovernance)
+[![Rust](https://img.shields.io/badge/Rust-crates.io-orange?logo=rust)](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-rust/agentmesh)
+[![Go](https://img.shields.io/badge/Go-module-00ADD8?logo=go)](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-golang)
 [![OWASP Agentic Top 10](https://img.shields.io/badge/OWASP_Agentic_Top_10-10%2F10_Covered-blue)](docs/compliance/owasp-agentic-top10-architecture.md)
-[![AARM Extended](https://img.shields.io/badge/AARM-Extended_(R1–R9)-brightgreen)](https://aarm.dev/builders/agent-governance-toolkit-microsoft)
-[![ATF](https://img.shields.io/badge/ATF-All_5_Elements-brightgreen)](https://agentictrustframework.ai/ecosystem)
+[![OpenSSF Best Practices](https://img.shields.io/cii/percentage/12085?label=OpenSSF%20Best%20Practices&logo=opensourcesecurity)](https://www.bestpractices.dev/projects/12085)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/microsoft/agent-governance-toolkit/badge)](https://scorecard.dev/viewer/?uri=github.com/microsoft/agent-governance-toolkit)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/microsoft/agent-governance-toolkit)
 
 > [!IMPORTANT]
-> **Public Preview** -- production-quality public preview releases. May have breaking changes before GA.
+> **公開預覽版** — 此儲存庫中發布的所有套件均為 **經 Microsoft 簽署的公開預覽版**。它們達到
+> 正式版的品質，但在正式發布 (GA) 之前可能存在重大變更。如有任何意見回饋，請在 [GitHub 上提交 Issue](https://github.com/microsoft/agent-governance-toolkit/issues)。
+>
+> **這個工具包是什麼：** 執行期治理基礎架構 — 位於您的代理框架與代理執行操作之間的確定性
+> 策略執行、零信任身份驗證、執行沙箱，以及可靠性工程。
+>
+> **這個工具包不是什麼：** 這不是一個用於模型安全或提示詞防護的工具。它不會過濾大型語言模型
+> (LLM) 的輸入/輸出，也不執行內容審核。它是在應用層對 *代理的行為* (工具呼叫、資源存取、
+> 代理間通訊) 進行治理。對於模型層面的安全，請參閱 [Azure AI Content Safety](https://learn.microsoft.com/azure/ai-services/content-safety/)。
 
-Policy enforcement, identity, sandboxing, and SRE for autonomous AI agents. One `pip install`, any framework.
+面向 AI 代理的執行期治理 — 唯一一個涵蓋全部 **10 項 OWASP Agentic 風險** 並提供 **13,000+ 測試** 的工具包。它治理的是代理 *做什麼*，而不僅僅是說什麼 — 包括確定性策略執行、零信任身份認證、執行沙箱，以及網站可靠性工程 (SRE) — 支援 **Python · TypeScript · .NET · Rust · Go**
 
----
+> **適用於任何技術棧** — 支援 AWS Bedrock、Google ADK、Azure AI、LangChain、CrewAI、AutoGen、OpenAI Agents、LlamaIndex 等。只需透過 `pip install` 即可使用，無廠商鎖定。
 
-## The Problem
+## 📋 入門指南
 
-Your AI agents call tools, browse the web, query databases, and delegate to other agents. Once deployed, they make decisions autonomously. You need answers to three questions:
+### 📦 安裝
 
-**1. Is this action allowed?** An agent with access to `send_email` and `query_database` should not be able to `drop_table`. OAuth scopes and IAM roles control which services an agent can reach, not what it does once connected.
+**Python** (PyPI)
+```bash
+pip install agent-governance-toolkit[full]
+```
 
-**2. Which agent did this?** In a multi-agent system, five agents might share a single API key. When something goes wrong, "an agent did it" is not an incident response.
+**TypeScript / Node.js** (npm)
+```bash
+npm install @microsoft/agent-governance-sdk
+```
 
-**3. Can you prove what happened?** Auditors and regulators need tamper-evident records of every decision: what policy was active, what the agent requested, and why it was allowed or denied.
+**.NET** (NuGet)
+```bash
+dotnet add package Microsoft.AgentGovernance
+```
 
-Prompt-level safety ("please follow the rules") is not a control surface. It is a polite request to a stochastic system. [OWASP LLM01:2025](https://genai.owasp.org/llmrisk/llm01-prompt-injection/) states this explicitly: *"it is unclear if there are fool-proof methods of prevention for prompt injection."* The published numbers back this up. [Andriushchenko et al. (ICLR 2025)](https://arxiv.org/abs/2404.02151) report **100% attack success rate** on GPT-4o, GPT-3.5, Claude 3, and Llama-3 using adaptive attacks with logprob access and suffix optimization, evaluated against the [JailbreakBench](https://arxiv.org/abs/2404.01318) benchmark (Chao et al., NeurIPS 2024). Microsoft's own [AI Red Teaming Agent](https://learn.microsoft.com/azure/ai-foundry/concepts/ai-red-teaming-agent) formalizes **Attack Success Rate (ASR)**, the rate of policy violations under adversarial input, as the canonical metric for this class of failure. [*Lessons from Red Teaming 100 Generative AI Products*](https://www.microsoft.com/en-us/security/blog/2025/01/13/3-takeaways-from-red-teaming-100-generative-ai-products/) reinforces the point: *"mitigations do not eliminate risk entirely"* and red teaming must be a continuous process because model-layer defenses are probabilistic by construction.
-
-AGT does not try to win that fight inside the prompt. Every tool call, message send, and delegation is intercepted in deterministic application code *before* the model's intent reaches the wire. Actions the AGT kernel denies are not "unlikely." They are **structurally impossible**. That is the difference between asking an agent to behave and making it incapable of misbehaving.
-
----
-
-## Quick Start
-
-**Prerequisites:** Python 3.11+
+<details>
+<summary>安裝單獨的 Python 套件</summary>
 
 ```bash
-pip install "agent-governance-toolkit[full]"
+pip install agent-os-kernel        # 策略引擎
+pip install agentmesh-platform     # 信任網格
+pip install agentmesh-runtime       # 執行期監督器
+pip install agent-sre              # SRE 工具包
+pip install agent-governance-toolkit    # 合規與認證
+pip install agentmesh-marketplace      # 外掛市場
+pip install agentmesh-lightning        # 強化學習訓練治理
 ```
-
-Use the `[full]` extra for the quick-start imports below. The base
-`agent-governance-toolkit` wheel installs the compliance CLI only; the governance
-modules live in the consolidated core distribution. The `agentmesh` quick-start
-import remains the current wrapper API. Importing `agent_os` emits a
-`DeprecationWarning` because the old `agent-os-kernel` distribution is deprecated.
-Use `agent-governance-toolkit-core` (or the `[full]` extra that includes it) as
-the replacement distribution. Policy-engine host code uses the ACS SDK;
-`agt-policies` provides the one-way v4-to-v5 migration command. The pre-ACS
-`agent_os.policies` rule model is gone, and `BREAKING_CHANGES.md` lists its
-replacements.
-
-For Claude Code, add AGT as a plugin marketplace and install the governance plugin:
-
-```text
-/plugin marketplace add microsoft/agent-governance-toolkit
-/plugin install agt-governance@agent-governance-toolkit
-```
-
-Govern any tool function in two lines:
-
-```python
-from agentmesh.governance import govern
-
-safe_tool = govern(my_tool, policy="policy.yaml")   # every call checked, logged, enforced
-```
-
-On every call, `safe_tool` evaluates the YAML policy, logs the decision to an
-audit trail, and raises `GovernanceDenied` when the policy blocks the action.
-
-```yaml
-# policy.yaml
-apiVersion: governance.toolkit/v1
-name: production-policy
-default_action: allow
-rules:
-  - name: block-destructive
-    condition: "action.type in ['drop', 'delete', 'truncate']"
-    action: deny
-    description: "Destructive operations require human approval"
-
-  - name: require-approval-for-send
-    condition: "action.type == 'send_email'"
-    action: require_approval
-    approvers: ["security-team"]
-```
-
-```python
->>> safe_tool(action="read", table="users")
-{'table': 'users', 'rows': 42}
-
->>> safe_tool(action="drop", table="users")
-GovernanceDenied: Action denied by policy rule 'block-destructive':
-  Destructive operations require human approval
-```
-
-Or use the full `AgentControl` API for programmatic control:
-
-<details>
-<summary><b>AgentControl example</b></summary>
-
-```python
-from agent_control_specification import AgentControl
-
-runtime = AgentControl.from_path(str("manifest.yaml"))
-result = runtime.evaluate(
-    "input",
-    {
-        "envelope": {"agent_id": "example-agent"},
-        "input": {"body": {"action": "web_search", "params": {}}},
-    },
-)
-print(result.verdict)
-runtime.close()
-```
-
-[Run the complete ACS email-tool example](examples/acs-email-tool).
-
 </details>
 
-<details>
-<summary><b>TypeScript / .NET / Rust / Go examples</b></summary>
+### 📚 文件
 
-**TypeScript**
+- **[快速入門](docs/i18n/quickstart.zh-TW.md)** — 在 10 分鐘內從零開始構建受治理的代理 (Python · TypeScript · .NET · Rust · Go)
+- **[TypeScript 套件](https://github.com/microsoft/agent-governance-toolkit/blob/main/agent-governance-typescript/README.md)** — 提供身份、信任、策略與稽核功能的 npm 套件
+- **[.NET 套件](https://github.com/microsoft/agent-governance-toolkit/blob/main/agent-governance-dotnet/README.md)** — 提供完整 OWASP 覆蓋的 NuGet 套件
+- **[Rust crate](https://github.com/microsoft/agent-governance-toolkit/blob/main/agent-governance-rust/agentmesh/README.md)** — crates.io 上的函式庫，包含策略、信任、稽核及 Ed25519 身份
+- **[Go 模組](https://github.com/microsoft/agent-governance-toolkit/blob/main/agent-governance-golang/README.md)** — 提供策略、信任、稽核與身份功能的 Go 模組
+- **[教學](docs/tutorials/index.md)** — 涵蓋策略、身份、整合、合規、SRE 與沙箱的逐步指南
+- **[Azure 部署](https://github.com/microsoft/agent-governance-toolkit/blob/main/docs/deployment/README.md)** — 支援 AKS、Azure AI Foundry、Container Apps、OpenClaw Sidecar
+- **[OWASP 合規](docs/compliance/owasp-agentic-top10-architecture.md)** — 完整覆蓋 ASI-01 至 ASI-10 的對應
+- **[威脅模型](../security/threat-model.md)** — 包含信任邊界、攻擊面與 STRIDE 分析
+- **[架構](../ARCHITECTURE.md)** — 系統設計、安全模型與信任評分
+- **[架構決策](https://github.com/microsoft/agent-governance-toolkit/blob/main/docs/adr/README.md)** — 關鍵身份、執行期與策略選擇的 ADR 記錄
+- **[NIST RFI 對應](docs/compliance/nist-rfi-2026-00206.md)** — 對應 NIST AI Agent 安全 RFI 的對應 (2026-00206)
+
+還有問題嗎？請提交一個 [GitHub Issue](https://github.com/microsoft/agent-governance-toolkit/issues) 或查看我們的 [社群頁面](../COMMUNITY.md)。
+
+### ✨ **亮點**
+
+- **確定性策略執行**：每個代理行為在執行 *前* 都會根據策略進行評估，延遲低於毫秒 (<0.1 ms)
+  - [策略引擎](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-python/agent-os) | [效能基準](../BENCHMARKS.md)
+- **零信任代理身份**：基於 Ed25519 的加密憑證，支援 SPIFFE/SVID，信任評分範圍為 0–1000
+  - [AgentMesh](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-python/agent-mesh) | [信任評分](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-python/agent-mesh)
+- **執行沙箱**：4 層權限環、Saga 編排、終止控制與緊急停止 (kill switch)
+  - [Agent Runtime](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-python/agent-runtime) | [代理虛擬化管理器](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-python/agent-hypervisor)
+- **代理 SRE**：包含 SLO、錯誤預算、重播除錯、混沌工程、熔斷機制與漸進式發布
+  - [Agent SRE](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-python/agent-sre) | [可觀測性整合](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-python/agent-hypervisor/src/hypervisor/observability)
+- **MCP 安全掃描器**：偵測 MCP 工具定義中的工具投毒、拼寫劫持 (typosquatting)、隱藏指令與 rug-pull 攻擊
+  - [MCP 掃描器](https://github.com/microsoft/agent-governance-toolkit/blob/main/agent-governance-python/agent-os/src/agent_os/mcp_security.py) | [CLI](https://github.com/microsoft/agent-governance-toolkit/blob/main/agent-governance-python/agent-os/src/agent_os/cli/mcp_scan.py)
+- **信任報告 CLI**：`agentmesh trust report` — 視覺化信任評分、任務成功/失敗情況及代理活動
+  - [信任 CLI](https://github.com/microsoft/agent-governance-toolkit/blob/main/agent-governance-python/agent-mesh/src/agentmesh/cli/trust_cli.py)
+- **金鑰掃描與模糊測試**：基於 Gitleaks 的工作流，包含 7 個模糊測試目標，涵蓋策略、注入、沙箱、信任及 MCP
+  - [安全工作流](https://github.com/microsoft/agent-governance-toolkit/tree/main/.github/workflows)
+- **12+ 框架整合**：支援 Microsoft Agent Framework、LangChain、CrewAI、AutoGen、Dify、LlamaIndex、OpenAI Agents、Google ADK 等
+  - [框架快速入門](https://github.com/microsoft/agent-governance-toolkit/tree/main/examples/quickstart) | [整合方案](https://github.com/microsoft/agent-governance-toolkit/tree/main/docs/proposals)
+- **完整 OWASP 覆蓋**：針對 Agentic Top 10 風險實現 10/10 覆蓋，每個 ASI 類別均有專屬控制措施
+  - [OWASP 合規](docs/compliance/owasp-agentic-top10-architecture.md) | [競品比較](../COMPARISON.md)
+- **GitHub Actions 支援 CI/CD**：透過 Agent Governance Verify 在 CI/CD 中執行治理驗證
+  - [Agent Governance Verify Action](https://github.com/microsoft/agent-governance-toolkit/tree/main/action)
+
+### 💬 **我們期待您的意見回饋！**
+
+- 如發現 Bug，請提交 [GitHub Issue](https://github.com/microsoft/agent-governance-toolkit/issues)。
+
+## 快速入門
+
+### 執行策略 — Python
+
+```python
+from agent_os import PolicyEngine, CapabilityModel
+
+# 定義此代理允許執行的操作
+capabilities = CapabilityModel(
+    allowed_tools=["web_search", "file_read"],
+    denied_tools=["file_write", "shell_exec"],
+    max_tokens_per_call=4096
+)
+
+# 在每次操作前強制執行策略
+engine = PolicyEngine(capabilities=capabilities)
+decision = engine.evaluate(agent_id="researcher-1", action="tool_call", tool="web_search")
+
+if decision.allowed:
+    # 繼續進行工具呼叫
+    ...
+```
+
+### 執行策略 — TypeScript
+
 ```typescript
 import { PolicyEngine } from "@microsoft/agent-governance-sdk";
 
@@ -156,38 +145,42 @@ const engine = new PolicyEngine([
   { action: "web_search", effect: "allow" },
   { action: "shell_exec", effect: "deny" },
 ]);
-engine.evaluate("web_search"); // "allow"
-engine.evaluate("shell_exec"); // "deny"
+
+const decision = engine.evaluate("web_search"); // "allow"
 ```
 
-**.NET**
+### 執行策略 — .NET
+
 ```csharp
 using AgentGovernance;
-using AgentGovernance.Extensions.ModelContextProtocol;
 using AgentGovernance.Policy;
 
 var kernel = new GovernanceKernel(new GovernanceOptions
 {
     PolicyPaths = new() { "policies/default.yaml" },
 });
-var result = kernel.EvaluateToolCall("did:mesh:agent-1", "web_search",
-    new() { ["query"] = "latest AI news" });
 
-// MCP server integration
-builder.Services.AddMcpServer()
-    .WithGovernance(options => options.PolicyPaths.Add("policies/mcp.yaml"));
+var result = kernel.EvaluateToolCall(
+    agentId: "did:mesh:researcher-1",
+    toolName: "web_search",
+    args: new() { ["query"] = "latest AI news" }
+);
+
+if (result.Allowed) { /* 繼續執行 */ }
 ```
 
-**Rust**
+### 執行策略 — Rust
+
 ```rust
-use agent_governance::{AgentMeshClient, ClientOptions};
+use agentmesh::{AgentMeshClient, ClientOptions};
 
 let client = AgentMeshClient::new("my-agent").unwrap();
 let result = client.execute_with_governance("data.read", None);
 assert!(result.allowed);
 ```
 
-**Go**
+### 執行策略 — Go
+
 ```go
 import agentmesh "github.com/microsoft/agent-governance-toolkit/agent-governance-golang"
 
@@ -198,265 +191,198 @@ client, _ := agentmesh.NewClient("my-agent",
     }),
 )
 result := client.ExecuteWithGovernance("data.read", nil)
+// result.Allowed == true
 ```
 
-</details>
-
-CLI tools:
+### 執行治理示範
 
 ```bash
-agt doctor                                        # check installation
-agt verify                                        # OWASP compliance check
-agt verify --evidence ./agt-evidence.json --strict # fail CI on weak evidence
-agt red-team scan ./prompts/ --min-grade B         # prompt injection audit
-agt lint-policy policies/                          # validate policy files
+# 完整治理示範 (policy enforcement, audit, trust, cost, reliability)
+python examples/maf-integration/01-loan-processing/python/main.py
+
+# 使用對抗性攻擊場景執行
+python examples/maf-integration/01-loan-processing/python/main.py --include-attacks
 ```
 
-Full walkthrough: [quickstart.md](docs/quickstart.md) -- zero to governed agents in 5 minutes.
-🌍 Also in: [日本語](docs/i18n/quickstart.ja.md) | [简体中文](docs/i18n/quickstart.zh-CN.md) | [한국어](docs/i18n/quickstart.ko.md)
+## 更多範例與樣本
 
----
+- **[框架快速入門](https://github.com/microsoft/agent-governance-toolkit/tree/main/examples/quickstart)** — 單檔案受治理代理適用於 LangChain、CrewAI、AutoGen、OpenAI Agents、Google ADK
+- **教學 1: Policy Engine** — 定義並執行治理策略
+- **[教學 2: Trust & Identity](docs/tutorials/02-trust-and-identity.md)** — 零信任代理憑證
+- **[教學 3: Framework Integrations](docs/tutorials/03-framework-integrations.md)** — 為任何框架新增治理
+- **[教學 4: Audit & Compliance](docs/tutorials/04-audit-and-compliance.md)** — OWASP 合規與證明
+- **[教學 5: Agent Reliability](docs/tutorials/05-agent-reliability.md)** — SLO、錯誤預算、混沌測試
+- **[教學 6: Execution Sandboxing](docs/tutorials/06-execution-sandboxing.md)** — 權限環與終止機制
 
-## How It Works
+## OPA/Rego 與 Cedar 策略支援
 
+將您現有的基礎架構策略引入代理治理 — 無需新的策略 DSL。
+
+### OPA/Rego (Agent OS)
+
+```python
+from agent_control_specification import AgentControl, HostSession
+
+runtime = AgentControl.from_path("policies/rego-manifest.yaml")
+session = HostSession(
+    runtime, agent_id="agent-1", session_id="session-1"
+)
+decision = session.pre_tool_call(
+    tool_name="web_search", args={"query": "status"}
+)
 ```
-Agent ──► Policy Engine ──► Identity ──► Audit Log
-            (YAML/OPA/Cedar)  (SPIFFE/DID/mTLS)  (Tamper-evident)
-                 │                                      │
-                 ├── Allowed ──► Tool executes           │
-                 └── Denied  ──► GovernanceDenied        │
-                                                        ▼
-                                                 Decision Record
+
+### Cedar (Agent OS)
+
+```python
+from agent_control_specification import AgentControl
+
+runtime = AgentControl.from_path("policies/cedar-manifest.yaml")
 ```
 
-Every layer is optional. Start with `govern()` and add layers as your risk profile grows. Most teams run policy enforcement + audit logging and never need the full stack.
+### AgentMesh OPA/Cedar
 
----
+```python
+from agentmesh.governance import PolicyEngine
 
-## Packages
+engine = PolicyEngine()
+engine.load_rego("policies/mesh.rego", package="agentmesh")
+engine.load_cedar(cedar_content='permit(principal, action == Action::"Analyze", resource);')
 
-| Package | Description |
-|---------|-------------|
-| [**Agent OS**](agent-governance-python/agent-os/) | Policy engine, agent lifecycle, governance gate |
-| [**Agent Control Specification**](policy-engine/) ([README](policy-engine/README.md)) | Stateless, deterministic, fail-closed policy decision runtime (Rust core) backing the AGT policy layer |
-| [**Agent Mesh**](agent-governance-python/agent-mesh/) | Agent discovery, routing, and trust mesh |
-| [**Agent Runtime**](agent-governance-python/agent-runtime/) | Execution sandboxing with four privilege rings |
-| [**Agent SRE**](agent-governance-python/agent-sre/) | Kill switch, SLO monitoring, chaos testing |
-| [**Agent Compliance**](agent-governance-python/agent-compliance/) | OWASP verification, policy linting, integrity checks |
-| [**Agent Marketplace**](agent-governance-python/agent-marketplace/) | Plugin governance and trust scoring |
-| [**Agent Lightning**](agent-governance-python/agent-lightning/) | RL training governance with violation penalties |
-| [**Agent Hypervisor**](agent-governance-python/agent-hypervisor/) | Execution audit, delta engine, in-memory commitment tracking, command denylist enforcement |
+decision = engine.evaluate("did:mesh:agent-1", {"tool_name": "analyze"})
+```
 
-### Additional Capabilities
+每個後端支援三種評估模式：**內嵌引擎** (cedarpy/opa CLI)、**遠端伺服器**，或 **內建回退** (零外部相依性)。
 
-| Capability | Description |
-|---|---|
-| **MCP Security Gateway** | Tool poisoning detection, drift monitoring, typosquatting, hidden instruction scanning ([Spec](docs/specs/MCP-SECURITY-GATEWAY-1.0.md)) |
-| **Shadow AI Discovery** | Find unregistered agents across processes, configs, and repos ([Discovery](agent-governance-python/agent-discovery/)) |
-| **Governance Dashboard** | Real-time fleet visibility for health, trust, and compliance ([Dashboard](examples/demos/governance-dashboard/)) |
-| **PromptDefense Evaluator** | 12-vector prompt injection audit ([Evaluator](agent-governance-python/agent-compliance/src/agent_compliance/prompt_defense.py)) |
-| **Contributor Reputation** | PR/issue author screening for social engineering. Reusable GitHub Action ([Action](.github/actions/contributor-check/)) |
+## SDK 與套件
 
----
+### 多語言 SDK
 
-## Install
-
-| Language | Package | Command |
+| 語言 | Package | Install |
 |----------|---------|---------|
-| **Python** | [`agent-governance-toolkit`](https://pypi.org/project/agent-governance-toolkit/) | `pip install "agent-governance-toolkit[full]"` |
-| **TypeScript** | [`@microsoft/agent-governance-sdk`](agent-governance-typescript/) | `npm install @microsoft/agent-governance-sdk` |
-| **Copilot CLI** | [`@microsoft/agent-governance-copilot-cli`](agent-governance-copilot-cli/) | `npx @microsoft/agent-governance-copilot-cli install` |
-| **Claude Code** | [`@microsoft/agent-governance-claude-code`](agent-governance-claude-code/) | `claude --plugin-dir ./agent-governance-claude-code` |
-| **OpenCode** | [`@microsoft/agent-governance-opencode`](agent-governance-opencode/) | `npm install @microsoft/agent-governance-opencode` |
+| **Python** | [`agent-governance-toolkit[full]`](https://pypi.org/project/agent-governance-toolkit/) | `pip install agent-governance-toolkit[full]` |
+| **TypeScript** | [`@microsoft/agent-governance-sdk`](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-typescript) | `npm install @microsoft/agent-governance-sdk` |
 | **.NET** | [`Microsoft.AgentGovernance`](https://www.nuget.org/packages/Microsoft.AgentGovernance) | `dotnet add package Microsoft.AgentGovernance` |
-| **.NET MCP** | `Microsoft.AgentGovernance.Extensions.ModelContextProtocol` | `dotnet add package Microsoft.AgentGovernance.Extensions.ModelContextProtocol` |
-| **Rust** | [`agent-governance`](https://crates.io/crates/agent-governance) | `cargo add agent-governance` |
-| **Go** | [`agent-governance-toolkit`](agent-governance-golang/) | `go get github.com/microsoft/agent-governance-toolkit/agent-governance-golang` |
+| **Rust** | [`agentmesh`](https://crates.io/crates/agentmesh) | `cargo add agentmesh` |
+| **Go** | [`agentmesh`](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-golang) | `go get github.com/microsoft/agent-governance-toolkit/agent-governance-golang` |
 
-All five language SDKs implement core governance (policy, identity, trust, audit). Python has the full stack. Copilot CLI and Claude Code are first-party developer surfaces built on the TypeScript SDK.
-See **[Language Package Matrix](docs/PACKAGE-FEATURE-MATRIX.md)** for detailed per-language coverage.
+### Python 套件 (PyPI)
 
-<details>
-<summary><b>Python distributions (v4.1.0 — consolidated)</b></summary>
+| 套件 | PyPI | 說明 |
+|---------|------|-------------|
+| **Agent OS** | [`agent-os-kernel`](https://pypi.org/project/agent-os-kernel/) | 策略引擎 — 確定性動作評估、能力模型、稽核日誌、動作攔截、MCP 閘道 |
+| **AgentMesh** | [`agentmesh-platform`](https://pypi.org/project/agentmesh-platform/) | 代理間信任 — Ed25519 身份、SPIFFE/SVID 憑證、信任評分、A2A/MCP/IATP 協定橋接 |
+| **Agent Runtime** | [`agentmesh-runtime`](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-python/agent-runtime) | 執行期監督器 — 四層權限環、Saga 編排、終止控制、聯合責任、僅附加稽核日誌 |
+| **Agent SRE** | [`agent-sre`](https://pypi.org/project/agent-governance-python/agent-sre/) | 可靠性工程 — SLO、錯誤預算、重播除錯、混沌工程、漸進式發布 |
+| **Agent Compliance** | [`agent-governance-toolkit`](https://pypi.org/project/agent-governance-toolkit/) | 執行期策略執行 — OWASP ASI 2026 控制、治理證明、完整性驗證 |
+| **Agent Marketplace** | [`agentmesh-marketplace`](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-python/agent-marketplace) | 外掛生命週期 — 探索、安裝、驗證和簽署外掛 |
+| **Agent Lightning** | [`agentmesh-lightning`](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-python/agent-lightning) | RL 訓練治理 — 受治理執行器、策略獎勵 |
 
-As of v4.1.0, 45 packages have been consolidated into 5 top-level distributions:
+## 框架整合
 
-| Distribution | PyPI | What's included |
-|--------------|------|-----------------|
-| `agent-governance-toolkit-core` | [`agent-governance-toolkit-core`](https://pypi.org/project/agent-governance-toolkit-core/) | Policy engine, capability model, audit, MCP gateway, zero-trust identity, trust scoring, A2A/MCP/IATP bridges |
-| `agent-governance-toolkit-runtime` | [`agent-governance-toolkit-runtime`](https://pypi.org/project/agent-governance-toolkit-runtime/) | Privilege rings, saga orchestration, termination control, execution plan validation, command denylist enforcement |
-| `agent-governance-toolkit-sre` | [`agent-governance-toolkit-sre`](https://pypi.org/project/agent-governance-toolkit-sre/) | SLOs, error budgets, chaos engineering, circuit breakers |
-| `agent-governance-toolkit-cli` | [`agent-governance-toolkit-cli`](https://pypi.org/project/agent-governance-toolkit-cli/) | `agt` CLI, OWASP verification, integrity checks, policy linting |
-| `agent-governance-toolkit[full]` | [`agent-governance-toolkit`](https://pypi.org/project/agent-governance-toolkit/) | Meta-package installing all of the above |
+適用於 **20+ 代理框架**，包括：
 
-Previous package names (`agent-os-kernel`, `agentmesh-platform`, `agentmesh-runtime`, `agent-sre`, `agent-discovery`, `agent-hypervisor`, `agentmesh-marketplace`, `agentmesh-lightning`) remain installable as stub packages that redirect to the consolidated distributions.
+| 框架 | Stars | 整合方式 |
+|-----------|-------|-------------|
+| [**Microsoft Agent Framework**](https://github.com/microsoft/agent-framework) | 8K+ ⭐ | **Native Middleware** |
+| [**Semantic Kernel**](https://github.com/microsoft/semantic-kernel) | 27K+ ⭐ | **Native (.NET + Python)** |
+| [Dify](https://github.com/langgenius/dify) | 133K+ ⭐ | Plugin |
+| [Microsoft AutoGen](https://github.com/microsoft/autogen) | 55K+ ⭐ | Adapter |
+| [LlamaIndex](https://github.com/run-llama/llama_index) | 47K+ ⭐ | Middleware |
+| [CrewAI](https://github.com/crewAIInc/crewAI) | 46K+ ⭐ | Adapter |
+| [LangGraph](https://github.com/langchain-ai/langgraph) | 27K+ ⭐ | Adapter |
+| [Haystack](https://github.com/deepset-ai/haystack) | 24K+ ⭐ | Pipeline |
+| [OpenAI Agents SDK](https://github.com/openai/openai-agents-python) | 20K+ ⭐ | Middleware |
+| [Google ADK](https://github.com/google/adk-python) | 18K+ ⭐ | Adapter |
+| [Azure AI Foundry](https://learn.microsoft.com/azure/ai-studio/) | — | Deployment Guide |
 
-</details>
+## OWASP Agentic Top 10 覆蓋
 
-### Prerequisites
+| 風險 | ID | 狀態 |
+|------|----|--------|
+| 代理目標劫持 | ASI-01 | ✅ 策略引擎阻止未授權的目標變更 |
+| 過度能力 | ASI-02 | ✅ 能力模型強制最小權限原則 |
+| 身份與權限濫用 | ASI-03 | ✅ 基於 Ed25519 憑證的零信任身份 |
+| 代理供應鏈攻擊 | ASI-04 | ✅ 相依混淆掃描 + 工具驗證 |
+| 意外程式碼執行 | ASI-05 | ✅ Agent Runtime 執行環 + 沙箱 |
+| 記憶體投毒 | ASI-06 | ✅ 帶完整性檢查的情節記憶 |
+| 不安全的代理間通訊 | ASI-07 | ✅ AgentMesh 加密通道 + 信任閘控 |
+| 級聯故障 | ASI-08 | ✅ 熔斷器 + SLO 執行 |
+| 人機信任缺失 | ASI-09 | ✅ 完整稽核軌跡 + 飛行記錄器 |
+| 惡意代理 | ASI-10 | ✅ 終止開關 + 權限環隔離 + 行為異常偵測 |
 
-- **Python**: 3.10+
-- **Node.js**: 18+ / npm 9+ (TypeScript SDK)
-- **.NET**: 8+
-- **Go**: 1.25+
-- **Rust**: 1.70+
-- **Optional**: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_SECRET` for Azure-integrated features
+完整對應包含實作細節和測試證據：**[OWASP-COMPLIANCE.md](docs/compliance/owasp-agentic-top10-architecture.md)**
 
----
+### 法規對應
 
-## Framework Support
+| 法規 | 截止日期 | AGT 覆蓋 |
+|------------|----------|-------------|
+| 歐盟 AI 法案 — 高風險 AI (Annex III) | 2026 年 8 月 2 日 | 稽核軌跡 (Art. 12)、風險管理 (Art. 9)、人工監督 (Art. 14) |
+| Colorado AI 法案 (SB 24-205) | 2026 年 6 月 30 日 | 風險評估、人工監督機制、消費者揭露 |
+| 歐盟 AI 法案 — GPAI 義務 | 生效中 | 透明性、著作權策略、系統性風險評估 |
 
-| Framework | Integration |
-|-----------|-------------|
-| [**Microsoft Agent Framework**](https://github.com/microsoft/agent-framework) | Native Middleware |
-| [**Semantic Kernel**](https://github.com/microsoft/semantic-kernel) | Native (.NET + Python) |
-| [AutoGen](https://github.com/microsoft/autogen) | Adapter |
-| [LangGraph](https://github.com/langchain-ai/langgraph) / [LangChain](https://github.com/langchain-ai/langchain) | Adapter |
-| [CrewAI](https://github.com/crewAIInc/crewAI) | Adapter |
-| [OpenAI Agents SDK](https://github.com/openai/openai-agents-python) | Middleware |
-| Claude Code | Governance plugin package |
-| [Google ADK](https://github.com/google/adk-python) | Adapter |
-| [LlamaIndex](https://github.com/run-llama/llama_index) | Middleware |
-| [Haystack](https://github.com/deepset-ai/haystack) | Pipeline |
-| [Mastra](https://github.com/mastra-ai/mastra) | Adapter |
-| [Dify](https://github.com/langgenius/dify) | Plugin |
-| [Azure AI Foundry](https://learn.microsoft.com/azure/ai-studio/) | Deployment Guide |
-| GitHub Copilot CLI | Governance installer |
+AGT 提供 **執行期治理** — 規定代理允許執行的操作。對於 **資料治理** 和面向監管機構的證據匯出，可參考 [Microsoft Purview DSPM for AI](https://learn.microsoft.com/purview/ai-microsoft-purview) 作為補充層。
 
-Full list: [Framework Integrations](agent-governance-python/agentmesh-integrations/) · [Quickstart Examples](examples/quickstart/)
+## 效能
 
----
+治理額外負荷為 **每次操作 < 0.1 ms** — 大約比一次 LLM API 呼叫快 10,000 倍。
 
-## Examples
-
-| Example | Framework | What it demonstrates |
-|---------|-----------|----------------------|
-| [acs-email-tool](examples/acs-email-tool) | Framework-neutral ACS host | Snapshot, verdict, transform, deny, and host enforcement |
-| [acs-atr-annotator](examples/acs-atr-annotator) | ACS custom policy | Independent threat-rule annotations with fail-closed decisions |
-| [openai-agents-governed](examples/openai-agents-governed) | OpenAI Agents SDK | Policy-gated tool calls with trust tiers |
-| [crewai-governed](examples/crewai-governed) | CrewAI | Multi-agent governance with role-based policies |
-| [smolagents-governed](examples/smolagents-governed) | HuggingFace smolagents | Lightweight agent governance |
-| [maf-integration](examples/maf-integration) | MAF | Microsoft Agent Framework integration |
-| [mcp-trust-verified-server](examples/mcp-trust-verified-server) | MCP | Trust-verified MCP server implementation |
-| [governance-dashboard](examples/demos/governance-dashboard) | Streamlit | Real-time fleet visibility dashboard |
-
----
-
-## Specifications
-
-Every major component has a formal RFC 2119 specification with conformance tests. These specs define the behavioral contract: what implementations MUST, SHOULD, and MAY do.
-
-| Specification | Scope | Tests |
+| 指標 | 延遲 (p50) | 吞吐量 |
 |---|---|---|
-| [Agent OS Policy Engine](docs/specs/AGENT-OS-POLICY-ENGINE-1.0.md) | Native runtime integration and fail-closed semantics | -- |
-| [Agent Control Specification](policy-engine/spec/SPECIFICATION.md) | Stateless intervention-point policy runtime, verdicts, transform, fail-closed | -- |
-| [AgentMesh Identity and Trust](docs/specs/AGENTMESH-IDENTITY-TRUST-1.0.md) | Credentials, trust scoring, delegation chains | 135 |
-| [Agent Hypervisor Execution Control](docs/specs/AGENT-HYPERVISOR-EXECUTION-CONTROL-1.0.md) | Privilege rings, saga orchestration, kill switch | 80 |
-| [AgentMesh Trust and Coordination](docs/specs/AGENTMESH-TRUST-COORDINATION-1.0.md) | Peer trust negotiation, mesh-wide policy | 62 |
-| [Agent SRE Governance](docs/specs/AGENT-SRE-GOVERNANCE-1.0.md) | SLOs, error budgets, chaos, circuit breakers | 111 |
-| [MCP Security Gateway](docs/specs/MCP-SECURITY-GATEWAY-1.0.md) | Tool poisoning, drift detection, hidden instructions | 127 |
-| [Agent Lightning Fast-Path](docs/specs/AGENT-LIGHTNING-FAST-PATH-1.0.md) | RL training governance, violation penalties | 100 |
-| [Framework Adapter Contract](docs/specs/FRAMEWORK-ADAPTER-CONTRACT-1.0.md) | Native framework mediation contract | -- |
-| [Audit and Compliance](docs/specs/AUDIT-COMPLIANCE-1.0.md) | Merkle audit, compliance mapping, Decision BOM | 157 |
-| [AgentMesh Wire Protocol](docs/specs/AGENTMESH-WIRE-1.0.md) | Message format, routing, serialization | -- |
+| 策略評估（1 條規則） | 0.012 ms | 72K ops/sec |
+| 策略評估（100 條規則） | 0.029 ms | 31K ops/sec |
+| 核心層級執行 | 0.091 ms | 9.3K ops/sec |
+| 轉接器額外負荷 | 0.004–0.006 ms | 130K–230K ops/sec |
+| 並行吞吐量（50 個 agents） | — | 35,481 ops/sec |
 
-**992 conformance tests** ensure code stays aligned to specs. [29 Architecture Decision Records](docs/adr/) document why.
+完整方法論及各轉接器細分：**[BENCHMARKS.md](../BENCHMARKS.md)**
 
----
+## 安全模型與限制
 
-## Standards Compliance
+此工具包提供 **應用層 (Python middleware) 治理**，而非作業系統核心層隔離。策略引擎與其治理的代理執行在 **同一個 Python 程序中**。這與所有基於 Python 的代理框架 (如 LangChain、CrewAI、AutoGen 等) 使用相同的信任邊界。
 
-| Standard | Coverage |
-|----------|----------|
-| [OWASP Agentic AI Top 10](docs/compliance/owasp-agentic-top10-architecture.md) | All ASI risk categories mapped with deterministic controls |
-| [NIST AI RMF 1.0](docs/compliance/nist-ai-rmf-alignment.md) | Full GOVERN, MAP, MEASURE, MANAGE alignment |
-| [EU AI Act](docs/compliance/) | Compliance mapping with automated evidence |
-| [SOC 2](docs/compliance/soc2-mapping.md) | Control mapping with audit trail export |
-| [AARM Extended](https://aarm.dev/builders/agent-governance-toolkit-microsoft) | All R1–R9 requirements satisfied; verified Jun 14, 2026 |
-| [ATF](https://agentictrustframework.ai/ecosystem) | All five elements mapped: Agent Mesh (identity), Agent OS (policy), Agent Compliance (governance), Agent Runtime (sandboxing), Agent SRE (incident response) |
+| 層 | 提供能力 | 不提供 |
+|-------|-----------------|------------------------|
+| 策略引擎 | 確定性動作攔截、拒絕清單執行 | 硬體層級記憶體隔離 |
+| 身份 (IATP) | 基於 Ed25519 的加密代理憑證、信任評分 | 作業系統層級程序隔離 |
+| 執行環 | 具資源限制的邏輯權限層級 | CPU 環層級強制執行 |
+| 啟動完整性 | 啟動時對治理模組進行 SHA-256 竄改偵測 | 硬體信任根 (如 TPM/Secure Boot) |
 
----
+**正式環境建議：**
+- 將每個代理執行在 **獨立容器中**，以實現作業系統層級隔離
+- 所有安全策略規則以 **可設定範例設定** 形式提供 — 請根據您的環境進行審查和自訂 (參見 `examples/policies/`)
+- 不應將任何內建規則集視為完整
+- 詳細資訊參見 [Architecture — Security Model & Boundaries](../ARCHITECTURE.md)
 
-## Security
+### 安全工具
 
-AGT enforces governance at the application middleware layer, not at the OS kernel level. The policy engine and agents share the same process boundary.
-
-**Production recommendation:** Run each agent in a separate container for OS-level isolation. See [Architecture: Security Boundaries](docs/ARCHITECTURE.md).
-
-| Tool | Coverage |
+| 工具 | 覆蓋範圍 |
 |------|----------|
-| CodeQL | Python + TypeScript SAST |
-| Gitleaks | Secret scanning on PR/push/weekly |
-| ClusterFuzzLite | 7 fuzz targets (policy, injection, MCP, sandbox, trust) |
-| Dependabot | 13 ecosystems |
-| OpenSSF Scorecard | Weekly scoring + SARIF upload |
+| CodeQL | Python + TypeScript 靜態應用安全測試 |
+| Gitleaks | 在 PR/push/每週執行金鑰掃描 |
+| ClusterFuzzLite | 7 個模糊測試目標 (policy, injection, MCP, sandbox, trust) |
+| Dependabot | 13 個生態系統 (pip, npm, nuget, cargo, gomod, docker, actions) |
+| OpenSSF Scorecard | 每週評分 + SARIF 上傳 |
+| SBOM | SPDX + CycloneDX 產生與證明 |
+| Dependency Review | PR 階段 CVE 和授權檢查 |
 
-See [Known Limitations](docs/LIMITATIONS.md) for honest design boundaries and recommended layered defense.
+## 貢獻者資源
 
----
+- [貢獻指南](https://github.com/microsoft/agent-governance-toolkit/blob/main/CONTRIBUTING.md)
+- [社群](../COMMUNITY.md)
+- [安全政策](https://github.com/microsoft/agent-governance-toolkit/blob/main/SECURITY.md)
+- [架構](../ARCHITECTURE.md)
+- [Changelog](https://github.com/microsoft/agent-governance-toolkit/blob/main/CHANGELOG.md)
+- [Support](https://github.com/microsoft/agent-governance-toolkit/blob/main/SUPPORT.md)
 
-## Documentation
+## 重要聲明
 
-| Category | Links |
-|----------|-------|
-| **Getting Started** | [Quick Start](docs/quickstart.md) · [Tutorials](docs/tutorials/) (60+) · [FAQ](docs/FAQ.md) |
-| **Architecture** | [System Design](docs/ARCHITECTURE.md) · [Threat Model](docs/security/threat-model.md) · [ADRs](docs/adr/) (29) |
-| **Specifications** | [All Specs](docs/specs/) (10 formal specs, 992 conformance tests) |
-| **API Reference** | [Agent OS](agent-governance-python/agent-os/README.md) · [AgentMesh](agent-governance-python/agent-mesh/README.md) · [Agent SRE](agent-governance-python/agent-sre/README.md) |
-| **Compliance** | [OWASP](docs/compliance/owasp-agentic-top10-architecture.md) · [EU AI Act](docs/compliance/) · [NIST AI RMF](docs/compliance/nist-ai-rmf-alignment.md) · [SOC 2](docs/compliance/soc2-mapping.md) · [AARM Extended](https://aarm.dev/builders/agent-governance-toolkit-microsoft) · [ATF](https://agentictrustframework.ai/ecosystem) |
-| **Deployment** | [Azure](docs/deployment/README.md) · [AWS](docs/deployment/README.md) · [GCP](docs/deployment/README.md) · [Docker Compose](docs/deployment/README.md) |
-| **Extensions** | [VS Code](agent-governance-typescript/agent-os-vscode/) · [Framework Integrations](agent-governance-python/agentmesh-integrations/) |
+如果您使用 Agent Governance Toolkit 建立與第三方代理框架或服務協作的應用程式，則需自行承擔風險。我們建議您審查所有與第三方服務共享的資料，並了解第三方在資料保留和資料存放位置方面的做法。您有責任管理您的資料是否會流出組織的合規範圍和地理邊界，以及相關影響。
 
----
+## 授權條款
 
-## Contributing
+本專案基於 [MIT License](https://github.com/microsoft/agent-governance-toolkit/blob/main/LICENSE) 進行授權。
 
-[Contributing Guide](CONTRIBUTING.md) · [Community](docs/COMMUNITY.md) · [Discord](https://discord.gg/TxMRqY3pFr) · [Security Policy](SECURITY.md) · [Changelog](CHANGELOG.md)
+## 商標
 
-**Using AGT?** Add your organization to [ADOPTERS.md](docs/ADOPTERS.md).
-
-## Governance
-
-| Document | Purpose |
-|----------|---------|
-| [GOVERNANCE.md](GOVERNANCE.md) | Decision-making, roles, contributor ladder |
-| [CHARTER.md](docs/CHARTER.md) | Technical charter (LF Projects format) |
-| [MAINTAINERS.md](MAINTAINERS.md) | Maintainers and organizations |
-| [SECURITY.md](SECURITY.md) | Vulnerability reporting and response SLAs |
-| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Microsoft Open Source Code of Conduct |
-| [ANTITRUST.md](ANTITRUST.md) | Competition law guidelines for participants |
-| [TRADEMARKS.md](TRADEMARKS.md) | Trademark usage policy |
-
-## Important Notes
-
-If you use the Agent Governance Toolkit to build applications that operate with third-party agent frameworks or services, you do so at your own risk. We recommend reviewing all data being shared with third-party services and being cognizant of third-party practices for retention and location of data.
-
-## Official Sources
-
-The only official sources for the Agent Governance Toolkit are:
-
-| Resource | Location |
-|----------|----------|
-| **Source code** | [github.com/microsoft/agent-governance-toolkit](https://github.com/microsoft/agent-governance-toolkit) |
-| **Documentation** | [microsoft.github.io/agent-governance-toolkit](https://microsoft.github.io/agent-governance-toolkit/) |
-| **Python packages** | [pypi.org/user/agentgovtoolkit](https://pypi.org/user/agentgovtoolkit/) |
-| **npm packages** | `@microsoft/agent-governance-sdk` on [npmjs.com](https://www.npmjs.com/) |
-| **NuGet packages** | `Microsoft.AgentGovernance.*` on [nuget.org](https://www.nuget.org/) |
-| **Rust crates** | `agent-governance`, `agent-governance-mcp` on [crates.io](https://crates.io/) |
-
-The project team does not maintain or endorse any third-party websites,
-packages, or documentation sites claiming to be official. If you encounter a
-suspicious site or package using the Agent Governance Toolkit name, please
-report it through the channels described in [SECURITY.md](SECURITY.md).
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
-
-## Trademarks
-
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft
-trademarks or logos is subject to and must follow
-[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
-Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
-Any use of third-party trademarks or logos are subject to those third-party's policies.
+本專案可能包含專案、產品或服務的商標或標誌。Microsoft 商標或標誌的授權使用需遵循 [Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general)。在本專案的修改版本中使用 Microsoft 商標或標誌，不得造成混淆或暗示 Microsoft 的贊助。任何第三方商標或標誌的使用，均需遵循該第三方的相關政策。

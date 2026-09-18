@@ -4,7 +4,7 @@ last_reviewed: 2026-07-15
 owner: agt-maintainers
 ---
 
-🌍 [English](https://github.com/microsoft/agent-governance-toolkit/blob/main/README.md) | [日本語](./README.ja.md) | [简体中文](./README.zh-CN.md) | [繁體中文](./README.zh-TW.md)
+🌍 [English](../../README.en.md) | [繁體中文](./README.zh-TW.md)
 
 ![Agent Governance Toolkit](../assets/readme-banner.svg)
 

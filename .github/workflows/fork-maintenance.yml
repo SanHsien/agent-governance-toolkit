@@ -10,12 +10,11 @@ on:
       - CLAUDE.md
       - AGENTS.md
       - README.md
+      - README.en.md
       - SECURITY.md
       - CONTRIBUTING.md
       - docs/fork/**
       - tools/**
-      # 本 fork 與上游分歧的產品碼。上游 CI 鎖在 microsoft/ 名下不會測它，
-      # 所以改到它必須觸發本 gate，否則等於沒有人看著。
       - agent-governance-python/agent-os/src/agent_os/mcp_auth_enforcement.py
       - agent-governance-python/agent-os/tests/test_mcp_auth_enforcement.py
       - requirements-dev.txt
@@ -35,13 +34,9 @@ concurrency:
 
 jobs:
   test:
-    name: fork gate (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    name: fork gate (windows-latest)
+    runs-on: windows-latest
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
     env:
       PYTHONUTF8: "1"
       PYTHONIOENCODING: utf-8
@@ -59,19 +54,6 @@ jobs:
       - name: Install fork-gate dependencies
         run: python -m pip install -r requirements-dev.txt
 
-      - name: Canonical fork gate
-        if: runner.os == 'Windows'
+      - name: Canonical fork gate (Windows)
         shell: pwsh
         run: pwsh -NoProfile -File tools/dev_check.ps1
-
-      - name: Canonical fork gate
-        if: runner.os != 'Windows'
-        run: |
-          python -m compileall -q tools
-          python -m ruff check --select E9,F --target-version py310 tools
-          python -m pytest -c tools/pytest.ini tools/tests
-          python tools/check_links.py
-          # 與 tools/dev_check.ps1 的最後一步等價，理由見該檔的註解：
-          # 上游 CI 鎖在 microsoft/ 名下，本 fork 分歧的產品碼只有這裡看著。
-          python -m pytest \
-            agent-governance-python/agent-os/tests/test_mcp_auth_enforcement.py -q

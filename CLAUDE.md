@@ -3,7 +3,7 @@
 請先完整閱讀並遵守 [`FORK.md`](FORK.md)。產品規則見上游內容為主的 [`AGENTS.md`](AGENTS.md)；衝突時以 FORK.md 為準。本檔只補充 Claude Code 的最小入口。
 
 - 這是保留上游歷史的 fork；不要移除 `upstream`、原作者或 MIT 授權標示。
-- `README.md` 保持上游英文產品說明（產品測試契約）；繁中維護規則在 `FORK.md`。不要把產品 `AGENTS.md` 改寫成維護索引。
+- 根目錄 `README.md` 為繁體中文主說明檔，英文規格說明在 [`README.en.md`](README.en.md)。本 fork 僅支援 Windows 作業系統（PowerShell 環境）。不要把產品 `AGENTS.md` 改寫成維護索引。
 - 產品程式在 `agent-governance-python/`、各 `agent-governance-*` SDK、`policy-engine/`、`examples/`，以上游為準，除非 `FORK.md`／`REVIEW.md` 已記錄 overlay。
 - 不要在本 fork 發 PyPI／npm／NuGet／GHCR，不要部署 GitHub Pages，不要把 fork-only 檔案送進上游。
 - 日常修改直接推 `origin/main`，不開功能分支、不開維護 PR；需要他人審查或高風險改動才走 PR。
