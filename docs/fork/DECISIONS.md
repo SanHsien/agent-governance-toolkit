@@ -211,9 +211,9 @@ crate** 而言，精確釘版會強迫每個下游的 `Cargo.lock` 跟著鎖死�
    - 修正處置：將 Dependabot 4 筆安全相依性更新（PR `#3` brace-expansion、PR `#4` hono、PR `#5` @babel/core、PR `#6` js-yaml）逐一檢驗並合入 `main` 分支，隨後以 `gh api /repos/SanHsien/agent-governance-toolkit/branches` 與 `/tags` 直接查核遠端，全數刪除 4 個已合入之遠端分支與 23 個歷史舊 tags。GitHub 上僅嚴格保留單一分支 `main` 與單一最新 tag/release `v5.0.0`。
    - 規則寫入 `FORK.md` 與本檔。
 
-## 2026-09-17：評估並合併 Dependabot PR #9~#24 與清理分支
+## 2026-09-17：評估並合併 Dependabot PR #9~#27 與清理分支
 
-**背景**：GitHub 針對相依性漏洞自動觸發 Dependabot 安全更新，陸續產生 PR #9~#24：
+**背景**：GitHub 針對相依性漏洞自動觸發 Dependabot 安全更新，陸續產生 PR #9~#27：
 - PR #9：`rmcp` 2.0.0 in `/policy-engine`
 - PR #10：`js-yaml` 3.15.2 in `/agent-governance-typescript`
 - PR #11：`vitest` 4.1.11 in `mastra-agentmesh`
@@ -230,19 +230,22 @@ crate** 而言，精確釘版會強迫每個下游的 `Cargo.lock` 跟著鎖死�
 - PR #22：`vitest` 4.1.11 in `mcp-proxy`
 - PR #23：`rmcp` 2.1.0 in `/policy-engine`
 - PR #24：`fast-uri` 3.1.8 in `mcp-proxy`
+- PR #25：`@hono/node-server` 2.1.1 in `mcp-proxy`
+- PR #26：`body-parser` 2.3.0 in `mcp-proxy`
+- PR #27：`qs` 6.16.0 in `mcp-proxy`
 
 **決定**：
-1. **評估並合入 PR #9~#24**：
+1. **評估並合入 PR #9~#27**：
    - **PR #9 & #23 (`rmcp` 2.0.0 -> 2.1.0)**：徹底解決 `policy-engine` 兩項高風險 CVE（CVE-2026-63128 與 CVE-2026-63127），對照上游審計 PR #4018，引用符號完全相容，編譯測試全綠。
    - **PR #10, #17, #20 (`js-yaml`)**：解決 `agent-governance-typescript`、`copilot` 擴充套件與 `mcp-proxy` 內部之 `js-yaml` 多項 DoS 與 CPU 耗盡漏洞。
    - **PR #11~#13, #22 (`vitest` 4.1.11)**：解決 `mastra-agentmesh`、`copilot-governance`、`mcp-server` 與 `mcp-proxy` 之 `@vitest/mocker` 路徑走訪任意檔案讀取漏洞。
-   - **PR #14~#16, #18, #21, #24**：解決 `mcp-server` 與 `mcp-proxy` 之 `hono`、`fast-uri`、`qs` 與 `@hono/node-server` 漏洞。
+   - **PR #14~#16, #18, #21, #24~#27**：解決 `mcp-server` 與 `mcp-proxy` 之 `hono`、`fast-uri`、`qs`、`body-parser` 與 `@hono/node-server` 漏洞。
    - **PR #19**：解決 `copilot` 擴充套件內部之 `brace-expansion` 記憶體消耗 DoS 漏洞。
    - **驗證**：所有 PR 均通過 GitHub Actions 之 `fork gate (ubuntu-latest)` 與 `fork gate (windows-latest)`；本地 `tools/dev_check.ps1` 全綠。
-   - **合入處置**：依序以 squash merge 合入 `main`，16 筆 PR 均正常結案為 MERGED，已修復告警數由 30 增加至 93（成功解決 63 項漏洞告警）。
+   - **合入處置**：依序以 squash merge 合入 `main`，19 筆 PR 均正常結案為 MERGED，已修復告警數由 30 增加至 97（成功解決 67 項漏洞告警）。
 2. **嚴格落實單一分支原則**：
    - 各 PR 合入後立即以 `--delete-branch` 刪除 origin 上的遠端分支。
    - 經 `git ls-remote --heads origin` 查核，遠端嚴格僅保留唯一分支 `main`。
 3. **Dependabot 告警現況分析與錯誤研判**：
    - 診斷 Dependabot 更新失敗紀錄（如 Run #34697776783，針對 mastra-agentmesh 之 esbuild 更新）：因 `tsup: 8.5.1` 要求 `esbuild: ^0.27.0`，而修復版 esbuild 為 `>= 0.28.1`，npm 嘗試降級路徑失敗致使 Dependabot updater 報錯。
-   - 其餘 23 個模組之 npm/uv 告警均屬上游 checked-in lockfiles 之相依性，依照本 fork 治理原則，靜待上游常態整併（如上游 PR #4006）。
+   - 其餘 19 個模組之 npm/uv 告警均屬上游 checked-in lockfiles 之相依性，依照本 fork 治理原則，靜待上游常態整併（如上游 PR #4006）。
