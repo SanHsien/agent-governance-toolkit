@@ -209,5 +209,8 @@
       "GitHub Actions deployment",
       "Real-time safety annotations"
     ]
+  },
+  "overrides": {
+    "qs": "6.16.0"
   }
 }
