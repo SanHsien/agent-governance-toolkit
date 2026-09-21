@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """檢查本 fork overlay 文件之間的相對連結。
 
-只驗 FORK.md、NOTICE.md、REVIEW.md、CLAUDE.md、SECURITY.md、CONTRIBUTING.md
+只驗 FORK.md、NOTICE.md、REVIEW.md、SECURITY.md、CONTRIBUTING.md
 與 docs/fork/。不掃根目錄 README.md／AGENTS.md：那是上游產品契約，頂部 overlay
 以外的連結由上游負責。
 
@@ -29,7 +29,6 @@ FORK_DOCUMENTS = [
     ROOT / "FORK.md",
     ROOT / "NOTICE.md",
     ROOT / "REVIEW.md",
-    ROOT / "CLAUDE.md",
     ROOT / "SECURITY.md",
     ROOT / "CONTRIBUTING.md",
 ]

@@ -133,3 +133,15 @@ Before opening a PR:
 - Ensure commits are DCO-compliant by including a signoff (`git commit -s`).
 - For docs PRs, run `python scripts/docs/check_links.py` and `python scripts/docs/check_frontmatter.py` locally first.
 - Avoid markdown links to external sites that return `403` to automated link checkers. When an external source must be cited but the host blocks bots, prefer plain-text or code-formatted URLs in docs and put clickable links in the PR description instead.
+
+## Fork 操作規則與環境注意事項
+
+- 這是保留上游歷史的 fork；不要移除 `upstream`、原作者或 MIT 授權標示。
+- 本 fork 僅支援 Windows 作業系統（PowerShell 環境）；根目錄 `README.md` 為繁體中文主說明，英文規格見 `README.en.md`。
+- 不要把 fork-only 檔案送進上游。
+- 日常修改直接推 `origin/main`，不開功能分支、不開維護 PR；需要他人審查或高風險改動才走 PR。
+- 開 PR 前先 `gh repo set-default SanHsien/agent-governance-toolkit`，並明寫 `gh pr create --repo SanHsien/agent-governance-toolkit --base main --head <分支>`；建完讀輸出的 URL 確認 owner。
+- 合併任何 PR（含 Dependabot）前必須讀完整 diff；CI 綠燈不等於審查過，不要自動合併。
+- 提交前跑 `pwsh -NoProfile -File tools\dev_check.ps1`；產品檔有改再依 `docs/fork/DEVELOPMENT.md` 跑對應套件測試。
+- API key、`.env`、Azure 憑證、稽核日誌與帳號資料一律不可提交。
+- 使用繁體中文溝通，直接交付可驗證結果，避免冗長背景鋪陳。

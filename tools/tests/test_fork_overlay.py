@@ -173,12 +173,10 @@ def test_review_is_windows_first_record() -> None:
 
 def test_agents_overlay_points_at_fork_rules() -> None:
     agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-    claude = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
 
     assert "SanHsien 維護型 fork overlay" in agents
     assert "FORK.md" in agents
     assert "不要推 `upstream`" in agents
-    assert "FORK.md" in claude
     assert "Agent Governance Toolkit" in agents
 
 
@@ -189,7 +187,6 @@ def test_required_overlay_files_exist() -> None:
         "FORK.md",
         "NOTICE.md",
         "AGENTS.md",
-        "CLAUDE.md",
         "CONTRIBUTING.md",
         "SECURITY.md",
         "REVIEW.md",
