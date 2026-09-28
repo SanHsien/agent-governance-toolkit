@@ -1,0 +1,5 @@
+{
+  "enabled": true,
+  "quick": "pwsh -NoProfile -File tools/dev_check.ps1",
+  "timeout": 180
+}

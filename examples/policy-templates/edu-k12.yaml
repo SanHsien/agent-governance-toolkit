@@ -1,0 +1,21 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+agent_control_specification_version: 0.3.1-beta
+metadata:
+  name: owasp-asi-edu-k12
+  version: "1.0"
+extends: []
+policies:
+  edu_k12:
+    type: rego
+    bundle: rego
+    query: data.agt.examples.templates.edu_k12.result
+intervention_points:
+  input:
+    policy_target: $.input.body
+    policy:
+      id: edu_k12
+  output:
+    policy_target: $.output.content
+    policy:
+      id: edu_k12

@@ -1,0 +1,212 @@
+version: 2
+# Every ecosystem sets commit-message.prefix so dependabot emits titles in the
+# repo's conventional-commit style ("chore(deps): bump X ..."). Without it,
+# some ecosystems generate "Bump X ..." with a capitalized subject, which fails
+# the pr-title check (subjectPattern ^(?![A-Z]).+$). This was previously set on
+# nuget only; extending it to all ecosystems keeps their auto-generated titles
+# passing the same gate.
+updates:
+  # All Python packages under agent-governance-python/, covered by a single
+  # multi-directory entry. A separate per-directory entry for any of these
+  # dirs would be a duplicate ecosystem+directory config and invalidate the
+  # whole file, so they are intentionally consolidated here.
+  #
+  # The python-dev-tooling group (mypy, pytest, structlog, ruff) is grouped
+  # across all directories: the docker-compose-test image installs every
+  # package's [dev] extras into a single pip environment, so bumping one
+  # package's dev-tool floor past another's cap makes the resolver unsolvable
+  # (see issue #2930). Grouping lands those bumps as one PR. Every other
+  # dependency still gets its own individual PR per directory.
+  - package-ecosystem: "pip"
+    directories:
+      - "/agent-governance-python/agent-os"
+      - "/agent-governance-python/agent-mesh"
+      - "/agent-governance-python/agent-hypervisor"
+      - "/agent-governance-python/agent-sre"
+      - "/agent-governance-python/agent-compliance"
+      - "/agent-governance-python/agent-discovery"
+      - "/agent-governance-python/agent-lightning"
+      - "/agent-governance-python/agent-marketplace"
+      - "/agent-governance-python/agent-mcp-governance"
+      - "/agent-governance-python/agent-primitives"
+      - "/agent-governance-python/agent-rag-governance"
+      - "/agent-governance-python/agent-runtime"
+      - "/agent-governance-python/agent-sandbox"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    groups:
+      python-dev-tooling:
+        patterns:
+          - "mypy"
+          - "pytest*"
+          - "structlog"
+          - "ruff"
+
+  # npm packages
+  - package-ecosystem: "npm"
+    directory: "/agent-governance-python/agent-os/extensions/mcp-server"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+
+  - package-ecosystem: "npm"
+    directory: "/agent-governance-python/agent-os/extensions/copilot"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+
+  - package-ecosystem: "npm"
+    directory: "/agent-governance-copilot-cli"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+
+  - package-ecosystem: "npm"
+    directory: "/agent-governance-claude-code"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+
+  - package-ecosystem: "npm"
+    directory: "/agent-governance-typescript"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+
+  - package-ecosystem: "npm"
+    directory: "/agent-governance-antigravity-cli"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+
+  # .NET
+  - package-ecosystem: "nuget"
+    directory: "/agent-governance-dotnet"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    # nuget does not auto-apply the repo's conventional-commit prefix, so the
+    # generated PR title ("Bump X from A to B") fails the pr-title check. Set
+    # it explicitly so nuget bumps match the required title format.
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+
+  # Rust
+  - package-ecosystem: "cargo"
+    directory: "/agent-governance-rust"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+
+  # Go
+  - package-ecosystem: "gomod"
+    directory: "/agent-governance-golang"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+
+  # Docker
+  - package-ecosystem: "docker"
+    directory: "/agent-governance-python/agent-os"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    groups:
+      # codeql-action's init, autobuild and analyze steps must run the same
+      # version: init writes a config stamped with its version and analyze
+      # refuses to load a config from a different one ("Loaded a configuration
+      # file for version X, but running version Y"). Bumping them in separate
+      # PRs leaves every one of them red, so they are grouped into a single PR.
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
+    cooldown:
+      default-days: 7

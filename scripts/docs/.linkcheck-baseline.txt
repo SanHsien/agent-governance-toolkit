@@ -1,0 +1,3 @@
+# Broken-link baseline for scripts/docs/check_links.py
+# Generated; do not edit by hand except to remove entries
+# as the underlying links are fixed. Format: <source>\t<target>

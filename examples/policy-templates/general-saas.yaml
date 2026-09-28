@@ -1,0 +1,21 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+agent_control_specification_version: 0.3.1-beta
+metadata:
+  name: owasp-asi-general-saas
+  version: "1.0"
+extends: []
+policies:
+  general_saas:
+    type: rego
+    bundle: rego
+    query: data.agt.examples.templates.general_saas.result
+intervention_points:
+  input:
+    policy_target: $.input.body
+    policy:
+      id: general_saas
+  output:
+    policy_target: $.output.content
+    policy:
+      id: general_saas

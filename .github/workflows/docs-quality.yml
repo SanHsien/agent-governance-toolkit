@@ -1,0 +1,67 @@
+# Copyright (c) Microsoft Corporation. Licensed under the MIT License.
+name: Docs Quality
+
+# Validates links and frontmatter when a PR changes the documentation site
+# or its quality tooling.
+#
+# Link checking is strict: any broken relative link, missing target, or
+# unresolved anchor fails the job. The baseline file is empty and reserved
+# for approved migrations.
+#
+# Frontmatter checking is strict because the published corpus has complete
+# title, ownership, and review-date metadata.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/*.md'
+      - 'mkdocs.yml'
+      - 'scripts/docs/**'
+      - 'scripts/tests/test_docs_check_*.py'
+      - '.github/workflows/docs-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
+    name: Validate relative links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+      - name: Run link checker
+        run: python scripts/docs/check_links.py --root .
+
+  frontmatter:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
+    name: Validate docs frontmatter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+      - name: Run frontmatter checker
+        run: python scripts/docs/check_frontmatter.py --root . --strict
+
+  unit-tests:
+    if: github.repository == 'microsoft/agent-governance-toolkit'
+    name: Unit tests for docs tooling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+      - name: Install pytest
+        run: |
+          pip install --no-cache-dir --require-hashes --no-deps \
+            -r agent-governance-python/requirements/ci-docs-test.txt
+          pip install --no-cache-dir pytest==8.3.3  # Scorecard: version-pinned (transitive deps)
+      - name: Run docs tooling tests
+        run: pytest scripts/tests/test_docs_check_links.py scripts/tests/test_docs_check_frontmatter.py -q

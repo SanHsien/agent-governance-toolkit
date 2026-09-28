@@ -1,0 +1,21 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+agent_control_specification_version: 0.3.1-beta
+metadata:
+  name: financial-services-asi-starter
+  version: "1.0"
+extends: []
+policies:
+  financial_services:
+    type: rego
+    bundle: rego
+    query: data.agt.examples.templates.financial_services.result
+intervention_points:
+  input:
+    policy_target: $.input.body
+    policy:
+      id: financial_services
+  output:
+    policy_target: $.output.content
+    policy:
+      id: financial_services

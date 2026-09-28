@@ -1,0 +1,6 @@
+pytest>=9
+ruff>=0.16
+# fork gate 會跑 agent-os 的 MCP 認證測試（本 fork 分歧的產品碼）。那支測試
+# 經 agent_os/__init__.py 匯入 agents_compat，而它需要 yaml。乾淨 venv 實測：
+# 裝了 pytest 與 pyyaml 之後 21 條全過，沒有其他缺的依賴。
+pyyaml>=6
