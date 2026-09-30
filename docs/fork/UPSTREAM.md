@@ -75,3 +75,11 @@ README 衝突的解法：保留頂部 fork overlay，把上游新英文內容留
   - Commit：`0533cea`
   - PR：已看到 **#3931**
   - Issue：已看到 **#3930**
+
+## 2026-09-30：第三輪審查
+
+- 逐筆研判記錄於 [`DECISIONS.md`](DECISIONS.md)。採用 `#4157`；其餘安全修正記為 adoption pending（本機無法驗證）。
+- 水位更新：
+  - Commit：`9f2512f`（`9f2512f3c70fc907fa7ddb41caea19aba046af84`）
+  - PR：已看到 **#4197**
+  - Issue：已看到 **#4178**

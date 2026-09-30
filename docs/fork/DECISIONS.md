@@ -265,3 +265,31 @@ crate** 而言，精確釘版會強迫每個下游的 `Cargo.lock` 跟著鎖死�
    - 更新 `tools/tests/test_fork_overlay.py`，驗證中英雙語 README 架構與必要檔案存在。
    - 本地 `tools/dev_check.ps1` 驗收全綠（WINDOWS DEV CHECK GREEN）。
    - 推送至 `origin main`，遠端嚴格維持單一分支。
+
+## 2026-09-30：第三輪上游審查（275 commit／222 PR／38 issue）
+
+範圍：commit `0533cea`..`9f2512f`、PR `#3932`–`#4197`、issue `#3931`–`#4178`。本線與上游無共同祖先，只能 `cherry-pick -x`；本機 gate 不安裝產品依賴，產品套件測試多數無法在本機執行。
+
+**採用**（cherry-pick，測試已在本機通過）：
+
+- `#4157`（`6b64456` → `119656e`）：`mute_agent` scrubber 處理 dict key、tuple 子類別不再崩潰。diff 2 檔 43 行；`agent-os/tests/test_mute_agent.py` 21 passed。
+
+**採用待辦（adoption pending）**，觸發條件＝本 fork 具備可執行對應套件測試的環境（`pip install` 各套件）後逐一重評：
+
+- 安全／fail-closed 修正，本機無法驗證：`#4070`（email/basic auth 掃描複雜度）、`#4131`（MCP replay nonce 原子性）、`#4132`、`#4123`、`#4124`（編碼／不可見字元規避）、`#4069`／`#4130`／`#3746`（agt-policies；缺 `agent_control_specification`，cherry-pick 已試、測試無法 import）、`#4071`、`#4066`、`#4096`／`#4135`／`#4138`／`#4140`／`#4147`／`#4148`（agent-mesh 稽核一致性）、`#3953`、`#4026`、`#4029`、`#4158`／`#4105`／`#3955`／`#3934`（redactor；與已採用的 `#3853` 有相依，`8be4268` cherry-pick 於測試檔衝突）。
+- `#4160`（agent-sre 指標反向）：cherry-pick 乾淨，但 `agent_sre` 無法 import，已捨棄。
+- `#4192`／`#4193`／`#4194`／`#4152`、`#4161`／`#4162`、`#4107`：agent-mesh／agent-sre，本機無法驗證。
+- OpenCode／Claude Code plugin：`#4129`／`#4142`／`#4167`／`#4179`／`#4175`／`#4178`（issue）；Node 套件測試不在本 gate。
+
+**不適用／跟隨上游**：
+
+- policy-engine ACS 重構與衍生修正（`#3939`、`#3940`、`#4004`、`#4014`–`#4059` 系列、issue `#3941`–`#3948`、`#4005`、`#4042`、`#4043`、`#4047`）：Rust／PyO3 大型重構，本線不建置該套件；跟隨上游。
+- 新功能：`#4063` Codex hooks、`#4065`、`#4101`、`#4099`、`#4100`、`#4102`、`#4164`、`#4168`、`#4045`、`#4052`、Studio（`#4170`、`#4195`、`#4155`、`#4169`）、healthcare（`#4153`、`#4154`、`#4156`）：新增能力，非缺陷修正。
+- Windows 相關：`#3913` 已在第二輪採用；本輪無新增 Windows 專屬項目。
+- 依賴升級（約 120 commit／PR：npm、pip requirement、NuGet、cargo、GitHub Actions）：Dependabot 已於本線獨立處理，不逐筆合入。
+- CI／workflow（`#3950`、`#3951`、`#3887`、`#4006`、`#4033`、`#4038`、`#4103`、`#4151`、`#4196`、`#4127`）：本線 workflow 全部鎖官方 repo。
+- 文件／ADOPTERS／ADR／i18n（含西班牙文 README `#3673`）／CODEOWNERS：本線僅保留繁中與英文；其餘為上游專屬。
+- TypeScript 7、rust `ed25519-dalek`／`serde-saphyr` 升級（`#4126`、`#4104`、`#4008`）：大型升版，本機無法建置驗證。
+- 其餘 issue（`#3933`、`#3952`、`#3954`、`#3957`、`#4012`、`#4019`、`#4048`、`#4061`、`#4062`、`#4095`、`#4106`、`#4134`、`#4137`、`#4139`、`#4141`、`#4146`、`#4165`、`#4172`、`#4174`）：對應上述 PR 的問題描述，隨對應 PR 一併處置。
+
+水位：commit `9f2512f3c70fc907fa7ddb41caea19aba046af84`，PR `4197`，issue `4178`。Baseline 代表已審查，不代表已合併。
