@@ -1,9 +1,9 @@
 {
   "repo": "https://github.com/microsoft/agent-governance-toolkit.git",
   "branch": "main",
-  "reviewed_through": "9f2512f3c70fc907fa7ddb41caea19aba046af84",
-  "reviewed_date": "2026-09-30",
-  "notes": "2026-08-28 fork 起點。2026-08-30 完成第一輪審查。2026-09-12 完成第二輪審查：合入 upstream/main 41 個提交至 0533cea（含 #3854 Claude Code hooks 直接啟動、依賴更新等）；PR 水位 3852 → 3931，採用 #3913（Windows OPA --stdin-input 避免靜默拒絕）、#3916（audit_file 落地至 FileAuditSink）、#3924（PolicyRule 補齊 contains/startswith/endswith 避免 deny 規則靜默失效）、#3853（秘鑰後綴遮蔽安全性修復），其餘 62 個 PR（包含已合併的 20 個與未採納的新功能提案/重複更新）記錄於 DECISIONS.md；Issue 水位 3836 → 3930，涵蓋 #3884、#3911、#3912、#3915、#3923 等，全數完成研判並記錄於 DECISIONS.md。 2026-09-30 完成第三輪審查：275 commit／222 PR／38 issue 逐筆研判記錄於 docs/fork/DECISIONS.md；採用 #4157，其餘安全修正記為 adoption pending（本機無法驗證）。",
+  "reviewed_through": "c3e8229dfb19c697468cfb790495d7174ef8bc45",
+  "reviewed_date": "2026-10-06",
+  "notes": "2026-08-28 fork 起點。2026-08-30 完成第一輪審查。2026-09-12 完成第二輪審查：合入 upstream/main 41 個提交至 0533cea（含 #3854 Claude Code hooks 直接啟動、依賴更新等）；PR 水位 3852 → 3931，採用 #3913（Windows OPA --stdin-input 避免靜默拒絕）、#3916（audit_file 落地至 FileAuditSink）、#3924（PolicyRule 補齊 contains/startswith/endswith 避免 deny 規則靜默失效）、#3853（秘鑰後綴遮蔽安全性修復），其餘 62 個 PR（包含已合併的 20 個與未採納的新功能提案/重複更新）記錄於 DECISIONS.md；Issue 水位 3836 → 3930，涵蓋 #3884、#3911、#3912、#3915、#3923 等，全數完成研判並記錄於 DECISIONS.md。 2026-09-30 完成第三輪審查：275 commit／222 PR／38 issue 逐筆研判記錄於 docs/fork/DECISIONS.md；採用 #4157，其餘安全修正記為 adoption pending（本機無法驗證）。 2026-10-06 整樹同步至 c3e8229d（296 commit，橋接 merge；維護者授權整樹採用，非逐筆審查）；PR／issue 水位未推進，仍為 4197／4178。",
   "reviewed_pr_through": 4197,
   "reviewed_issue_through": 4178
 }

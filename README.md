@@ -16,7 +16,7 @@
 [![.NET 8.0+](https://img.shields.io/badge/.NET_8.0+-NuGet-blue?logo=dotnet)](https://www.nuget.org/packages/Microsoft.AgentGovernance)
 [![Rust](https://img.shields.io/badge/Rust-crates.io-orange?logo=rust)](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-rust/agentmesh)
 [![Go](https://img.shields.io/badge/Go-module-00ADD8?logo=go)](https://github.com/microsoft/agent-governance-toolkit/tree/main/agent-governance-golang)
-[![OWASP Agentic Top 10](https://img.shields.io/badge/OWASP_Agentic_Top_10-10%2F10_Covered-blue)](docs/compliance/owasp-agentic-top10-architecture.md)
+[![OWASP Agentic Top 10](https://img.shields.io/badge/OWASP_Agentic_Top_10-7_Full,_3_Partial-blue)](docs/compliance/owasp-agentic-top10-architecture.md)
 [![OpenSSF Best Practices](https://img.shields.io/cii/percentage/12085?label=OpenSSF%20Best%20Practices&logo=opensourcesecurity)](https://www.bestpractices.dev/projects/12085)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/microsoft/agent-governance-toolkit/badge)](https://scorecard.dev/viewer/?uri=github.com/microsoft/agent-governance-toolkit)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/microsoft/agent-governance-toolkit)
@@ -32,7 +32,7 @@
 > (LLM) 的輸入/輸出，也不執行內容審核。它是在應用層對 *代理的行為* (工具呼叫、資源存取、
 > 代理間通訊) 進行治理。對於模型層面的安全，請參閱 [Azure AI Content Safety](https://learn.microsoft.com/azure/ai-services/content-safety/)。
 
-面向 AI 代理的執行期治理 — 唯一一個涵蓋全部 **10 項 OWASP Agentic 風險** 並提供 **13,000+ 測試** 的工具包。它治理的是代理 *做什麼*，而不僅僅是說什麼 — 包括確定性策略執行、零信任身份認證、執行沙箱，以及網站可靠性工程 (SRE) — 支援 **Python · TypeScript · .NET · Rust · Go**
+面向 AI 代理的執行期治理 — 對應 **10 項 OWASP Agentic 風險**（上游標示 7 項完整、3 項部分涵蓋）的工具包。它治理的是代理 *做什麼*，而不僅僅是說什麼 — 包括確定性策略執行、零信任身份認證、執行沙箱，以及網站可靠性工程 (SRE) — 支援 **Python · TypeScript · .NET · Rust · Go**
 
 > **適用於任何技術棧** — 支援 AWS Bedrock、Google ADK、Azure AI、LangChain、CrewAI、AutoGen、OpenAI Agents、LlamaIndex 等。只需透過 `pip install` 即可使用，無廠商鎖定。
 
@@ -104,7 +104,7 @@ pip install agentmesh-lightning        # 強化學習訓練治理
   - [安全工作流](https://github.com/microsoft/agent-governance-toolkit/tree/main/.github/workflows)
 - **12+ 框架整合**：支援 Microsoft Agent Framework、LangChain、CrewAI、AutoGen、Dify、LlamaIndex、OpenAI Agents、Google ADK 等
   - [框架快速入門](https://github.com/microsoft/agent-governance-toolkit/tree/main/examples/quickstart) | [整合方案](https://github.com/microsoft/agent-governance-toolkit/tree/main/docs/proposals)
-- **完整 OWASP 覆蓋**：針對 Agentic Top 10 風險實現 10/10 覆蓋，每個 ASI 類別均有專屬控制措施
+- **OWASP 對應**：Agentic Top 10 的 10 個 ASI 類別皆有對應控制措施（上游標示 7 項完整、3 項部分涵蓋，詳見 `docs/compliance/owasp-agentic-top10-architecture.md`）
   - [OWASP 合規](docs/compliance/owasp-agentic-top10-architecture.md) | [競品比較](../COMPARISON.md)
 - **GitHub Actions 支援 CI/CD**：透過 Agent Governance Verify 在 CI/CD 中執行治理驗證
   - [Agent Governance Verify Action](https://github.com/microsoft/agent-governance-toolkit/tree/main/action)
