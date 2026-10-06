@@ -25,7 +25,7 @@ git rev-parse HEAD
 實查（不是只讀 README）：
 
 - 上游 workflow 在 overlay 後都帶 `github.repository == 'microsoft/agent-governance-toolkit'`（契約測試會鎖住）。
-- `auto-merge-dependabot.yml` 同樣閘在官方 repo。
+- 上游已刪除 `auto-merge-dependabot.yml`（2026-10-06 同步後本 fork 也沒有）；契約測試鎖住它不存在。
 - `docs.yml` 部署 GitHub Pages，已閘。
 - `publish.yml` / `publish-containers.yml` 已閘。
 - 根目錄 `NOTICE` 是上游第三方清單；本 fork 說明在 `NOTICE.md`。

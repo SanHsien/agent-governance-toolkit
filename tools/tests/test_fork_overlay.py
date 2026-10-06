@@ -233,12 +233,14 @@ def test_every_workflow_is_classified_gated_or_ungated() -> None:
     assert names == gated | UNGATED_WORKFLOWS
 
 
-def test_auto_merge_is_gated() -> None:
-    text = (ROOT / ".github" / "workflows" / "auto-merge-dependabot.yml").read_text(
-        encoding="utf-8"
-    )
-    assert f"github.repository == '{OFFICIAL_REPO}'" in text
-    assert "dependabot[bot]" in text
+def test_dependabot_auto_merge_workflow_is_absent() -> None:
+    # Upstream removed auto-merge-dependabot.yml; the fork never auto-merges
+    # (AGENTS.md: read every PR diff before merging). A reintroduced copy,
+    # gated or not, is a contract violation.
+    assert not (ROOT / ".github" / "workflows" / "auto-merge-dependabot.yml").exists()
+    for path in (ROOT / ".github" / "workflows").glob("*.yml"):
+        text = path.read_text(encoding="utf-8")
+        assert "gh pr merge" not in text, path.name
 
 
 def test_fork_workflows_use_python_314() -> None:

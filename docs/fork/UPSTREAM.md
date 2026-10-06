@@ -83,3 +83,15 @@ README 衝突的解法：保留頂部 fork overlay，把上游新英文內容留
   - Commit：`9f2512f`（`9f2512f3c70fc907fa7ddb41caea19aba046af84`）
   - PR：已看到 **#4197**
   - Issue：已看到 **#4178**
+
+
+## 2026-10-06：整樹同步至 `c3e8229d`
+
+- 橋接 commit（`git merge -s ours --allow-unrelated-histories 0533cea`）加 `git merge upstream/main`，三方 base 為 `0533cea`，共 296 個上游 commit；30 個衝突檔的逐檔解決表、保留的 fork 差異與驗證證據記錄於 [`DECISIONS.md`](DECISIONS.md)（2026-10-06 條目）。
+- 最終分支 `sync/upstream-c3e8229d` 是單一 commit，父為 fork `main`（`40efdf19`）。
+- 這次不是逐筆審查：維護者授權整樹採用。2026-09-30 記為 adoption pending 的項目隨整樹進來。
+- 水位更新：
+  - Commit：`c3e8229d`（`c3e8229dfb19c697468cfb790495d7174ef8bc45`）
+  - PR：**不推進**，維持 **#4197**（本輪沒有逐筆讀 #4197 以後的 PR）
+  - Issue：**不推進**，維持 **#4178**
+- 新上游 workflow 檢查：`redteam-benchmark.yml` 已加官方 repo 閘門；上游刪除 `auto-merge-dependabot.yml`，本 fork 跟著刪除。

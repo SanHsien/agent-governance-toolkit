@@ -125,7 +125,8 @@ class McpAuthPolicy:
         Args:
             server_name: Name of the MCP server.
             auth_method: Authentication method being used.
-            url: Server URL (for logging/audit).
+            url: Server URL used for TLS enforcement. When omitted, the
+                configured server entry URL is used.
 
         Returns:
             AuthCheckResult indicating whether the connection is allowed.
@@ -159,9 +160,12 @@ class McpAuthPolicy:
                 # all bypassed the require_tls gate because none of
                 # them start with "http://" — only `https://` and
                 # `wss://` represent actual TLS-secured transports.
-                if entry.require_tls and url:
+                # The caller URL describes the connection being checked and
+                # therefore takes precedence over the configured fallback.
+                effective_url = url or entry.url
+                if entry.require_tls and effective_url:
                     try:
-                        scheme = urlparse(url).scheme.lower()
+                        scheme = urlparse(effective_url).scheme.lower()
                     except (ValueError, AttributeError):
                         scheme = ""
                     if scheme not in {"https", "wss"}:
@@ -194,11 +198,9 @@ class McpAuthPolicy:
         # Fall back to default policy
         if auth_method in self._default_methods:
             # TLS check: an unregistered server name should not get weaker
-            # transport guarantees than a registered one. Without this, a typo
-            # in the allowlist key turned a plain-http endpoint from denied
-            # into allowed. Only enforced when a URL is actually supplied --
-            # an omitted/empty URL stays allowed here too, matching the
-            # registered-entry gate above.
+            # transport guarantees than a registered one. Only enforced when
+            # a URL is actually supplied — an omitted/empty URL stays
+            # allowed here too, matching the registered-entry gate above.
             if self._default_require_tls and url:
                 try:
                     scheme = urlparse(url).scheme.lower()
@@ -254,11 +256,19 @@ class McpAuthPolicy:
 
         servers = []
         for s in policy_data.get("servers", []):
+            url = s.get("url", "")
+            require_tls = s.get("require_tls", True)
+            if require_tls and (not isinstance(url, str) or not url.strip()):
+                logger.warning(
+                    "MCP server '%s' requires TLS but has no URL configured; "
+                    "TLS cannot be validated until a URL is supplied at check time",
+                    s.get("name", "<unnamed>"),
+                )
             servers.append(McpServerEntry(
                 name=s["name"],
-                url=s.get("url", ""),
+                url=url,
                 allowed_auth_methods=s.get("allowed_auth_methods", ["oauth2", "mtls", "bearer"]),
-                require_tls=s.get("require_tls", True),
+                require_tls=require_tls,
                 min_tls_version=s.get("min_tls_version", "1.2"),
             ))
 

@@ -293,3 +293,96 @@ crate** 而言，精確釘版會強迫每個下游的 `Cargo.lock` 跟著鎖死�
 - 其餘 issue（`#3933`、`#3952`、`#3954`、`#3957`、`#4012`、`#4019`、`#4048`、`#4061`、`#4062`、`#4095`、`#4106`、`#4134`、`#4137`、`#4139`、`#4141`、`#4146`、`#4165`、`#4172`、`#4174`）：對應上述 PR 的問題描述，隨對應 PR 一併處置。
 
 水位：commit `9f2512f3c70fc907fa7ddb41caea19aba046af84`，PR `4197`，issue `4178`。Baseline 代表已審查，不代表已合併。
+
+
+## 2026-10-06：全樹採用上游 `c3e8229d`（296 commit，一次性整樹同步）
+
+**決定**：維護者授權採用上游全部待辦工作。把上游 `main` `c3e8229dfb19c697468cfb790495d7174ef8bc45`（`c3e8229d`，`chore(deps): Bump fast-uri (#4223)`）整樹併入本 fork，baseline 由 `9f2512f` 推進到此 SHA。範圍：`0533cea`..`c3e8229d` 共 296 個 commit。2026-09-30 記為 adoption pending 的安全修正（`#4070`、`#4131`、`#4132`、`#4123`、`#4124`、agent-mesh 稽核一致性、redactor `#4158`／`#4105`／`#3955`／`#3934` 等）隨整樹一起進來，不再逐筆 cherry-pick。
+
+**方法**：本 fork 的歷史在 2026-09-28 被 squash，與上游沒有共同祖先，所以用橋接 commit 製造可合併的祖先：
+
+1. `git merge -s ours --allow-unrelated-histories 0533cea`（橋接 commit，樹不變；`0533cea` 是上次合併的上游點）。
+2. `git merge upstream/main`，三方合併的 base 即 `0533cea`；30 個檔案衝突，逐檔解決。
+3. 最終分支 `sync/upstream-c3e8229d` 只有一個新 commit，父為本 fork 當時的 `main`（`40efdf19`），樹等於上面解決後的合併結果。上游 296 個 commit 不進本 fork 的歷史，與 2026-09-28 squash 的方針一致。
+
+**解決原則**：產品碼（agent-mesh、agent-os、policy-engine、SDK）以上游為準；fork 這邊只有「上游後來改寫過的 cherry-pick」就取上游，fork 專屬修正才疊在上游之上。overlay 檔保留 fork 版，只併入上游的事實性更新。
+
+**衝突表（30 個）**
+
+| 檔案 | 解決 | 理由 |
+| --- | --- | --- |
+| `agent-mesh/.../governance/audit_backends.py` | 上游 | fork 版是 `#3916` 的早期版本；上游改為「resume 時驗證整條鏈、略過不可解析行」，更嚴格 |
+| `agent-mesh/.../governance/federation.py` | 上游 | 上游的 `OrgPolicyRule` 運算子實作涵蓋 fork 版全部運算子，另加錨定、缺值、NaN／inf、未知語法 fail-closed |
+| `agent-mesh/.../governance/govern.py` | 上游 | 上游已有 `audit_secret_key`／`AGT_AUDIT_SECRET_KEY`，且加了 32 byte 下限 |
+| `agent-mesh/.../governance/opa.py` | 上游 | `#3913`（`--stdin-input`）已在上游，並抽出 `_rego_file_for_cli()` |
+| `agent-mesh/.../governance/policy.py` | 上游 | 同 federation；`contains`／`startswith`／`endswith`（`#3924`）上游版為超集 |
+| `agent-mesh/tests/test_govern.py` | 上游 | 測上游行為；fork 版 `audit_secret_key=b"irrelevant-for-reading"` 在新 resume 驗證下不再成立 |
+| `agent-mesh/tests/test_policy_rule_string_operators.py` | 上游 | 上游為超集；fork 的 `test_empty_operand_does_not_match_every_string` 測的行為已被上游改成 fail-closed 的「畸形條件」，被上游新測試取代 |
+| `agent-mesh/tests/test_org_policy_rule_string_operators.py` | 上游 | 同上 |
+| `agent-os/src/agent_os/credential_redactor.py` | 上游 | 上游版涵蓋 `#3853` 的全部 pattern，並修正 Google API key 結尾 `-` 與 Basic auth 掃描複雜度 |
+| `agent-os/src/agent_os/mcp_auth_enforcement.py` | 上游 | `#3849` 已在上游；fork 只剩註解差異 |
+| `agent-os/tests/test_credential_redactor.py` | 逐 hunk：保留 fork 的 `ids=`，其餘上游 | 見下「保留的 fork 差異」 |
+| `agentmesh-integrations/copilot-governance/package.json` | fork | 保留 `overrides.esbuild ^0.28.1`，見下 |
+| `agent-os/extensions/mcp-server/package.json` | 上游 | 上游版本都不低於 fork 版；`@vitest/coverage-v8` 4.1.10 是上游自己的組合 |
+| `agent-governance-typescript/package.json` | 上游 | `js-yaml` 5.4.2、`@noble/*` 較新 |
+| `policy-engine/integrations/mcp/Cargo.toml` | 上游 | `rmcp = "2.1.0"`（含 CVE 修正），與 `Cargo.lock` 一致 |
+| `policy-engine/Cargo.lock` | 上游 | 與上游 manifest 一致 |
+| `policy-engine/core/tests/opa.rs` | 接受上游刪除 | 上游已移除該 dispatcher；`with_eval_timeout` 在上游 `policy-engine` 全無，`#3848` 的修正對象已不存在 |
+| `.github/workflows/auto-merge-dependabot.yml` | 接受上游刪除 | 本 fork 不自動合併（`AGENTS.md`：合併前讀每個 PR diff）；fork 版只是加了官方 repo 閘門的同一支 workflow，不是測試必需的 no-op。`tools/tests/test_fork_overlay.py` 改為鎖「它不存在」 |
+| `agent-governance-{antigravity-cli,claude-code,copilot-cli,opencode}/package-lock.json`（4） | 上游 | 上游版 `js-yaml 4.3.2` 已含 fork 的修正 |
+| `agent-mesh/packages/mcp-proxy/package-lock.json` | 上游 + `npm update` | 見下 |
+| `agent-os/extensions/mcp-server/package-lock.json` | 上游 + `npm update` | 見下 |
+| `agent-governance-typescript/package-lock.json` | 上游 + `npm update` | 見下 |
+| `agent-hypervisor/uv.lock` | 上游 + `uv lock --upgrade-package cryptography` | 見下 |
+| `README.md` | fork | 繁中主頁保留；併入上游事實更新（OWASP 徽章改為「7 項完整、3 項部分」，並把繁中頁「10/10 覆蓋」「13,000+ 測試」的主張同步更正） |
+| `mkdocs.yml` | 上游 + 移除語系 | 語言切換器只留 English 與繁體中文（移除上游新增的 Español 與既有的 日本語／한국어／简体中文）；以位元組為準保留上游的 CRLF，避免整檔空白差異 |
+| `docs/i18n/README.md` | fork | 語系表只列 English 與繁體中文 |
+| `docs/i18n/README.ko.md` | 維持刪除 | fork 只留 zh-TW 與英文 |
+
+解決類型計數：上游整檔 10、逐 hunk 或保留 fork 3、manifest／lock 取上游 12（其中 4 個再以 `npm update`／`uv lock` 補回 fork 已有的安全版本）、fork overlay 2、接受刪除 3。
+
+**非衝突檔的後續處置**
+
+- `docs/i18n/README.es.md`、`quickstart.es.md`：上游新增，fork 只留 zh-TW 與英文，移除。
+- `agent-mesh/tests/governance/test_audit_backends.py`：自動合併後出現重複的 `TestFileAuditSinkConstructionValidation`／`TestFileAuditSinkExternalRotation`（fork 的 `#3916` 舊副本與上游新版並存），其中舊版 `test_write_after_external_replace_resyncs_to_new_file` 在新驗證下失敗。改取上游整檔（同時去掉 `email_validator` 的 MagicMock shim，完整安裝依賴後不需要）。
+- 新 workflow `redteam-benchmark.yml`（無 secret、不發佈，但是 `ubuntu-latest` 的上游 CI）：加 `github.repository == 'microsoft/agent-governance-toolkit'` 閘門。`ci.yml` 新增的 `engine-api-conformance`、`terraform-examples` 兩個 job 靠 `needs: changes` 間接被閘，補上顯式閘門以與其他 job 一致。逐 job 檢查全部 workflow：除 `fork-maintenance.yml`、`upstream-check.yml`、`dependency-freshness.yml` 外都有閘門（直接或經 `needs`）。
+- `README.en.md`（鏡像上游英文 README）：併入 OWASP 徽章、Codex CLI 列、k8s-agent-sandbox 範例列。
+- `REVIEW.md`、`tools/tests/test_fork_overlay.py`、`tools/dev_check.ps1` 註解：隨 `auto-merge-dependabot.yml` 刪除與產品碼分歧消失而更新。
+
+**保留的 fork 差異（疊在上游之上）**
+
+1. `agent-os/tests/test_credential_redactor.py`：`@pytest.mark.parametrize(..., ids=["akia", "ghp", "aiza", "sk_live"])`。pytest 會把 parametrize id 放進環境變數 `PYTEST_CURRENT_TEST`；10 萬字元的 id 超過 Windows 環境變數 32,767 字元上限。證據：純上游樹跑 `test_credential_redactor.py` 是 153 passed、8 errors；合併後 157 passed。
+2. `agentmesh-integrations/copilot-governance/package.json`：`overrides.esbuild ^0.28.1`，lock 為 esbuild 0.28.2（上游為 0.27.7，低於 Dependabot 告警的修正版 0.28.1）。同樣的 `mastra-agentmesh` override、`agent-os/extensions/copilot` 的 `qs 6.16.0` override、`agent-mesh/services/api` 的 `qs 6.16.0`、`examples/reasoning-attestation-governed` 的 `cryptography==50.0.1` 本來就是 fork-only 且上游沒有動，自動合併保留。
+3. `package-lock.json` 補回 fork 已有的較新版本（不是手改，是 `npm update <pkg> --package-lock-only --ignore-scripts --legacy-peer-deps`，manifest 沒變）：`mcp-proxy`（body-parser 2.2.2→2.3.0、hono 4.13.7→4.13.13、ip-address 10.4.0→10.7.3、js-yaml 4.3.0→4.3.2、nanoid 3.3.17→3.3.20）、`mcp-server`（hono、nanoid）、`agent-governance-typescript`（@babel 系列、browserslist 系列）。`agent-hypervisor/uv.lock`：cryptography 48.0.1→49.0.0。補回並不完整：同一份 lock 的 anyio 原本有 4.14.2 與 4.15.1 兩個解析分支，合併後只剩 4.14.2（4.14.2 本身是上游 #4032 的 Dependabot 安全升版）；`@vitest/coverage-v8` 4.1.11→4.1.10、`policy-engine/Cargo.lock` 的 `rmcp-macros` 2.2.0→2.1.0（配對 `rmcp` 2.1.0，fork 先前的 CVE-2026-63127／63128 修正在 `rmcp` 2.1.0）亦為降版，未連網查證這三個版本有無獨立公告。判斷依據是把 `40efdf19` 版 lock 與上游 lock 逐套件比版本，列出「fork 較新」的清單；不是整份 lock 重新解析。
+4. `agent-os/tests/test_mcp_auth_enforcement.py`：fork 原本加了四條未註冊 server 的測試，其中三條（TLS 下限、https 放行、可關閉 TLS 下限）上游已以 #3814 回歸測試收進；自動合併後兩份同名方法並存，fork 版會蓋掉上游版（ruff F811）。合併後審查發現，已刪除 fork 的三條重複，只保留上游沒有的「未給 URL 不受影響」；41 passed（上游 40）。
+5. overlay：`docker-compose.yml`／OpenClaw compose 的 loopback 綁定、`requirements-dev.txt`、`.gitignore`、`docs/i18n/README.zh-TW.md` 語言列、`REVIEW.md`、`SECURITY.md`、`NOTICE.md`、`FORK.md`、`AGENTS.md` fork 段、`CLAUDE.md`、`docs/fork/**`、`tools/**`。
+
+沒有任何一處產品原始碼（agent-mesh、agent-os、policy-engine、SDK）保留 fork 版；那些檔案與上游逐位元組相同。
+
+**驗證證據**（隔離 venv 在 scratchpad，Windows 11、Python 3.14.8；每個測試檔各自一個行程；對照組是 `git worktree add --detach C:/GitHub/agt-upstream upstream/main`，以 `PYTHONPATH` 指向各自的 `src`）
+
+- `git diff --name-only --diff-filter=U` 與 `git grep -nE '^(<<<<<<<|>>>>>>>) '` 皆為空。
+- `pwsh -NoProfile -File tools\dev_check.ps1`：`WINDOWS DEV CHECK GREEN`（含 `tools/tests` 與 MCP 認證 41 passed）。
+- agent-mesh（合併樹／純上游樹）：`test_govern` 58 passed 2 skipped／同；`test_policy_rule_string_operators` 18／18；`test_org_policy_rule_string_operators` 23／23；`test_federation` 58／58；`test_opa` 56／56（首輪存檔為 55 passed + 1 計時 flake，見下；2026-10-07 重跑 56 passed，存於 scratchpad `agt/results-merged/mesh_test_opa_rerun_20261007.txt`）（使用 OPA 0.70.0 Windows 版，SHA-256 與發行方公告一致）；`test_governance` 36／36；`governance/test_audit_backends` 34 passed 2 skipped／同；另 `test_policy_*`、`test_multi_agent_policy*`、`test_trust_policy`、`test_async_policy_evaluator`、`test_stdout_audit`、`test_govern_approval_coordinator` 全過，兩邊結果相同。`test_persistent_audit` 17 skipped（兩邊相同）。
+- agent-os：`test_credential_redactor` 157 passed（上游樹 153 passed + 8 errors，原因見上）；`test_mcp_auth_enforcement` 41（上游 40）；`test_mute_agent` 21／21。
+- `npm install --package-lock-only --ignore-scripts` 在 scratch 複本：13 個動過的 npm 套件 manifest 皆可解析，lock 一致（五個 CLI 套件只差 lock 根部一段 npm 11 不寫的 `overrides`，是上游 lock 本來就有的）。`uv lock --check`：`agent-hypervisor`、`agent-marketplace` 通過。Cargo：14 個 `Cargo.toml` 與 `Cargo.lock` 可被 TOML 解析，`policy-engine` 整個目錄與上游相同。
+
+**未能驗證**
+
+- 本機沒有 cargo／maturin，原生 ACS SDK（`policy-engine/sdk/python`）未建置；`agent-governance-toolkit-core` 依賴的 `agent-control-specification>=0.4.0b0` 不在 PyPI，因此用 `uv pip install --no-deps -e` 裝同層套件並手動裝 `dev` extra 的依賴。依賴 ACS 原生執行期的測試（agt-policies、agent-os 的 ACS 路徑）未跑。
+- 所有 Rust 測試（含 `policy-engine`）、所有 npm 套件的 `vitest`／`tsc`／build、.NET、Go 皆未跑。
+- 只跑了衝突與相關模組的測試檔，不是兩個套件的全套件；上游 CI 全部鎖在官方 repo，本 fork 沒有其他自動化會跑它們。
+- `test_opa.py::TestBuiltinEvaluator::test_evaluation_timing`（`evaluation_ms < 100`）在機器忙碌時偶發失敗（133.9ms），重跑三次 2 過 1 敗，屬計時 flake，與合併無關（該檔與上游相同）。
+- `@vitest/coverage-v8` 4.1.10 搭 `vitest` 4.1.11、`@typescript-eslint/eslint-plugin` 8.70.1 搭 `parser` 8.70.0（peer 要求 ^8.70.1）是上游 `mcp-server` manifest 自己的狀態；嚴格 peer 解析會 ERESOLVE，需 `--legacy-peer-deps`。`agent-governance-typescript` 同樣需要。未修，因為那是上游 manifest。
+- `policy-engine/Cargo.lock` 取上游後，fork 之前的 `rmcp-macros 2.2.0` 回到 2.1.0（與 `rmcp 2.1.0` 配對）；沒有 cargo，無法重新解析。
+
+**安全相關、需要審查者特別看的上游 hunk**
+
+- `agent-os/src/agent_os/credential_redactor.py:178`：Basic auth 的 URL 內嵌憑證 pattern 由 fork 的 `(?<![A-Za-z0-9])[a-z][a-z0-9+.-]*://` 變成上游的 `[a-z0-9+.-]{1,64}://`（無左邊界、scheme 長度上限 64）。上游註解說這是為了避免無 `://` 的分隔符密集輸入造成重複掃描，且長 scheme 仍 fail-closed 遮蔽。命中範圍比 fork 版更寬，不會變弱；但行為與 fork 版不是逐字相同。
+- `agent-mesh/src/agentmesh/governance/audit_backends.py:429`（`_read_last_hash`）：fork 版對「結尾壞行」寬容；上游版改成對整條既有鏈做簽章驗證，鏈不符時 `FileAuditSink` 建構就 `ValueError`（fail-closed），不可解析的行改在 `_iter_parsed_entries`（約 222 行）略過。更嚴格，但是行為變更：用不同 key 開同一檔會直接失敗。
+- `agent-mesh/src/agentmesh/governance/audit_backends.py:33,385`：`fchmod` 僅在有此函式的平台套用。Python 3.13 起 Windows 也有 `os.fchmod`（本機 3.14.8 實測存在），所以 Windows 上會執行，但只切換唯讀旗標、不改 ACL。fork 舊版 `_append_line` 完全沒有 `fchmod`，這是上游的強化。
+- `agent-mesh/src/agentmesh/governance/govern.py:86`：`audit_secret_key` 現在要求至少 32 bytes，短 key 直接 `ValueError`。
+- `federation.py:1223`、`policy.py:391`：未知語法對 deny 規則 fail-closed（視為匹配）、對 allow 規則不匹配；`!=`／數值比較對缺值與非字串同樣依 action 方向 fail-closed。
+- 這一輪沒有逐筆讀上游 296 個 commit 的 diff；採用依據是維護者授權整樹採用，加上上述測試與 fork-only 修正的逐項比對。
+
+**觸發條件**：本 fork 若能建置原生 ACS SDK（需要 Rust）或有可用的 agent-os／agt-policies 完整測試環境，再把兩個套件的全套件測試補跑。

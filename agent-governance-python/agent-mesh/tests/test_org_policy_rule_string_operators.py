@@ -12,15 +12,7 @@ operators would hit the same silent no-match fallthrough that
 test_policy_rule_string_operators.py covers for the core PolicyRule.
 """
 
-import sys
-from unittest.mock import MagicMock, patch
-try:
-    import email_validator  # noqa: F401
-except ImportError:
-    import importlib.metadata
-    _orig_version = importlib.metadata.version
-    importlib.metadata.version = lambda n: "2.2.0" if n == "email-validator" else _orig_version(n)
-    sys.modules["email_validator"] = MagicMock()
+from unittest.mock import patch
 
 from agentmesh.governance import federation
 from agentmesh.governance.federation import OrgPolicyRule
@@ -74,13 +66,134 @@ def test_string_operators_are_type_safe_against_non_string_values():
 
 
 def test_string_operators_fail_open_for_allow_rules_on_non_string_values():
-    rule = OrgPolicyRule(name="allow-safe-path", condition="action.path contains 'safe'", action="allow")
+    rule = OrgPolicyRule(
+        name="allow-safe-path", condition="action.path contains 'safe'", action="allow"
+    )
     assert rule.evaluate({"action": {"path": 123}}) is False
 
 
-def test_empty_operand_does_not_match_every_string():
-    rule = _rule("action.path contains ''")
-    assert rule.evaluate({"action": {"path": "anything"}}) is False
+def test_empty_operand_is_treated_as_a_malformed_condition(caplog):
+    """An empty literal (`contains ''`) no longer parses as a real 'contains'
+    check (which would match every string) -- it falls through to the
+    unrecognized-syntax fallback, which fails closed for deny and open for
+    allow.
+    """
+    deny_rule = _rule("action.path contains ''")
+    with caplog.at_level("WARNING"):
+        assert deny_rule.evaluate({"action": {"path": "anything"}}) is True
+    assert "unrecognized condition syntax" in caplog.text
+
+    allow_rule = OrgPolicyRule(
+        name="allow-empty-path", condition="action.path contains ''", action="allow"
+    )
+    assert allow_rule.evaluate({"action": {"path": "anything"}}) is False
+
+
+def test_inequality_absent_field_does_not_match_allow_rule():
+    """A missing field is not evidence of inequality -- `!=` must not grant
+    access on an allow rule just because the field was never set."""
+    deny_rule = _rule("user.role != 'blocked'")
+    assert deny_rule.evaluate({}) is True
+
+    allow_rule = OrgPolicyRule(
+        name="allow-not-blocked", condition="user.role != 'blocked'", action="allow"
+    )
+    assert allow_rule.evaluate({}) is False
+
+
+def test_numeric_comparison_absent_field_does_not_match_allow_rule():
+    """A missing numeric field must not be coerced to 0 -- `action.cost < 10`
+    must not match an allow rule with no cost recorded."""
+    deny_rule = _rule("action.cost < 10")
+    assert deny_rule.evaluate({}) is True
+
+    allow_rule = OrgPolicyRule(name="allow-cheap", condition="action.cost < 10", action="allow")
+    assert allow_rule.evaluate({}) is False
+
+
+def test_numeric_comparison_malformed_value_does_not_match_allow_rule():
+    deny_rule = _rule("action.cost < 10")
+    assert deny_rule.evaluate({"action": {"cost": "not-a-number"}}) is True
+
+    allow_rule = OrgPolicyRule(name="allow-cheap", condition="action.cost < 10", action="allow")
+    assert allow_rule.evaluate({"action": {"cost": "not-a-number"}}) is False
+
+
+def test_string_operators_reject_trailing_garbage():
+    """Malformed policy text must not be accepted as a valid operator prefix."""
+    rule = OrgPolicyRule(
+        name="allow-safe-path",
+        condition="action.path contains 'safe' THIS_IS_NOT_VALID",
+        action="allow",
+    )
+    assert rule.evaluate({"action": {"path": "safe/file"}}) is False
+
+
+def test_trailing_whitespace_does_not_trigger_unrecognized_syntax():
+    deny_rule = _rule("action.cost > 100 ")
+    assert deny_rule.evaluate({"action": {"cost": 50}}) is False
+
+    allow_rule = OrgPolicyRule(name="allow-cheap", condition="action.cost > 100\t", action="allow")
+    assert allow_rule.evaluate({"action": {"cost": 150}}) is True
+
+
+def test_equality_inequality_and_membership_reject_trailing_garbage():
+    allow_eq = OrgPolicyRule(
+        name="allow-eq", condition="action.path == 'safe/file' JUNK", action="allow"
+    )
+    assert allow_eq.evaluate({"action": {"path": "safe/file"}}) is False
+
+    allow_neq = OrgPolicyRule(name="allow-neq", condition="action.path != 'x' JUNK", action="allow")
+    assert allow_neq.evaluate({"action": {"path": "safe/file"}}) is False
+
+    allow_in = OrgPolicyRule(
+        name="allow-in", condition="action.path in ['safe/file'] JUNK", action="allow"
+    )
+    assert allow_in.evaluate({"action": {"path": "safe/file"}}) is False
+
+
+def test_numeric_comparison_rejects_non_finite_values():
+    deny_rule = _rule("action.cost > 100")
+    assert deny_rule.evaluate({"action": {"cost": "NaN"}}) is True
+    assert deny_rule.evaluate({"action": {"cost": "inf"}}) is True
+
+    allow_rule = OrgPolicyRule(name="allow-cheap", condition="action.cost > 100", action="allow")
+    assert allow_rule.evaluate({"action": {"cost": "NaN"}}) is False
+
+
+def test_inequality_rejects_non_string_values():
+    deny_rule = _rule("user.role != 'blocked'")
+    assert deny_rule.evaluate({"user": {"role": []}}) is True
+
+    allow_rule = OrgPolicyRule(
+        name="allow-not-blocked", condition="user.role != 'blocked'", action="allow"
+    )
+    assert allow_rule.evaluate({"user": {"role": []}}) is False
+
+
+def test_string_operators_require_matching_quote_delimiters():
+    allow_contains = OrgPolicyRule(
+        name="allow-safe-path", condition="action.path contains 'safe\"", action="allow"
+    )
+    assert allow_contains.evaluate({"action": {"path": "safe/file"}}) is False
+
+    allow_startswith = OrgPolicyRule(
+        name="allow-safe-path", condition="action.path startswith 'safe\"", action="allow"
+    )
+    assert allow_startswith.evaluate({"action": {"path": "safe/file"}}) is False
+
+    allow_endswith = OrgPolicyRule(
+        name="allow-safe-path", condition="action.path endswith 'file\"", action="allow"
+    )
+    assert allow_endswith.evaluate({"action": {"path": "safe/file"}}) is False
+
+    allow_eq = OrgPolicyRule(
+        name="allow-eq", condition="action.path == 'safe/file\"", action="allow"
+    )
+    assert allow_eq.evaluate({"action": {"path": "safe/file"}}) is False
+
+    allow_neq = OrgPolicyRule(name="allow-neq", condition="action.path != 'zzz\"", action="allow")
+    assert allow_neq.evaluate({"action": {"path": "safe/file"}}) is False
 
 
 def test_string_operators_compose_with_and_or():
