@@ -353,8 +353,8 @@ crate** 而言，精確釘版會強迫每個下游的 `Cargo.lock` 跟著鎖死�
 
 1. `agent-os/tests/test_credential_redactor.py`：`@pytest.mark.parametrize(..., ids=["akia", "ghp", "aiza", "sk_live"])`。pytest 會把 parametrize id 放進環境變數 `PYTEST_CURRENT_TEST`；10 萬字元的 id 超過 Windows 環境變數 32,767 字元上限。證據：純上游樹跑 `test_credential_redactor.py` 是 153 passed、8 errors；合併後 157 passed。
 2. `agentmesh-integrations/copilot-governance/package.json`：`overrides.esbuild ^0.28.1`，lock 為 esbuild 0.28.2（上游為 0.27.7，低於 Dependabot 告警的修正版 0.28.1）。同樣的 `mastra-agentmesh` override、`agent-os/extensions/copilot` 的 `qs 6.16.0` override、`agent-mesh/services/api` 的 `qs 6.16.0`、`examples/reasoning-attestation-governed` 的 `cryptography==50.0.1` 本來就是 fork-only 且上游沒有動，自動合併保留。
-3. `package-lock.json` 補回 fork 已有的較新版本（不是手改，是 `npm update <pkg> --package-lock-only --ignore-scripts --legacy-peer-deps`，manifest 沒變）：`mcp-proxy`（body-parser 2.2.2→2.3.0、hono 4.13.7→4.13.13、ip-address 10.4.0→10.7.3、js-yaml 4.3.0→4.3.2、nanoid 3.3.17→3.3.20）、`mcp-server`（hono、nanoid）、`agent-governance-typescript`（@babel 系列、browserslist 系列）。`agent-hypervisor/uv.lock`：cryptography 48.0.1→49.0.0。判斷依據是把 `40efdf19` 版 lock 與上游 lock 逐套件比版本，列出「fork 較新」的清單；不是整份 lock 重新解析。
-4. `agent-os/tests/test_mcp_auth_enforcement.py`：fork 的兩條測試（未註冊 server 的 TLS 下限、未給 URL 不受影響），上游沒有，自動合併保留；41 passed（上游 40）。
+3. `package-lock.json` 補回 fork 已有的較新版本（不是手改，是 `npm update <pkg> --package-lock-only --ignore-scripts --legacy-peer-deps`，manifest 沒變）：`mcp-proxy`（body-parser 2.2.2→2.3.0、hono 4.13.7→4.13.13、ip-address 10.4.0→10.7.3、js-yaml 4.3.0→4.3.2、nanoid 3.3.17→3.3.20）、`mcp-server`（hono、nanoid）、`agent-governance-typescript`（@babel 系列、browserslist 系列）。`agent-hypervisor/uv.lock`：cryptography 48.0.1→49.0.0。補回並不完整：同一份 lock 的 anyio 原本有 4.14.2 與 4.15.1 兩個解析分支，合併後只剩 4.14.2（4.14.2 本身是上游 #4032 的 Dependabot 安全升版）；`@vitest/coverage-v8` 4.1.11→4.1.10、`policy-engine/Cargo.lock` 的 `rmcp-macros` 2.2.0→2.1.0（配對 `rmcp` 2.1.0，fork 先前的 CVE-2026-63127／63128 修正在 `rmcp` 2.1.0）亦為降版，未連網查證這三個版本有無獨立公告。判斷依據是把 `40efdf19` 版 lock 與上游 lock 逐套件比版本，列出「fork 較新」的清單；不是整份 lock 重新解析。
+4. `agent-os/tests/test_mcp_auth_enforcement.py`：fork 原本加了四條未註冊 server 的測試，其中三條（TLS 下限、https 放行、可關閉 TLS 下限）上游已以 #3814 回歸測試收進；自動合併後兩份同名方法並存，fork 版會蓋掉上游版（ruff F811）。合併後審查發現，已刪除 fork 的三條重複，只保留上游沒有的「未給 URL 不受影響」；41 passed（上游 40）。
 5. overlay：`docker-compose.yml`／OpenClaw compose 的 loopback 綁定、`requirements-dev.txt`、`.gitignore`、`docs/i18n/README.zh-TW.md` 語言列、`REVIEW.md`、`SECURITY.md`、`NOTICE.md`、`FORK.md`、`AGENTS.md` fork 段、`CLAUDE.md`、`docs/fork/**`、`tools/**`。
 
 沒有任何一處產品原始碼（agent-mesh、agent-os、policy-engine、SDK）保留 fork 版；那些檔案與上游逐位元組相同。
@@ -363,7 +363,7 @@ crate** 而言，精確釘版會強迫每個下游的 `Cargo.lock` 跟著鎖死�
 
 - `git diff --name-only --diff-filter=U` 與 `git grep -nE '^(<<<<<<<|>>>>>>>) '` 皆為空。
 - `pwsh -NoProfile -File tools\dev_check.ps1`：`WINDOWS DEV CHECK GREEN`（含 `tools/tests` 與 MCP 認證 41 passed）。
-- agent-mesh（合併樹／純上游樹）：`test_govern` 58 passed 2 skipped／同；`test_policy_rule_string_operators` 18／18；`test_org_policy_rule_string_operators` 23／23；`test_federation` 58／58；`test_opa` 56／56（使用 OPA 0.70.0 Windows 版，SHA-256 與發行方公告一致）；`test_governance` 36／36；`governance/test_audit_backends` 34 passed 2 skipped／同；另 `test_policy_*`、`test_multi_agent_policy*`、`test_trust_policy`、`test_async_policy_evaluator`、`test_stdout_audit`、`test_govern_approval_coordinator` 全過，兩邊結果相同。`test_persistent_audit` 17 skipped（兩邊相同）。
+- agent-mesh（合併樹／純上游樹）：`test_govern` 58 passed 2 skipped／同；`test_policy_rule_string_operators` 18／18；`test_org_policy_rule_string_operators` 23／23；`test_federation` 58／58；`test_opa` 56／56（首輪存檔為 55 passed + 1 計時 flake，見下；2026-10-07 重跑 56 passed，存於 scratchpad `agt/results-merged/mesh_test_opa_rerun_20261007.txt`）（使用 OPA 0.70.0 Windows 版，SHA-256 與發行方公告一致）；`test_governance` 36／36；`governance/test_audit_backends` 34 passed 2 skipped／同；另 `test_policy_*`、`test_multi_agent_policy*`、`test_trust_policy`、`test_async_policy_evaluator`、`test_stdout_audit`、`test_govern_approval_coordinator` 全過，兩邊結果相同。`test_persistent_audit` 17 skipped（兩邊相同）。
 - agent-os：`test_credential_redactor` 157 passed（上游樹 153 passed + 8 errors，原因見上）；`test_mcp_auth_enforcement` 41（上游 40）；`test_mute_agent` 21／21。
 - `npm install --package-lock-only --ignore-scripts` 在 scratch 複本：13 個動過的 npm 套件 manifest 皆可解析，lock 一致（五個 CLI 套件只差 lock 根部一段 npm 11 不寫的 `overrides`，是上游 lock 本來就有的）。`uv lock --check`：`agent-hypervisor`、`agent-marketplace` 通過。Cargo：14 個 `Cargo.toml` 與 `Cargo.lock` 可被 TOML 解析，`policy-engine` 整個目錄與上游相同。
 
@@ -380,7 +380,7 @@ crate** 而言，精確釘版會強迫每個下游的 `Cargo.lock` 跟著鎖死�
 
 - `agent-os/src/agent_os/credential_redactor.py:178`：Basic auth 的 URL 內嵌憑證 pattern 由 fork 的 `(?<![A-Za-z0-9])[a-z][a-z0-9+.-]*://` 變成上游的 `[a-z0-9+.-]{1,64}://`（無左邊界、scheme 長度上限 64）。上游註解說這是為了避免無 `://` 的分隔符密集輸入造成重複掃描，且長 scheme 仍 fail-closed 遮蔽。命中範圍比 fork 版更寬，不會變弱；但行為與 fork 版不是逐字相同。
 - `agent-mesh/src/agentmesh/governance/audit_backends.py:429`（`_read_last_hash`）：fork 版對「結尾壞行」寬容；上游版改成對整條既有鏈做簽章驗證，鏈不符時 `FileAuditSink` 建構就 `ValueError`（fail-closed），不可解析的行改在 `_iter_parsed_entries`（約 222 行）略過。更嚴格，但是行為變更：用不同 key 開同一檔會直接失敗。
-- `agent-mesh/src/agentmesh/governance/audit_backends.py:33,385`：`fchmod` 僅在有此函式的平台套用；Windows 上既有檔案的權限不會被收緊（上游註解已說明 Windows 無對應概念）。
+- `agent-mesh/src/agentmesh/governance/audit_backends.py:33,385`：`fchmod` 僅在有此函式的平台套用。Python 3.13 起 Windows 也有 `os.fchmod`（本機 3.14.8 實測存在），所以 Windows 上會執行，但只切換唯讀旗標、不改 ACL。fork 舊版 `_append_line` 完全沒有 `fchmod`，這是上游的強化。
 - `agent-mesh/src/agentmesh/governance/govern.py:86`：`audit_secret_key` 現在要求至少 32 bytes，短 key 直接 `ValueError`。
 - `federation.py:1223`、`policy.py:391`：未知語法對 deny 規則 fail-closed（視為匹配）、對 allow 規則不匹配；`!=`／數值比較對缺值與非字串同樣依 action 方向 fail-closed。
 - 這一輪沒有逐筆讀上游 296 個 commit 的 diff；採用依據是維護者授權整樹採用，加上上述測試與 fork-only 修正的逐項比對。
