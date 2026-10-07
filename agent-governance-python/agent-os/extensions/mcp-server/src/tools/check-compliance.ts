@@ -7,14 +7,14 @@
  */
 
 import { ServiceContext } from '../server.js';
-import { CheckComplianceInputSchema, ComplianceFramework } from '../types/index.js';
+import { AgentSpec, CheckComplianceInputSchema, ComplianceFramework } from '../types/index.js';
 
 // Compliance control definitions
 const COMPLIANCE_CONTROLS: Record<ComplianceFramework, Array<{
   id: string;
   name: string;
   description: string;
-  check: (agent: any, policies: string[]) => { passed: boolean; evidence: string[] };
+  check: (agent: AgentSpec, policies: string[]) => { passed: boolean; evidence: string[] };
 }>> = {
   SOC2: [
     {

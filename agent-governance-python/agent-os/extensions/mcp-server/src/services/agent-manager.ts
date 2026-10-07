@@ -60,7 +60,7 @@ export class AgentManager {
     };
     
     // Generate workflow based on task
-    const workflow = this.generateWorkflow(task, config.language);
+    const workflow = this.generateWorkflow(task);
     
     const spec: AgentSpec = {
       config,
@@ -91,7 +91,7 @@ export class AgentManager {
   /**
    * Generate a basic workflow from task description.
    */
-  private generateWorkflow(task: string, language: string): AgentSpec['workflow'] {
+  private generateWorkflow(task: string): AgentSpec['workflow'] {
     // This would be enhanced with AI-based workflow generation
     const steps = [];
     

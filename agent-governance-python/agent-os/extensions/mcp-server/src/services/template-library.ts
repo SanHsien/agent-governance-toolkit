@@ -6,7 +6,7 @@
  * Provides pre-built agent and policy templates for common use cases.
  */
 
-import { AgentTemplate, PolicyTemplate, Policy } from '../types/index.js';
+import { AgentTemplate, PolicyTemplate } from '../types/index.js';
 
 // =============================================================================
 // Agent Templates
