@@ -386,3 +386,11 @@ crate** 而言，精確釘版會強迫每個下游的 `Cargo.lock` 跟著鎖死�
 - 這一輪沒有逐筆讀上游 296 個 commit 的 diff；採用依據是維護者授權整樹採用，加上上述測試與 fork-only 修正的逐項比對。
 
 **觸發條件**：本 fork 若能建置原生 ACS SDK（需要 Rust）或有可用的 agent-os／agt-policies 完整測試環境，再把兩個套件的全套件測試補跑。
+
+## 2026-10-09：延後 Rustls 安全修補
+
+**決定**：延後處理 `rustls` (medium) 的 Dependabot 安全性警告。
+
+**理由**：本機沒有 Rust toolchain，下次有 toolchain 時用 `cargo update -p rustls` 升到 0.23.45。
+
+**觸發條件**：待具備 Rust toolchain 之後處理。重審日期：2026-11-01。
