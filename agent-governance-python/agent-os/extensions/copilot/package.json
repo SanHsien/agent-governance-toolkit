@@ -2,7 +2,7 @@
   "name": "@microsoft/agent-os-copilot-extension",
   "version": "5.0.0",
   "private": true,
-  "description": "Public Preview — AgentOS GitHub Copilot Extension: Build safe AI agents with natural language and 0% policy violations",
+  "description": "Public Preview \u2014 AgentOS GitHub Copilot Extension: Build safe AI agents with natural language and 0% policy violations",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "repository": {
@@ -212,7 +212,7 @@
   },
   "overrides": {
     "qs": "6.16.0",
-    "proxy-addr": "^2.0.7",
+    "proxy-addr": "^2.0.8",
     "sprintf-js": "^1.1.3",
     "source-map-js": "^1.2.0",
     "@modelcontextprotocol/sdk": "^1.32.1"
