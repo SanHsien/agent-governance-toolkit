@@ -78,8 +78,28 @@ docker compose --profile dashboard up --build dashboard
 2. `ruff check`（E9 + F，target py310）
 3. `pytest -c tools/pytest.ini tools/tests`
 4. `python tools/check_links.py`
+5. `pytest agent-governance-python/agent-os/tests/test_mcp_auth_enforcement.py -q`
 
-`fork-maintenance.yml` 在 Ubuntu 與 Windows 跑同一套。推 `main` 前先跑本機 gate。
+`fork-maintenance.yml` 僅在 Windows 跑同一套。推 `main` 前先跑本機 gate。
+
+## 有限 Windows 產品驗收
+
+`fork-product-windows.yml` 僅在本 fork 的相關產品路徑 push／PR 與手動觸發時執行。
+三個獨立 job 分別驗收 Rust workspace、Copilot extension 與原生 policy Node SDK。
+官方生成的 `policy-engine-ci.yml` 與發布 guard 保持原狀。
+
+- Rust 執行 `cargo build --release --workspace --locked` 與
+  `cargo test --release --workspace --locked`。
+- Copilot 執行 `npm ci --ignore-scripts`、`npm run build`、`npm test -- --runInBand`。
+- Node SDK 執行 `npm ci --ignore-scripts`、checksum 固定的 Windows OPA 下載與
+  `npm run test:ci`。專用 `build:test:ci`／`test:ci` 保留既有 `npm test` 的建置與測試操作，
+  另透過 napi 的 `--cargo-flags="--locked"` 傳至 Cargo，僅建置一次。
+  既有 `build`／`build:test`／`test` 不變。
+  TAP 中兩項 bundled OPA 測試必須實際通過，skip 會讓 job 失敗。
+
+Rust／Node job overall cap 為 60 分鐘，build／test step 有各自具名上限。
+本機若沒有 MSVC，不重跑原生建置；本機 fork gate 不能取代上述 hosted 結果。
+原生產品驗收必須取得該提交的 hosted Windows 實證；本機 fork gate 不能作為替代。
 
 ## 不要做的事
 
