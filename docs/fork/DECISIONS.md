@@ -394,3 +394,24 @@ crate** 而言，精確釘版會強迫每個下游的 `Cargo.lock` 跟著鎖死�
 **理由**：本機沒有 Rust toolchain，下次有 toolchain 時用 `cargo update -p rustls` 升到 0.23.45。
 
 **觸發條件**：待具備 Rust toolchain 之後處理。重審日期：2026-11-01。
+
+## 2026-10-10：Rustls PR45 與有限 Windows 產品驗收候選
+
+採用 PR45 的單份 `agent-governance-rust/Cargo.lock` 候選，rustls 0.23.42 升至
+0.23.45，rustls-webpki 0.103.13 升至 0.103.15。PR46 的 Copilot lock 不混入本候選。
+官方產品 CI 在本 fork 被 owner guard 跳過，fork gate 也沒有原生 SDK 驗收能力。
+新增本 fork 專用 Windows workflow，分別驗收 Rust、Copilot、Node 原生 SDK。
+
+Node 僅新增 `build:test:ci`／`test:ci` 專用 script，與既有 test 相同的 bundled-dispatchers
+建置及全部本機 Node 測試，補上 Cargo locked 與 TAP 報告。既有 build/test 不變。
+Windows OPA 使用 repo 既有下載器的固定版本與 SHA256，兩項 OPA 測試不可 skip。
+MSVC 環境跨 step 保存；不存在編譯工具或 registry 套件時必須如實失敗。
+
+本決策記錄建立時候選尚未發布。本機無 MSVC，不宣稱 Rust／Node 原生全綠；待 root review 並更新 PR45
+後取得三個 hosted Windows job 成功，才具備合併驗收證據。最終 docs／workflow／lock
+必須先穩定，再跑本機 canonical fork gate 與輸入 hash；不沿用較早的 gate。
+
+Copilot 首次乾淨 `npm ci` 揭露既有 peer 衝突，eslint-plugin 8.70.1 要求 parser
+`^8.70.1`，manifest 卻固定 8.70.0。有限修補將 parser 與必要的同版本 helper 子圖
+協調至 8.70.1，保留既有 plugin／TypeScript／Jest 與其他套件版本，不使用 force
+或 legacy-peer-deps。handlebars 仍為 4.7.9，PR46 尚待獨立處理。
