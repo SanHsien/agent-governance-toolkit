@@ -61,6 +61,17 @@ jobs:
       - name: Build locked Rust workspace
         timeout-minutes: 30
         run: cargo build --release --workspace --locked
+      - name: Report Docker sandbox capability
+        timeout-minutes: 2
+        run: |
+          if (Get-Command docker -ErrorAction SilentlyContinue) {
+            $osType = & docker info --format '{{.OSType}}' 2>&1
+            $infoExit = $LASTEXITCODE
+            Write-Host "Docker info exit=$infoExit; OSType=$osType"
+          } else {
+            Write-Host 'Docker CLI unavailable; Linux sandbox must fail closed'
+          }
+          exit 0
       - name: Test locked Rust workspace
         timeout-minutes: 25
         run: cargo test --release --workspace --locked

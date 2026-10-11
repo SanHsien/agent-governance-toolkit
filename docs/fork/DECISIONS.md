@@ -415,3 +415,23 @@ Copilot 首次乾淨 `npm ci` 揭露既有 peer 衝突，eslint-plugin 8.70.1 �
 `^8.70.1`，manifest 卻固定 8.70.0。有限修補將 parser 與必要的同版本 helper 子圖
 協調至 8.70.1，保留既有 plugin／TypeScript／Jest 與其他套件版本，不使用 force
 或 legacy-peer-deps。handlebars 仍為 4.7.9，PR46 尚待獨立處理。
+
+## 2026-10-11：Linux Docker sandbox 能力判定
+
+PR45 hosted run `38123244870` 的 Rust build 成功，但 agentmesh 測試為 409 passed／
+1 failed：`docker_create_session_without_docker` 把成功的 `docker info` 當成可用 Linux
+sandbox，建立 `python:3.11-slim` session 失敗且原 assertion 未印出錯誤。
+該 runner 為 `windows-2025-vs2026`；官方 image 安裝 Windows Docker CE。原 log 未記錄
+實際 daemon `OSType`，不能把 Windows daemon 當成已觀測因果。新增唯讀診斷 step，
+由後續 hosted log 提供 `docker info --format '{{.OSType}}'` 的 exit 與輸出。
+
+此 provider 依賴 Linux image、sleep／sh 和 Linux hardening flags，因此只在 info 成功
+且 UTF-8 輸出 trim 後精確為 `linux` 時可用。Windows、未知／無效回應、命令失敗均
+fail closed；所有 cap-drop、no-new-privileges、read-only、network-none 與資源限制保留。
+新增純判定單元測試，既有 lifecycle 測試仍執行可用 Linux 分支或不可用拒絕分支；
+不 ignore／skip。Linux 分支失敗時 assertion 必須顯示實際 Err。
+
+本輪本機不執行缺少 MSVC 的 native Cargo；canonical fork gate 不能代替 Rust 新增
+測試或 Linux Docker lifecycle。驗收以最終候選 hosted Rust workspace 結果為準，且
+Windows unavailable 分支成功不代表 Linux 容器實際 lifecycle 已驗證。既有 Node
+125 passed／1 optional OpenTelemetry skip、兩项 OPA 實際 pass 及 Copilot 成功證據保留。

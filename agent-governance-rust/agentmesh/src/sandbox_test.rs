@@ -127,23 +127,31 @@ fn default_run_returns_failure() {
 }
 
 // ---------------------------------------------------------------------------
-// Session lifecycle — skipped when Docker is unavailable
+// Session lifecycle or fail-closed rejection when Linux Docker is unavailable
 // ---------------------------------------------------------------------------
 
 #[test]
 fn docker_create_session_without_docker() {
     let mut provider = DockerSandboxProvider::new("python:3.11-slim");
     if provider.is_available() {
-        // Docker is present — run the full lifecycle test
+        // A Linux daemon is available — run the full lifecycle test
         let handle = provider.create_session("test-agent", None);
-        assert!(handle.is_ok());
+        assert!(
+            handle.is_ok(),
+            "Linux Docker create_session failed: {:?}",
+            handle
+        );
         let handle = handle.unwrap();
         assert_eq!(handle.status, SessionStatus::Ready);
         assert_eq!(handle.agent_id, "test-agent");
 
         // Execute code
         let exec = provider.execute_code("test-agent", &handle.session_id, "echo hello");
-        assert!(exec.is_ok());
+        assert!(
+            exec.is_ok(),
+            "Linux Docker execute_code failed: {:?}",
+            exec
+        );
         let exec = exec.unwrap();
         assert!(exec.result.is_some());
         let result = exec.result.unwrap();
@@ -151,7 +159,11 @@ fn docker_create_session_without_docker() {
 
         // Destroy session
         let destroy = provider.destroy_session("test-agent", &handle.session_id);
-        assert!(destroy.is_ok());
+        assert!(
+            destroy.is_ok(),
+            "Linux Docker destroy_session failed: {:?}",
+            destroy
+        );
     } else {
         // Docker is not available — create_session should return an error
         let result = provider.create_session("test-agent", None);
@@ -241,4 +253,28 @@ fn generate_id_no_collisions_across_threads() {
         h.join().unwrap();
     }
     assert_eq!(all.lock().unwrap().len(), THREADS * PER_THREAD);
+}
+
+#[test]
+fn linux_docker_capability_accepts_linux_with_line_endings() {
+    for value in [b"linux".as_slice(), b"linux\n", b" linux\r\n"] {
+        assert!(docker_supports_linux_sandbox(true, value));
+    }
+}
+
+#[test]
+fn linux_docker_capability_rejects_windows() {
+    assert!(!docker_supports_linux_sandbox(true, b"windows\r\n"));
+}
+
+#[test]
+fn linux_docker_capability_rejects_malformed_output() {
+    for value in [b"".as_slice(), b"LINUX", b"linux extra", b"\"linux\"", b"\xff"] {
+        assert!(!docker_supports_linux_sandbox(true, value));
+    }
+}
+
+#[test]
+fn linux_docker_capability_rejects_failed_command() {
+    assert!(!docker_supports_linux_sandbox(false, b"linux\n"));
 }

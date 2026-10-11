@@ -236,6 +236,12 @@ fn container_name(agent_id: &str, session_id: &str) -> String {
     format!("{}-{}-{}", CONTAINER_PREFIX, safe_agent, safe_session)
 }
 
+/// The provider uses Linux images, shell commands, and Linux hardening flags.
+/// A reachable Windows daemon does not make this sandbox available.
+fn docker_supports_linux_sandbox(success: bool, os_type: &[u8]) -> bool {
+    success && std::str::from_utf8(os_type).is_ok_and(|value| value.trim() == "linux")
+}
+
 /// `SandboxProvider` backed by hardened Docker containers.
 ///
 /// Uses the Docker CLI via `std::process::Command` — no external Docker
@@ -248,14 +254,13 @@ pub struct DockerSandboxProvider {
 }
 
 impl DockerSandboxProvider {
-    /// Create a new provider, checking Docker CLI availability via `docker info`.
+    /// Create a provider only when the daemon supports this Linux sandbox.
     pub fn new(image: &str) -> Self {
         let available = Command::new("docker")
-            .args(["info"])
-            .stdout(std::process::Stdio::null())
+            .args(["info", "--format", "{{.OSType}}"])
             .stderr(std::process::Stdio::null())
-            .status()
-            .map(|s| s.success())
+            .output()
+            .map(|output| docker_supports_linux_sandbox(output.status.success(), &output.stdout))
             .unwrap_or(false);
 
         Self {
