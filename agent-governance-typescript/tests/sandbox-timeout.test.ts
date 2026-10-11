@@ -19,7 +19,9 @@ describe('DockerSandboxProvider executeCode timeout (issue #3118)', () => {
   beforeEach(() => {
     capturedTimeoutMs = undefined;
     // createSession -> execFileSync('docker', ['run', ...]) returns the container id.
-    mockedExecFileSync.mockReturnValue(Buffer.from('fake-container-id'));
+    mockedExecFileSync.mockImplementation((_file, args) =>
+      Buffer.from(Array.isArray(args) && args[0] === 'info' ? 'linux\n' : 'fake-container-id'),
+    );
     // executeCode -> execFile('docker', ['exec', ...], options, cb). Capture the
     // timeout and report a clean, successful execution.
     mockedExecFile.mockImplementation(

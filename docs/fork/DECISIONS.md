@@ -537,3 +537,15 @@ install／postinstall 與 files 僅 dist；完整 body-limit／alias 30 tests �
 JSON decoded replacements 與 provider-utils before／after hashes 不變；不放寬校驗，
 不修改 Git attributes。回歸驗證 raw 與 Git clean-filter blob identity 一致，另以實際
 Git blob／checkout filters 證明 LF bytes 穩定；未知 bytes 仍拒絕，patch 仍可重入。
+
+
+### TypeScript Linux Docker 能力補正（2026-10-11）
+
+PR47 Windows run 38143204918 的 TypeScript lifecycle 失敗明確顯示 daemon 使用
+Windows containers，拒絕 Linux sandbox 的 read-only 選項。Docker info 成功不等於
+Linux 能力可用。provider 改以固定 argv、無 shell 查詢 OSType；僅成功狀態、有效
+UTF-8 且 trim 後精確 linux 才可建立 session，其餘 fail closed。保留所有 capability、
+security、read-only、network 與資源限制。既有 lifecycle 在不可用環境實際斷言 session
+拒絕，不以 skip 通關；純回歸涵蓋 Windows、空值、大小寫、錯誤狀態與非法 UTF-8。
+本機回歸不代表 Linux Docker 真實 lifecycle 已驗證；產品驗收仍以最終 Windows
+workflow 的 TypeScript job 實際結果為準，其餘已成功產品 job 證據保留。

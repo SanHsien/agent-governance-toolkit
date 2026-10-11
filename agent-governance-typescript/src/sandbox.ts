@@ -1,7 +1,8 @@
 // Copyright (c) Microsoft Corporation. Licensed under the MIT License.
 
-import { execSync, exec, execFileSync, execFile } from 'child_process';
+import { execFileSync, execFile } from 'child_process';
 import { randomUUID } from 'crypto';
+import { TextDecoder } from 'util';
 
 // ---------------------------------------------------------------------------
 // Enums
@@ -142,6 +143,16 @@ function validateResourceName(value: string, label: string): void {
 // DockerSandboxProvider
 // ---------------------------------------------------------------------------
 
+// Linux sandbox images and hardening flags require a Linux daemon.
+export function isLinuxDockerDaemon(exitCode: number, output: Uint8Array): boolean {
+  if (exitCode !== 0) return false;
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(output).trim() === 'linux';
+  } catch {
+    return false;
+  }
+}
+
 export class DockerSandboxProvider implements SandboxProvider {
   private readonly image: string;
   private readonly containers = new Map<string, string>(); // sessionId -> containerId
@@ -153,8 +164,10 @@ export class DockerSandboxProvider implements SandboxProvider {
 
   async isAvailable(): Promise<boolean> {
     try {
-      execSync('docker info', { stdio: 'pipe', timeout: 10_000 });
-      return true;
+      const output = execFileSync('docker', ['info', '--format', '{{.OSType}}'], {
+        stdio: 'pipe', timeout: 10_000, shell: false,
+      });
+      return isLinuxDockerDaemon(0, output);
     } catch {
       return false;
     }
@@ -165,6 +178,9 @@ export class DockerSandboxProvider implements SandboxProvider {
     config?: SandboxConfig,
   ): Promise<SessionHandle> {
     validateResourceName(agentId, 'agentId');
+    if (!(await this.isAvailable())) {
+      throw new Error('Linux Docker sandbox unavailable');
+    }
 
     const cfg = config ?? defaultSandboxConfig();
     const sessionId = randomUUID();
