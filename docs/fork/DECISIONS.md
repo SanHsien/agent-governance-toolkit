@@ -435,3 +435,24 @@ fail closed；所有 cap-drop、no-new-privileges、read-only、network-none 與
 測試或 Linux Docker lifecycle。驗收以最終候選 hosted Rust workspace 結果為準，且
 Windows unavailable 分支成功不代表 Linux 容器實際 lifecycle 已驗證。既有 Node
 125 passed／1 optional OpenTelemetry skip、兩项 OPA 實際 pass 及 Copilot 成功證據保留。
+
+## 2026-10-11：PR46 Copilot handlebars 與 coverage YAML 依賴修補
+
+PR46 保留 bot 的 handlebars 4.7.9→4.7.10 與 minimist dependency edge，先將 owner main
+合入原 bot branch；未提交 merge 狀態由 root 完成。只修 Copilot，不包含 TypeScript、
+Mastra 或 policy-engine 的其他 alerts。parser／plugin 保持 8.70.1。
+
+Copilot 的 20 moderate audit 節點來自 coverage 開發依賴：
+`@istanbuljs/load-nyc-config → js-yaml3 → argparse1 → sprintf-js`。sprintf-js 目前無
+官方修補版。load-nyc-config 實際只呼叫 `yaml.load(text)`，可用 scoped override
+換成保留該 API 的 js-yaml4，讓 dependency chain 改走無 sprintf-js 的 argparse2。
+初始 4.1.1 候選被實際 resolver audit 揭露 high；官方 advisory 另列 repeated aliases、
+merge-key chains、omap 及 empty merge sources 的 DoS，修補範圍直到 4.3.2。
+因此只將這個 scoped YAML 套件固定為 4.3.2，不使用全域 override、audit fix、force
+或 legacy-peer-deps，也不把安全版本下限或 dev scope 當成漏洞已修的證據。
+
+新增 Copilot Jest 維護回歸：真實 loadNycConfig 的 mapping／sequence、YAML extends
+與 cwd 正規化，以及 js-yaml CLI help／fixture parse。產品依賴測試只在 Copilot
+Jest 跑，不讓 canonical fork gate 要求已安裝這些產品套件。驗收須以最終 manifests／
+docs／tests 穩定後的乾淨 npm ci、build、Jest、lock 與 npm ls 無 sprintf、真實 npm audit
+及 canonical gate 為準；既有 PR45 原生 Windows 證據沿用，不重跑本機 native builds。
