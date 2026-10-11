@@ -136,3 +136,37 @@ This package is part of the [AgentMesh](https://github.com/microsoft/agent-gover
 ## License
 
 MIT
+
+## Fork 安全依賴安裝（Windows）
+
+本 fork 的 locked Mastra 開發／驗收 graph 固定 core 1.37.1。provider-utils v5／v6
+alias 使用官方 3.0.28／4.0.33；legacy ui-utils 仍需 provider-utils 2.2.8 的同步
+`safeParseJSON`，因此由本地 hash-bound backport 修正 GHSA-866g-f22w-33x8。
+此為本 fork source checkout 的 locked 開發 graph 修補，非官方 2.x 新版本，
+也不是已發布 npm package 的修補。tarball 維持僅 `dist` 的契約，沒有 install／postinstall
+hook，消費者不繼承本專案 overrides；peer 範圍也不保證與此 locked graph 相同。
+
+```powershell
+npm ci --ignore-scripts
+npm run patch:dependencies
+node scripts/patch-provider-utils.mjs --check
+npm run build
+npm run lint
+npm test
+```
+
+`npm ci` 不會自動套用 backport；source checkout 必須明確執行上述 patch／check。
+build、lint、test 的 source pre-hook 也會套用並驗證，未知版本、原始檔
+或 patch 雜湊會 fail closed；不要跳過 hook／verify 或直接使用未驗證的 node_modules。
+Windows job 執行相同安裝契約。修補不改 package version 或 npm registry integrity。
+
+backport 參照 [官方修補](https://github.com/vercel/ai/commit/6a436e3)，在兩個 module
+format 的三個 buffered JSON／JSON-error／status-error handlers 使用共享讀取器。
+本 fork 將上限設為 **8 MiB 原始 bytes**：Content-Length 僅提前拒絕，缺少、無效或
+低報的 header 仍按串流 byteLength 計量；超限取消，正常／abort／讀取錯誤後均釋放
+reader lock。UTF-8 解碼在受限 buffer 完成後進行，超過上限的合法大型 response
+也會被拒絕。未改 streaming SSE／JSON-stream 或 binary handler 的既有契約。
+
+官方 2.x 尚無 patched artifact，因此 npm audit／Dependabot 仍會依原版號報告 raw
+low；本地 backport 的行為證據與 raw alerts 必須分別記錄，不能宣稱官方清冊歸零。
+升級 core／ui-utils 或移除此 backport 前，須重新核對官方 patch 與 API 並驗收。

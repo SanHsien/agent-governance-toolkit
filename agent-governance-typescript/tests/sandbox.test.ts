@@ -72,7 +72,7 @@ describe('ExecutionStatus enum', () => {
   });
 });
 
-// Full lifecycle test — skip when Docker is not available
+// Linux lifecycle or actual fail-closed session refusal on unsupported hosts.
 describe('DockerSandboxProvider lifecycle', () => {
   let provider: DockerSandboxProvider;
   let dockerAvailable: boolean;
@@ -84,7 +84,9 @@ describe('DockerSandboxProvider lifecycle', () => {
 
   it('creates, executes, and destroys a session', async () => {
     if (!dockerAvailable) {
-      console.log('Skipping lifecycle test — Docker not available');
+      await expect(provider.createSession('testAgent')).rejects.toThrow(
+        'Linux Docker sandbox unavailable',
+      );
       return;
     }
 
@@ -117,11 +119,6 @@ describe('DockerSandboxProvider lifecycle', () => {
   }, 60_000);
 
   it('destroySession is idempotent', async () => {
-    if (!dockerAvailable) {
-      console.log('Skipping idempotent test — Docker not available');
-      return;
-    }
-
     // Destroying a non-existent session should not throw
     await expect(
       provider.destroySession('testAgent', 'nonexistent-id'),

@@ -456,3 +456,96 @@ merge-key chains、omap 及 empty merge sources 的 DoS，修補範圍直到 4.3
 Jest 跑，不讓 canonical fork gate 要求已安裝這些產品套件。驗收須以最終 manifests／
 docs／tests 穩定後的乾淨 npm ci、build、Jest、lock 與 npm ls 無 sprintf、真實 npm audit
 及 canonical gate 為準；既有 PR45 原生 Windows 證據沿用，不重跑本機 native builds。
+
+## 2026-10-11：PR47 剩餘 TypeScript、Mastra 與 policy-engine 安全依賴
+
+保留原 bot PR47 的 TypeScript handlebars 4.7.10 與 minimist edge，在未提交 merge
+中納入 owner main 3060f55d；有效審查以該 main 為基準，既有 Copilot 修補不重做。
+TypeScript coverage 的 load-nyc-config scoped override 使用已修補的 js-yaml 4.3.2，
+移除 argparse1／sprintf-js 鏈；parser 由 8.70.0 最小對齊既有 plugin 8.70.1 的 peer
+範圍，僅協調該 helper 子圖。新增實際 YAML mapping／sequence、extends／cwd 與 CLI
+維護回歸，不升級 TypeScript／Jest 或其他產品依賴。
+
+Mastra core 1.37.1 保持原版，僅將其 gray-matter scoped alias 指向維護中的
+`npm:@11ty/gray-matter@3.0.0`。原 gray-matter4 使用 js-yaml3 的 safeLoad／safeDump，
+直接套 js-yaml4 會破壞 API；維護 fork 保留 data／content，使用 yaml.load／dump，
+其 js-yaml5 實際鎖定 5.4.3，改走 argparse2。移除無效的全域 sprintf-js override。
+JavaScript front matter 明確拒絕且不得執行；YAML 日期維持普通字串。新增離線回歸
+涵蓋 CJS／ESM、Buffer、ordinary schema、Markdown body、實際 Workspace skill loader
+與 JavaScript payload 不執行；不以靜態 alias 或版本下限宣稱相容或漏洞已消除。
+
+policy-engine 僅更新 rustls 0.23.45 與 resolver 所需的 aws-lc-rs 1.18.1、
+aws-lc-sys 0.45.0、rustls-webpki 0.103.15、pkg-config 0.3.34，保留原 Windows
+dependency edges；registry checksum 與 cargo metadata --locked 驗證鎖檔，不改 crypto
+功能或安全 flags。本機缺 MSVC 時不做 native build，須由實際 hosted Node job 驗收。
+
+Windows 產品 workflow 增加 owner 限定的 TypeScript／Mastra Node22 job 與路徑，
+保留原三個 job、action pins、唯讀權限、credentials false、OPA 必過與 MSVC／Docker
+能力修補。兩個新增 job 各 20 分鐘，具名 step timeout、乾淨 install、build、全套
+Jest／Vitest（Mastra 另跑 tsc lint），並拒絕 manifest／lock mutation。不 publish。
+所有最終 source／docs／workflow 穩定後才跑 focused workflow 與 canonical gate，
+記錄完整輸入與 index 雜湊；兩套實際 npm audit 與 resolved graph 須逐一核對，
+raw alerts 降低不是整個 repo 完成的充分證據。此決策建立時候選尚未發布；最終驗收
+以 PR47 的實際 Windows jobs 與 owner main 權威安全清冊為準。
+
+### 同候選追加：Mastra legacy provider-utils response limit backport
+
+初版實際 audit 為 3 low，根源為 GHSA-866g-f22w-33x8：response handlers 讀取 body
+沒有共同 byte cap，並非 tool approval 漏洞。官方 provider-utils 2.x 最新仍是
+2.2.8；ui-utils 1.x 最新 1.2.11 仍依賴它。已修補的 3.0.28 把 safeParseJSON 改成
+Promise，而該 ui-utils parsePartialJson 同步讀取 success／value，盲套 major override
+會破壞 API。因此保留 core 1.37.1 與 legacy 2.2.8；v5／v6 aliases 僅升官方同 major
+3.0.28／4.0.33 及必要 provider 子圖。
+
+依官方 shared bounded reader 修補作本地 backport，僅替換 legacy CJS／ESM 的
+三個 buffered JSON／JSON-error／status-error body read；safeParseJSON 與 streaming／
+binary 契約不變。有限 8 MiB raw byte cap、header 提前拒絕、實際串流計量、取消與
+releaseLock 清理避免無上限 body buffer；保留原 abort／read error，不以 cancel error
+掩蓋。新增正常 JSON／UTF-8／error handlers、缺少／低報／無效 header、byte boundary、
+oversize cancel、abort、同步 ui-utils parsePartialJson 與 hash-bound patch 回歸。
+
+patch artifact 綁定原始與輸出 SHA256，套用程式另外綁定 artifact SHA256、版本與
+固定兩個 module target；全部驗證後才寫入，未知 bytes fail closed，重入可驗證。
+本 fork source checkout 使用 explicit patch／check 與 build／lint／test source pre-hook；
+Windows ignore-scripts 安裝後同樣必須 explicit 套用。tarball 僅含 dist，沒有 dependency
+install／postinstall hook；消費者不繼承 overrides，peer 範圍也不保證本 locked graph。
+不宣稱發布套件已套 backport；source 使用者入口與限制寫在 adapter README。
+不改 npm version／integrity 以偽造 audit zero，不使用 audit fix、force 或 legacy peer。
+
+raw audit／Dependabot 對 legacy 官方版本仍可能報告 low，須保留原始 exit／nodes；
+本地 runtime backport 不等於官方 alert 歸零。不變的 TypeScript 696 tests／audit0、
+Cargo checksum／metadata 與原 workflow phase 保留，僅重驗變動後 Mastra 安裝／build／
+lint／Vitest／audit、新 install workflow contract 與最終 canonical。所有 source／docs
+先穩定，再記錄完整前後 input/index 雜湊；發布前仍須 root code 與 security review。
+
+
+### 安裝契約 review 補正
+
+移除初版 postinstall：files 僅 dist，發布 tarball 沒有本地 patch script／artifact，
+且消費者不繼承 overrides 或固定 core peer graph，不能在 dependency 安裝時強制套用。
+保持發布 files 契約，不把 script／patch 塞入 tarball；backport 僅適用本 fork source
+checkout 的 locked 開發／驗收 graph。實際 npm pack 回歸核對 packaged manifest 無
+install／postinstall 與 files 僅 dist；完整 body-limit／alias 30 tests 安全證據沿用，
+只重驗變動的安裝契約、focused workflow 與最終 canonical，保留所有前期證據。
+
+
+### Git checkout 位元組 binding 補正
+
+初版本地 artifact 為 CRLF，Git 的 text/eol=lf 規則將已提交 blob 正規化為 LF，
+造成 raw-byte checksum 在乾淨 checkout 不符。artifact 改用精確 LF bytes，script
+固定 SHA256 為 `073ab28e26233ad22400473e0fc95341d6ff2161ab23b33fb87ae7c3d96512a1`。
+JSON decoded replacements 與 provider-utils before／after hashes 不變；不放寬校驗，
+不修改 Git attributes。回歸驗證 raw 與 Git clean-filter blob identity 一致，另以實際
+Git blob／checkout filters 證明 LF bytes 穩定；未知 bytes 仍拒絕，patch 仍可重入。
+
+
+### TypeScript Linux Docker 能力補正（2026-10-11）
+
+PR47 Windows run 38143204918 的 TypeScript lifecycle 失敗明確顯示 daemon 使用
+Windows containers，拒絕 Linux sandbox 的 read-only 選項。Docker info 成功不等於
+Linux 能力可用。provider 改以固定 argv、無 shell 查詢 OSType；僅成功狀態、有效
+UTF-8 且 trim 後精確 linux 才可建立 session，其餘 fail closed。保留所有 capability、
+security、read-only、network 與資源限制。既有 lifecycle 在不可用環境實際斷言 session
+拒絕，不以 skip 通關；純回歸涵蓋 Windows、空值、大小寫、錯誤狀態與非法 UTF-8。
+本機回歸不代表 Linux Docker 真實 lifecycle 已驗證；產品驗收仍以最終 Windows
+workflow 的 TypeScript job 實際結果為準，其餘已成功產品 job 證據保留。
