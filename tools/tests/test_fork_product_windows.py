@@ -7,6 +7,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -83,6 +84,8 @@ def test_msvc_configuration_survives_process_boundary(tmp_path: Path) -> None:
         for key in ("INCLUDE", "LIB", "LIBPATH", "VCToolsInstallDir", "VCINSTALLDIR", "WindowsSdkDir", "WindowsSDKVersion", "VSCMD_ARG_TGT_ARCH"):
             env[key] = f"fixture-{key}"
         env["PATH"] = r"C:\fixture-msvc;" + env["PATH"]
+        block = r'$msvcLinker = "C:\fixture-msvc\link.exe"; ' + block
+        env["CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER"] = r"C:\fixture-msvc\link.exe"
         subprocess.run([pwsh, "-NoProfile", "-Command", block], env=env, check=True, capture_output=True, timeout=30)
         next_env = dict(os.environ)
         for line in env_file.read_text(encoding="utf-8-sig").splitlines():
@@ -106,3 +109,46 @@ def test_required_opa_tap_pattern_rejects_skips_and_failures() -> None:
     assert re.search(pattern, f"ok 20 - {name}\r\n")
     assert not re.search(pattern, f"ok 20 - {name} # SKIP\n")
     assert not re.search(pattern, f"not ok 20 - {name}\n")
+
+
+@pytest.mark.parametrize("job", ["rust", "node"])
+def test_native_pins_msvc_linker_across_steps(tmp_path: Path, job: str) -> None:
+    steps = workflow()["jobs"][job]["steps"]
+    setup = next(s["run"] for s in steps if s.get("name") == "Enable installed MSVC tools")
+    assert "Join-Path $env:VCToolsInstallDir 'bin/Hostx64/x64/link.exe'" in setup
+    assert "Test-Path -LiteralPath $msvcLinker -PathType Leaf" in setup
+    assert "'CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER'" in setup
+    build_name = "Build locked Rust workspace" if job == "rust" else "Build once and test native SDK with bundled OPA"
+    assert steps.index(next(s for s in steps if s.get("name") == "Enable installed MSVC tools")) < steps.index(next(s for s in steps if s.get("name") == build_name))
+    assert "$env:PATH.Split" not in setup
+    assert "Split-Path -Parent $msvcLinker" in setup
+    assert "IsPathFullyQualified" in setup and "Unexpected non-MSVC linker path" in setup
+    # Exercise resolution/persistence with a Git linker present earlier in PATH.
+    # No compiler or linker is executed by this fixture.
+    pwsh = shutil.which("pwsh")
+    assert pwsh
+    tools = tmp_path / "msvc-tools"
+    linker = tools / "bin/Hostx64/x64/link.exe"
+    linker.parent.mkdir(parents=True)
+    linker.touch()
+    git_bin = tmp_path / "git-bin"
+    git_bin.mkdir()
+    (git_bin / "link.exe").touch()
+    env_file, path_file = tmp_path / "env", tmp_path / "path"
+    env = dict(os.environ, VCToolsInstallDir=str(tools), GITHUB_ENV=str(env_file), GITHUB_PATH=str(path_file))
+    env["PATH"] = str(git_bin) + ";" + env["PATH"]
+    block = setup[setup.index("$msvcLinker ="):]
+    subprocess.run([pwsh, "-NoProfile", "-Command", block], env=env, check=True, capture_output=True, timeout=30)
+    next_env = dict(os.environ, PATH=env["PATH"])
+    for line in env_file.read_text(encoding="utf-8-sig").splitlines():
+        key, value = line.split("=", 1)
+        next_env[key] = value
+    # Model runner behavior that prepends each GITHUB_PATH entry.
+    entries = path_file.read_text(encoding="utf-8-sig").splitlines()
+    assert entries == [str(linker.parent)]
+    for entry in entries:
+        next_env["PATH"] = entry + ";" + next_env["PATH"]
+    result = subprocess.run([pwsh, "-NoProfile", "-Command", "[pscustomobject]@{CargoLinker=$env:CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER;DefaultLinker=(Get-Command link.exe -ErrorAction Stop).Source} | ConvertTo-Json -Compress"], env=next_env, check=True, capture_output=True, text=True, timeout=30)
+    actual = json.loads(result.stdout)
+    assert Path(actual["DefaultLinker"]) == linker
+    assert Path(actual["CargoLinker"]) == linker

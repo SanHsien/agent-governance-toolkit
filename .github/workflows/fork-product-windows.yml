@@ -49,11 +49,15 @@ jobs:
           Import-Module "$vs\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
           Enter-VsDevShell -VsInstallPath $vs -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64'
           Get-Command cl.exe, link.exe -ErrorAction Stop
-          foreach ($key in @('INCLUDE', 'LIB', 'LIBPATH', 'VCToolsInstallDir', 'VCINSTALLDIR', 'WindowsSdkDir', 'WindowsSDKVersion', 'VSCMD_ARG_TGT_ARCH')) {
+          $msvcLinker = Join-Path $env:VCToolsInstallDir 'bin/Hostx64/x64/link.exe'
+          if (-not [IO.Path]::IsPathFullyQualified($msvcLinker) -or $msvcLinker -match '[\\/]Git[\\/]') { throw 'Unexpected non-MSVC linker path' }
+          if (-not (Test-Path -LiteralPath $msvcLinker -PathType Leaf)) { throw 'MSVC x64 linker unavailable' }
+          $env:CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER = $msvcLinker
+          foreach ($key in @('INCLUDE', 'LIB', 'LIBPATH', 'VCToolsInstallDir', 'VCINSTALLDIR', 'WindowsSdkDir', 'WindowsSDKVersion', 'VSCMD_ARG_TGT_ARCH', 'CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER')) {
             $value = [Environment]::GetEnvironmentVariable($key)
             if ($value) { "$key=$value" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8 }
           }
-          $env:PATH.Split(';') | Where-Object { $_ } | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          Split-Path -Parent $msvcLinker | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
       - name: Build locked Rust workspace
         timeout-minutes: 30
         run: cargo build --release --workspace --locked
@@ -116,11 +120,15 @@ jobs:
           Import-Module "$vs\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
           Enter-VsDevShell -VsInstallPath $vs -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64'
           Get-Command cl.exe, link.exe -ErrorAction Stop
-          foreach ($key in @('INCLUDE', 'LIB', 'LIBPATH', 'VCToolsInstallDir', 'VCINSTALLDIR', 'WindowsSdkDir', 'WindowsSDKVersion', 'VSCMD_ARG_TGT_ARCH')) {
+          $msvcLinker = Join-Path $env:VCToolsInstallDir 'bin/Hostx64/x64/link.exe'
+          if (-not [IO.Path]::IsPathFullyQualified($msvcLinker) -or $msvcLinker -match '[\\/]Git[\\/]') { throw 'Unexpected non-MSVC linker path' }
+          if (-not (Test-Path -LiteralPath $msvcLinker -PathType Leaf)) { throw 'MSVC x64 linker unavailable' }
+          $env:CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER = $msvcLinker
+          foreach ($key in @('INCLUDE', 'LIB', 'LIBPATH', 'VCToolsInstallDir', 'VCINSTALLDIR', 'WindowsSdkDir', 'WindowsSDKVersion', 'VSCMD_ARG_TGT_ARCH', 'CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER')) {
             $value = [Environment]::GetEnvironmentVariable($key)
             if ($value) { "$key=$value" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8 }
           }
-          $env:PATH.Split(';') | Where-Object { $_ } | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          Split-Path -Parent $msvcLinker | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
       - name: Install locked SDK dependencies
         timeout-minutes: 10
         run: npm ci --ignore-scripts
