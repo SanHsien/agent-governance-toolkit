@@ -394,3 +394,65 @@ crate** 而言，精確釘版會強迫每個下游的 `Cargo.lock` 跟著鎖死�
 **理由**：本機沒有 Rust toolchain，下次有 toolchain 時用 `cargo update -p rustls` 升到 0.23.45。
 
 **觸發條件**：待具備 Rust toolchain 之後處理。重審日期：2026-11-01。
+
+## 2026-10-10：Rustls PR45 與有限 Windows 產品驗收候選
+
+採用 PR45 的單份 `agent-governance-rust/Cargo.lock` 候選，rustls 0.23.42 升至
+0.23.45，rustls-webpki 0.103.13 升至 0.103.15。PR46 的 Copilot lock 不混入本候選。
+官方產品 CI 在本 fork 被 owner guard 跳過，fork gate 也沒有原生 SDK 驗收能力。
+新增本 fork 專用 Windows workflow，分別驗收 Rust、Copilot、Node 原生 SDK。
+
+Node 僅新增 `build:test:ci`／`test:ci` 專用 script，與既有 test 相同的 bundled-dispatchers
+建置及全部本機 Node 測試，補上 Cargo locked 與 TAP 報告。既有 build/test 不變。
+Windows OPA 使用 repo 既有下載器的固定版本與 SHA256，兩項 OPA 測試不可 skip。
+MSVC 環境跨 step 保存；不存在編譯工具或 registry 套件時必須如實失敗。
+
+本決策記錄建立時候選尚未發布。本機無 MSVC，不宣稱 Rust／Node 原生全綠；待 root review 並更新 PR45
+後取得三個 hosted Windows job 成功，才具備合併驗收證據。最終 docs／workflow／lock
+必須先穩定，再跑本機 canonical fork gate 與輸入 hash；不沿用較早的 gate。
+
+Copilot 首次乾淨 `npm ci` 揭露既有 peer 衝突，eslint-plugin 8.70.1 要求 parser
+`^8.70.1`，manifest 卻固定 8.70.0。有限修補將 parser 與必要的同版本 helper 子圖
+協調至 8.70.1，保留既有 plugin／TypeScript／Jest 與其他套件版本，不使用 force
+或 legacy-peer-deps。handlebars 仍為 4.7.9，PR46 尚待獨立處理。
+
+## 2026-10-11：Linux Docker sandbox 能力判定
+
+PR45 hosted run `38123244870` 的 Rust build 成功，但 agentmesh 測試為 409 passed／
+1 failed：`docker_create_session_without_docker` 把成功的 `docker info` 當成可用 Linux
+sandbox，建立 `python:3.11-slim` session 失敗且原 assertion 未印出錯誤。
+該 runner 為 `windows-2025-vs2026`；官方 image 安裝 Windows Docker CE。原 log 未記錄
+實際 daemon `OSType`，不能把 Windows daemon 當成已觀測因果。新增唯讀診斷 step，
+由後續 hosted log 提供 `docker info --format '{{.OSType}}'` 的 exit 與輸出。
+
+此 provider 依賴 Linux image、sleep／sh 和 Linux hardening flags，因此只在 info 成功
+且 UTF-8 輸出 trim 後精確為 `linux` 時可用。Windows、未知／無效回應、命令失敗均
+fail closed；所有 cap-drop、no-new-privileges、read-only、network-none 與資源限制保留。
+新增純判定單元測試，既有 lifecycle 測試仍執行可用 Linux 分支或不可用拒絕分支；
+不 ignore／skip。Linux 分支失敗時 assertion 必須顯示實際 Err。
+
+本輪本機不執行缺少 MSVC 的 native Cargo；canonical fork gate 不能代替 Rust 新增
+測試或 Linux Docker lifecycle。驗收以最終候選 hosted Rust workspace 結果為準，且
+Windows unavailable 分支成功不代表 Linux 容器實際 lifecycle 已驗證。既有 Node
+125 passed／1 optional OpenTelemetry skip、兩项 OPA 實際 pass 及 Copilot 成功證據保留。
+
+## 2026-10-11：PR46 Copilot handlebars 與 coverage YAML 依賴修補
+
+PR46 保留 bot 的 handlebars 4.7.9→4.7.10 與 minimist dependency edge，先將 owner main
+合入原 bot branch；未提交 merge 狀態由 root 完成。只修 Copilot，不包含 TypeScript、
+Mastra 或 policy-engine 的其他 alerts。parser／plugin 保持 8.70.1。
+
+Copilot 的 20 moderate audit 節點來自 coverage 開發依賴：
+`@istanbuljs/load-nyc-config → js-yaml3 → argparse1 → sprintf-js`。sprintf-js 目前無
+官方修補版。load-nyc-config 實際只呼叫 `yaml.load(text)`，可用 scoped override
+換成保留該 API 的 js-yaml4，讓 dependency chain 改走無 sprintf-js 的 argparse2。
+初始 4.1.1 候選被實際 resolver audit 揭露 high；官方 advisory 另列 repeated aliases、
+merge-key chains、omap 及 empty merge sources 的 DoS，修補範圍直到 4.3.2。
+因此只將這個 scoped YAML 套件固定為 4.3.2，不使用全域 override、audit fix、force
+或 legacy-peer-deps，也不把安全版本下限或 dev scope 當成漏洞已修的證據。
+
+新增 Copilot Jest 維護回歸：真實 loadNycConfig 的 mapping／sequence、YAML extends
+與 cwd 正規化，以及 js-yaml CLI help／fixture parse。產品依賴測試只在 Copilot
+Jest 跑，不讓 canonical fork gate 要求已安裝這些產品套件。驗收須以最終 manifests／
+docs／tests 穩定後的乾淨 npm ci、build、Jest、lock 與 npm ls 無 sprintf、真實 npm audit
+及 canonical gate 為準；既有 PR45 原生 Windows 證據沿用，不重跑本機 native builds。

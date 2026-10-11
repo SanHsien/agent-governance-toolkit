@@ -56,6 +56,8 @@
     "build:debug": "node scripts/clean-build.mjs && napi build --platform --js native.js --dts native.d.ts && npm run build:dist-binary && tsc -p tsconfig.json && node scripts/clean-build.mjs --generated-only",
     "build:dist-binary": "node -e \"const fs=require('fs');fs.mkdirSync('dist',{recursive:true});for(const f of ['native.js','native.d.ts'])if(fs.existsSync(f))fs.copyFileSync(f,'dist/'+f);for(const f of fs.readdirSync('.').filter(n=>n.endsWith('.node')))fs.copyFileSync(f,'dist/'+f);\"",
     "test": "npm run build:test && node --test test/*.test.mjs",
+    "build:test:ci": "node scripts/clean-build.mjs && napi build --platform --release --features bundled-dispatchers --js native.js --dts native.d.ts --cargo-flags=\"--locked\" && npm run build:dist-binary && tsc -p tsconfig.json && node scripts/clean-build.mjs --generated-only",
+    "test:ci": "npm run build:test:ci && node --test --test-reporter=tap test/*.test.mjs",
     "test:real-frameworks": "node test/standalone-real-frameworks.mjs && node --test test/real-framework-adapters.mjs"
   },
   "engines": {

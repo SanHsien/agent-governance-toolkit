@@ -51,7 +51,7 @@
     "@types/jest": "30.0.0",
     "@types/node": "26.6.2",
     "@typescript-eslint/eslint-plugin": "8.70.1",
-    "@typescript-eslint/parser": "8.70.0",
+    "@typescript-eslint/parser": "8.70.1",
     "eslint": "10.11.0",
     "jest": "30.4.2",
     "ts-jest": "29.4.12",
@@ -212,6 +212,9 @@
   },
   "overrides": {
     "qs": "6.16.0",
-    "proxy-addr": "^2.0.8"
+    "proxy-addr": "^2.0.8",
+    "@istanbuljs/load-nyc-config": {
+      "js-yaml": "4.3.2"
+    }
   }
 }

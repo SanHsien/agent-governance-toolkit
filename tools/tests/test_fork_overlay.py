@@ -18,6 +18,7 @@ UNGATED_WORKFLOWS = {
     "fork-maintenance.yml",
     "upstream-check.yml",
     "dependency-freshness.yml",
+    "fork-product-windows.yml",
 }
 
 
