@@ -60,7 +60,7 @@ cd agent-os
 pytest
 ```
 
-不要把完整 monorepo 測試矩陣當成 fork 一鍵驗收。TypeScript／.NET／Rust／Go 的產品回歸屬上游 `ci.yml`，本線已加上游 repo 閘門。
+不要把完整 monorepo 測試矩陣當成 fork 一鍵驗收。官方 TypeScript／.NET／Rust／Go 矩陣保留上游 repo 閘門；本 fork 的有限 Windows 產品驗收另由下列 workflow 執行。
 
 可選 dashboard（本線 overlay 只聽本機）：
 
@@ -85,12 +85,20 @@ docker compose --profile dashboard up --build dashboard
 ## 有限 Windows 產品驗收
 
 `fork-product-windows.yml` 僅在本 fork 的相關產品路徑 push／PR 與手動觸發時執行。
-三個獨立 job 分別驗收 Rust workspace、Copilot extension 與原生 policy Node SDK。
+五個獨立 job 分別驗收 Rust workspace、Copilot extension、原生 policy Node SDK、
+TypeScript SDK 與 Mastra adapter。
 官方生成的 `policy-engine-ci.yml` 與發布 guard 保持原狀。
 
 - Rust 執行 `cargo build --release --workspace --locked` 與
   `cargo test --release --workspace --locked`。
 - Copilot 執行 `npm ci --ignore-scripts`、`npm run build`、`npm test -- --runInBand`。
+- TypeScript SDK 執行 `npm ci --ignore-scripts`、`npm run build`、`npm test -- --runInBand`。
+- Mastra adapter 執行 `npm ci --ignore-scripts`、`npm run patch:dependencies` 與
+  `node scripts/patch-provider-utils.mjs --check`，再執行 `npm run build`、
+  `npm run lint` 與 `npm test`。安裝 hook 被關閉時，backport 不會自動套用；
+  explicit patch／verify 不可省略。完整契約見 Mastra adapter 的 README。
+  兩者使用 Node 22，job cap 為 20 分鐘；維護回歸放在各自產品套件，
+  不讓 fork gate 要求已安裝產品依賴。驗收後以 git diff 拒絕 manifest／lock 變動。
 - Node SDK 執行 `npm ci --ignore-scripts`、checksum 固定的 Windows OPA 下載與
   `npm run test:ci`。專用 `build:test:ci`／`test:ci` 保留既有 `npm test` 的建置與測試操作，
   另透過 napi 的 `--cargo-flags="--locked"` 傳至 Cargo，僅建置一次。

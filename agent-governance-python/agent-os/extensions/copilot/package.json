@@ -212,6 +212,9 @@
   },
   "overrides": {
     "qs": "6.16.0",
-    "proxy-addr": "^2.0.8"
+    "proxy-addr": "^2.0.8",
+    "@istanbuljs/load-nyc-config": {
+      "js-yaml": "4.3.2"
+    }
   }
 }

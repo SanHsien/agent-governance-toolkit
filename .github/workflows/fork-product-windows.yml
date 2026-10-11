@@ -6,6 +6,8 @@ on:
     paths: &product_paths
       - 'agent-governance-rust/**'
       - 'policy-engine/**'
+      - 'agent-governance-typescript/**'
+      - 'agent-governance-python/agentmesh-integrations/mastra-agentmesh/**'
       - 'agent-governance-python/agent-os/extensions/copilot/**'
       - '.github/workflows/fork-product-windows.yml'
       - 'tools/tests/test_fork_product_windows.py'
@@ -163,3 +165,63 @@ jobs:
           }
       - name: Reject manifest and lockfile mutation
         run: git diff --exit-code -- package.json package-lock.json ../../Cargo.lock
+
+  typescript:
+    if: github.repository == 'SanHsien/agent-governance-toolkit'
+    name: fork typescript SDK (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: agent-governance-typescript
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Install locked typescript dependencies
+        timeout-minutes: 10
+        run: npm ci --ignore-scripts
+      - name: Build typescript SDK
+        timeout-minutes: 5
+        run: npm run build
+      - name: Run typescript product tests
+        timeout-minutes: 5
+        run: npm test -- --runInBand
+      - name: Reject manifest and lockfile mutation
+        run: git diff --exit-code -- package.json package-lock.json
+
+  mastra:
+    if: github.repository == 'SanHsien/agent-governance-toolkit'
+    name: fork mastra SDK (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: agent-governance-python/agentmesh-integrations/mastra-agentmesh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Install locked mastra dependencies
+        timeout-minutes: 10
+        run: npm ci --ignore-scripts
+      - name: Apply and verify legacy response-limit backport
+        timeout-minutes: 2
+        run: npm run patch:dependencies && node scripts/patch-provider-utils.mjs --check
+      - name: Build mastra SDK
+        timeout-minutes: 5
+        run: npm run build
+      - name: Type check Mastra adapter
+        timeout-minutes: 3
+        run: npm run lint
+      - name: Run mastra product tests
+        timeout-minutes: 5
+        run: npm test
+      - name: Reject manifest and lockfile mutation
+        run: git diff --exit-code -- package.json package-lock.json

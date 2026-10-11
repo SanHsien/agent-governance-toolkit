@@ -1,0 +1,44 @@
+{
+  "package": "@ai-sdk/provider-utils",
+  "version": "2.2.8",
+  "advisory": "GHSA-866g-f22w-33x8",
+  "upstream_fix": "https://github.com/vercel/ai/commit/6a436e3",
+  "upstream_reader": "https://raw.githubusercontent.com/vercel/ai/6a436e3/packages/provider-utils/src/read-response-with-size-limit.ts",
+  "max_response_bytes": 8388608,
+  "files": [
+    {
+      "path": "dist/index.js",
+      "before_sha256": "8a5726dd8b575cc3cf1b74ca23ae61599a59671ce72b0c8225522fc250f268d3",
+      "after_sha256": "e075a7fc04453e33da51789e84b267725aca245fab74381268d6e6297feeb2c6",
+      "replacements": [
+        {
+          "before": "// src/response-handler.ts",
+          "after": "// Fork backport of vercel/ai GHSA-866g-f22w-33x8 response body limits.\n// Keep the provider-utils 2.2.8 synchronous parsing API unchanged.\nconst FORK_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;\nasync function forkReadResponseBodyAsText(response) {\n  const tooLarge = () => new RangeError(`Response body exceeds fork limit of ${FORK_MAX_RESPONSE_BYTES} bytes`);\n  const length = response.headers.get(\"content-length\");\n  if (length !== null && /^\\d+$/.test(length.trim()) && Number(length) > FORK_MAX_RESPONSE_BYTES) {\n    try { await response.body?.cancel(); } catch { /* preserve the size error */ }\n    throw tooLarge();\n  }\n  if (response.body === null) return \"\";\n  const reader = response.body.getReader();\n  const chunks = [];\n  let totalBytes = 0;\n  try {\n    while (true) {\n      const { done, value } = await reader.read();\n      if (done) break;\n      if (!(value instanceof Uint8Array)) throw new TypeError(\"Response stream must contain bytes\");\n      totalBytes += value.byteLength;\n      if (totalBytes > FORK_MAX_RESPONSE_BYTES) throw tooLarge();\n      chunks.push(value);\n    }\n  } finally {\n    try { await reader.cancel(); } catch { /* preserve read/abort errors */ }\n    reader.releaseLock();\n  }\n  const bytes = new Uint8Array(totalBytes);\n  let offset = 0;\n  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }\n  return new TextDecoder().decode(bytes);\n}\n\n// src/response-handler.ts",
+          "count": 1
+        },
+        {
+          "before": "const responseBody = await response.text();",
+          "after": "const responseBody = await forkReadResponseBodyAsText(response);",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "path": "dist/index.mjs",
+      "before_sha256": "39f90da88af0e031a03fadd47ec7e33b09be2881faf62a195a83024b09375063",
+      "after_sha256": "b04a2e6e8c026630b674740c86b9bd88b0afdf110c43a30d161e4e4620c25bdd",
+      "replacements": [
+        {
+          "before": "// src/response-handler.ts",
+          "after": "// Fork backport of vercel/ai GHSA-866g-f22w-33x8 response body limits.\n// Keep the provider-utils 2.2.8 synchronous parsing API unchanged.\nconst FORK_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;\nasync function forkReadResponseBodyAsText(response) {\n  const tooLarge = () => new RangeError(`Response body exceeds fork limit of ${FORK_MAX_RESPONSE_BYTES} bytes`);\n  const length = response.headers.get(\"content-length\");\n  if (length !== null && /^\\d+$/.test(length.trim()) && Number(length) > FORK_MAX_RESPONSE_BYTES) {\n    try { await response.body?.cancel(); } catch { /* preserve the size error */ }\n    throw tooLarge();\n  }\n  if (response.body === null) return \"\";\n  const reader = response.body.getReader();\n  const chunks = [];\n  let totalBytes = 0;\n  try {\n    while (true) {\n      const { done, value } = await reader.read();\n      if (done) break;\n      if (!(value instanceof Uint8Array)) throw new TypeError(\"Response stream must contain bytes\");\n      totalBytes += value.byteLength;\n      if (totalBytes > FORK_MAX_RESPONSE_BYTES) throw tooLarge();\n      chunks.push(value);\n    }\n  } finally {\n    try { await reader.cancel(); } catch { /* preserve read/abort errors */ }\n    reader.releaseLock();\n  }\n  const bytes = new Uint8Array(totalBytes);\n  let offset = 0;\n  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }\n  return new TextDecoder().decode(bytes);\n}\n\n// src/response-handler.ts",
+          "count": 1
+        },
+        {
+          "before": "const responseBody = await response.text();",
+          "after": "const responseBody = await forkReadResponseBodyAsText(response);",
+          "count": 3
+        }
+      ]
+    }
+  ]
+}

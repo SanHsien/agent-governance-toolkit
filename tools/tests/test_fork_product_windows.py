@@ -31,7 +31,7 @@ def test_windows_product_scope_and_permissions() -> None:
     assert "agent-governance-rust/**" in doc["on"]["push"]["paths"]
     assert "policy-engine/**" in doc["on"]["push"]["paths"]
     assert "agent-governance-python/agent-os/extensions/copilot/**" in doc["on"]["push"]["paths"]
-    assert set(doc["jobs"]) == {"rust", "copilot", "node"}
+    assert set(doc["jobs"]) == {"rust", "copilot", "node", "typescript", "mastra"}
     for job in doc["jobs"].values():
         assert job["if"] == "github.repository == 'SanHsien/agent-governance-toolkit'"
         assert job["runs-on"] == "windows-latest"
@@ -152,3 +152,55 @@ def test_native_pins_msvc_linker_across_steps(tmp_path: Path, job: str) -> None:
     actual = json.loads(result.stdout)
     assert Path(actual["DefaultLinker"]) == linker
     assert Path(actual["CargoLinker"]) == linker
+
+
+@pytest.mark.parametrize("name,directory,command", [
+    ("typescript", "agent-governance-typescript", "npm test -- --runInBand"),
+    ("mastra", "agent-governance-python/agentmesh-integrations/mastra-agentmesh", "npm test"),
+])
+def test_additional_windows_dependency_consumers(name: str, directory: str, command: str) -> None:
+    doc = workflow()
+    assert directory + "/**" in doc["on"]["push"]["paths"]
+    job = doc["jobs"][name]
+    assert job["timeout-minutes"] == "20"
+    assert job["defaults"]["run"]["working-directory"] == directory
+    assert next(s for s in job["steps"] if s.get("uses", "").startswith("actions/setup-node@"))["with"]["node-version"] == "22"
+    steps = [s for s in job["steps"] if "run" in s]
+    assert [s["run"] for s in steps] == (["npm ci --ignore-scripts"] + (["npm run patch:dependencies && node scripts/patch-provider-utils.mjs --check"] if name == "mastra" else []) + ["npm run build"] + (["npm run lint"] if name == "mastra" else []) + [command, "git diff --exit-code -- package.json package-lock.json"])
+    assert all(0 < int(s["timeout-minutes"]) <= 10 for s in steps[:-1])
+
+
+def test_mastra_backport_install_contract_and_artifact_binding() -> None:
+    import hashlib
+
+    directory = ROOT / "agent-governance-python/agentmesh-integrations/mastra-agentmesh"
+    package = json.loads((directory / "package.json").read_text())
+    assert "install" not in package["scripts"]
+    assert "postinstall" not in package["scripts"]
+    assert package["files"] == ["dist"]
+    lock = json.loads((directory / "package-lock.json").read_text())
+    assert not lock["packages"][""].get("hasInstallScript", False)
+    for name in ("prebuild", "pretest", "prelint"):
+        assert package["scripts"][name] == "npm run patch:dependencies"
+    artifact_path = directory / "patches/provider-utils-2.2.8-response-limit.json"
+    artifact_bytes = artifact_path.read_bytes()
+    assert b"\r\n" not in artifact_bytes, "Artifact must use checkout-stable LF bytes"
+    relative_path = artifact_path.relative_to(ROOT).as_posix()
+    clean_blob = subprocess.check_output(
+        ["git", "hash-object", f"--path={relative_path}", "--stdin"],
+        input=artifact_bytes, cwd=ROOT,
+    ).strip()
+    raw_blob = subprocess.check_output(
+        ["git", "hash-object", "--no-filters", "--stdin"],
+        input=artifact_bytes, cwd=ROOT,
+    ).strip()
+    assert clean_blob == raw_blob, "Git clean filters must preserve the bound artifact bytes"
+    digest = hashlib.sha256(artifact_bytes).hexdigest()
+    script = (directory / "scripts/patch-provider-utils.mjs").read_text(encoding="utf-8-sig")
+    assert f"const artifactSha256 = '{digest}'" in script
+    artifact = json.loads(artifact_path.read_text())
+    assert artifact["package"] == "@ai-sdk/provider-utils"
+    assert artifact["version"] == "2.2.8"
+    assert artifact["max_response_bytes"] == 8 * 1024 * 1024
+    assert [f["path"] for f in artifact["files"]] == ["dist/index.js", "dist/index.mjs"]
+    assert all(re.fullmatch("[0-9a-f]{64}", f[k]) for f in artifact["files"] for k in ("before_sha256", "after_sha256"))
