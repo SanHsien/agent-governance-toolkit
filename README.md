@@ -379,6 +379,10 @@ AGT 提供 **執行期治理** — 規定代理允許執行的操作。對於 **
 
 如果您使用 Agent Governance Toolkit 建立與第三方代理框架或服務協作的應用程式，則需自行承擔風險。我們建議您審查所有與第三方服務共享的資料，並了解第三方在資料保留和資料存放位置方面的做法。您有責任管理您的資料是否會流出組織的合規範圍和地理邊界，以及相關影響。
 
+## 多 Agent 流水線
+
+本 repo 是 [agent-relay](https://github.com/SanHsien/agent-relay) 多 Agent 派工與驗收流水線的一環（角色：執行期政策與沙箱審計）。與 agent-relay 的整合規劃中（Phase 3）。協定規格與所有相關 repo 的總目錄見 agent-relay。
+
 ## 授權條款
 
 本專案基於 [MIT License](https://github.com/microsoft/agent-governance-toolkit/blob/main/LICENSE) 進行授權。

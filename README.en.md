@@ -451,6 +451,10 @@ packages, or documentation sites claiming to be official. If you encounter a
 suspicious site or package using the Agent Governance Toolkit name, please
 report it through the channels described in [SECURITY.md](SECURITY.md).
 
+## Multi-agent pipeline
+
+This repo is part of the [agent-relay](https://github.com/SanHsien/agent-relay) multi-agent dispatch and verification pipeline (role: runtime policy and sandbox auditing). Integration with agent-relay is planned (Phase 3). The protocol spec and the index of all related repos live in agent-relay.
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
