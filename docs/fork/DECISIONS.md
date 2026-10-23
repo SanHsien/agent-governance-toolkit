@@ -549,3 +549,47 @@ security、read-only、network 與資源限制。既有 lifecycle 在不可用�
 拒絕，不以 skip 通關；純回歸涵蓋 Windows、空值、大小寫、錯誤狀態與非法 UTF-8。
 本機回歸不代表 Linux Docker 真實 lifecycle 已驗證；產品驗收仍以最終 Windows
 workflow 的 TypeScript job 實際結果為準，其餘已成功產品 job 證據保留。
+
+## 2026-10-24：Dependabot 68 筆開放告警（critical 2、high 15、medium 42、low 9）一次處理
+
+**範圍**：全部 68 筆都有修補版，沒有延後項。只動告警 `manifest_path` 對應的 manifest／lock，沒有改產品程式碼。
+Code-scanning API 回 `404 no analysis found`（本 fork 沒有 CodeQL 分析結果），沒有可處理的項目。
+
+**決定與做法**（各生態系各一個 commit，同一個 PR）：
+
+- Rust（2 筆 medium，`rustls` GHSA-2mjx-qc3c-rqvc）：`cargo update -p rustls --precise 0.23.45`，
+  只改 `policy-engine/examples/coding_agent/app/Cargo.lock`（resolver 同時把 `rustls-webpki` 0.103.13 帶到 0.103.16）
+  與 `benchmarks/prompt-injection/harness/agt-rules-baseline/Cargo.lock`。`Cargo.toml` 與 `agent-governance-rust` 的
+  精確釘版政策不動：本 fork 不是 crates.io 發佈方，PR45 的精確釘版決定維持。這同時結案 2026-10-09
+  「延後 Rustls」那一則：當時以「沒有 toolchain」為由，現在 `~/.cargo` 有 cargo 1.98.1，`cargo update`
+  與 `cargo metadata --locked` 可用；仍沒有 MSVC `link.exe`，所以不能 `cargo check`／`cargo test`。
+- pip（27 筆：critical 2、high 7、medium 13、low 5）：兩個 `uv.lock` 用 `uv lock --upgrade-package <pkg>==<修補版>`
+  （certifi 2026.10.19、hypervisor 另 aiohttp 3.14.4，resolver 順帶 yarl 1.25.1）。兩個 `requirements.txt`
+  是人工釘版：cloud-board 的 aiohttp 3.14.4、black 26.10.1、opentelemetry-api／sdk 1.45.1 與
+  instrumentation-fastapi 0.66b1（sdk 1.45.1 要求 semantic-conventions 0.66b1，三者必須一起動）；caas 的
+  pypdf 6.21.1。選的都是告警列出的最小修補版（instrumentation 例外，由 sdk 約束決定）。
+- npm（39 筆，6 個套件）：lock 一律由 npm 重新產生（`--package-lock-only --ignore-scripts`，不用 legacy-peer-deps、
+  audit fix、force）。`@vitest/mocker` 是 `vitest` 的精確釘版子依賴，唯一的修補路徑是 vitest 4.1.11 → 4.1.12
+  （mcp-server 的 `@vitest/coverage-v8` 是 vitest 的精確 peer，同步 4.1.12）。`vite` 沒有直接依賴，由 vitest
+  解析到 8.3.5（在 vitest 允許的 `^8` 內，高於修補版 8.1.6）。mcp-proxy 的 `@modelcontextprotocol/sdk`
+  1.31.0 → 1.32.0（精確釘版，取最小修補版）。hono 4.13.13、ip-address 10.7.4、follow-redirects 1.16.1
+  是 lock-only 的 `npm update`。
+
+**驗證**：兩個 Rust lock `cargo metadata --locked` 通過；marketplace 327 passed／2 skipped；hypervisor
+69 failed／9 errors，與 origin/main 的 lock 逐項相同（既有失敗，非本次造成）；mcp-proxy、copilot 擴充、
+copilot-governance、mastra 的 `npm ci`／build／test 通過（mastra 的 pack-contract 測試在本機失敗，是 Git 的
+GNU tar 把 `C:` 當遠端主機，System32 的 bsdtar 解 tarball 正常，PR 的 Windows runner 才是依據）；pypdf
+6.21.1 以 `PdfReader` 實測 caas 用到的 API。
+
+**既有問題，本次不處理**：
+
+- `agent-os/services/cloud-board/requirements.txt`：`pytest==9.0.3` 與 `pytest-asyncio==1.1.0`（要求 pytest<9）
+  互相衝突，原檔就無法解析；`agent-os/services/cloud-board/requirements.lock` 與 `agent-os/modules/caas/requirements.lock`
+  落後 `requirements.txt` 很多（例如 aiohttp 3.13.3），不在告警範圍。Dependabot 不讀 `*.lock`，沒有告警。
+- `npm audit` 另外報了不在這 68 筆內的 `zod`（GHSA-mrhx-c7xc-m3w5，high）：mcp-proxy、mcp-server、
+  mastra、policy-engine/sdk/node 都有，修補版 4.6.6 對 mastra 的 `zod 3.25.76` 是跨 major；
+  待 Dependabot 開出告警或
+  上游發出 3.x 修補時處理。
+
+**觸發條件**：下一次 Dependabot 告警出現新的 `zod`／`vite`／`vitest` 項目，或 2026-11-01 重新跑
+`gh api repos/SanHsien/agent-governance-toolkit/dependabot/alerts?state=open`，開放告警數應為 0（不含上述 zod）。
