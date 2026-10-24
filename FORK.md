@@ -19,7 +19,7 @@
 | 項目 | 說明 |
 |---|---|
 | `README.md` / `README.en.md` | 根目錄 `README.md` 為繁體中文主說明檔；`README.en.md` 為英文版規格與說明 |
-| `AGENTS.md` / `CLAUDE.md` | 開頭加上本 fork overlay，明定僅支援 Windows 與繁體中文為主；下文仍是上游產品規則 |
+| `AGENTS.md` | 開頭加上本 fork overlay，明定僅支援 Windows 與繁體中文為主；下文仍是上游產品規則 |
 | `SECURITY.md` / `CONTRIBUTING.md` | 開頭 overlay：本線 PR／overlay 問題走 SanHsien；產品漏洞與產品貢獻仍指向上游 |
 | `NOTICE.md` | 本 fork 的來源與授權說明。根目錄 `NOTICE` 仍是上游第三方清單 |
 | `tools/dev_check.ps1` | Windows 本機一鍵 fork gate：維護工具的檢查，加上**本 fork 分歧產品碼**的測試（目前是 `agent-os` 的 MCP 認證強制）。不安裝產品套件，只需 `requirements-dev.txt` |

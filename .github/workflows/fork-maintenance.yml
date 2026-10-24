@@ -7,7 +7,6 @@ on:
       - FORK.md
       - NOTICE.md
       - REVIEW.md
-      - CLAUDE.md
       - AGENTS.md
       - README.md
       - README.en.md
