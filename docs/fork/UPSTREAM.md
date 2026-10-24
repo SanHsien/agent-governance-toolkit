@@ -95,3 +95,12 @@ README 衝突的解法：保留頂部 fork overlay，把上游新英文內容留
   - PR：**不推進**，維持 **#4197**（本輪沒有逐筆讀 #4197 以後的 PR）
   - Issue：**不推進**，維持 **#4178**
 - 新上游 workflow 檢查：`redteam-benchmark.yml` 已加官方 repo 閘門；上游刪除 `auto-merge-dependabot.yml`，本 fork 跟著刪除。
+
+## 2026-10-24：第四輪審查，套用至 `70a4ab8e`
+
+- 範圍：`c3e8229d..70a4ab8e` 的 128 個 commit、195 個 PR、24 個 issue。逐項結論與證據見 `DECISIONS.md` 同日段落。
+- 方法：fork 歷史與上游無共同祖先（`git merge` 需橋接 commit），本輪改以 `git diff c3e8229d upstream/main | git apply --3way --index` 整批套用，依賴衝突檔與 `README.md` 取 fork 側，TypeScript 7 遷移還原延後，再另外移植 14 個上游 open 修正 PR。
+- 水位更新：
+  - Commit：`70a4ab8e`（`70a4ab8e8a0434f481ba85a52ccf988a0572ceeb`）
+  - PR：4197 → 4421
+  - Issue：4178 → 4400

@@ -593,3 +593,50 @@ GNU tar 把 `C:` 當遠端主機，System32 的 bsdtar 解 tarball 正常，PR �
 
 **觸發條件**：下一次 Dependabot 告警出現新的 `zod`／`vite`／`vitest` 項目，或 2026-11-01 重新跑
 `gh api repos/SanHsien/agent-governance-toolkit/dependabot/alerts?state=open`，開放告警數應為 0（不含上述 zod）。
+
+## 2026-10-24：上游審查第四輪（c3e8229d → 70a4ab8e）
+
+**範圍**：128 個 commit（57 個非依賴）、195 個 PR（`--state all`：142 已合併、7 關閉未合併、46 open，其中 88 筆 Dependabot）、24 個 issue（19 open、5 closed）。水位從 commit `c3e8229d`／PR 4197／issue 4178 推進到 commit `70a4ab8e`／PR 4421／issue 4400。
+
+**方法（結構性論證，PLAYBOOK §2 判準六）**：`git diff c3e8229d origin/main` 在產品碼上的分歧只有 mcp-server 4 個 `src/` 檔、Rust／TypeScript `sandbox*` 與少數測試；產品原始碼與上游 `c3e8229d..upstream/main` 變更檔沒有交集；交集只在非產品檔：`README.md`、11 個 workflow、`docs/i18n/README.*.md`、約 15 個 `package.json`／lock、cloud-board `requirements.txt`、`agent-hypervisor/uv.lock`、3 個 `Cargo.lock`。這些逐一處理（見下表），所以已合併的 commit 以 `git diff c3e8229d upstream/main | git apply --3way` 整批套用（fork 歷史與上游無共同祖先，改用 patch 而非橋接 merge），不逐筆重寫。
+
+**採用（commit 軸）**：57 個非依賴 commit 扣除 TypeScript 7 遷移後的產品修正與功能（agent-sre、agent-hypervisor、agent-mesh、agent-os、agent-compliance、agent-discovery、agent-runtime、agent-sandbox、agent-lightning、agent-learning、haystack-agentmesh、a2a-protocol、dotnet、opencode、claude-code、policy-engine ACS alpha.4），包含 #4361／#4332／#4277（hypervisor denylist 繞過）、#4362（.NET 非 DID principal）、#4124（不可見字元繞過）、#4339（traceparent sampled 位元）。供應鏈 CI 腳本（#4229、#4231、#4213、#4151）一併採用。
+
+**未採用，附理由與觸發條件**：
+
+| 項目 | 結論 | 證據與理由 | 觸發條件 |
+| --- | --- | --- | --- |
+| TypeScript 7 遷移（#4126、#4127，`tsconfig`／`jest.config`／測試）與其後 `@typescript-eslint`、vitest 5、`@swc/core` 等 dev 依賴 PR | 延後 | 遷移把 jest 換成 `@swc/jest`、`module: NodeNext`；fork 的 `package.json` 釘 `typescript 6.0.3`／`ts-jest`，套了會讓 jest 設定缺套件。此遷移不是安全修正 | TypeScript 7 穩定且 fork 的 Windows gate 能全綠時，整組（package.json＋lock＋tsconfig＋jest）一起採用 |
+| `README.md` 變更（ACS 說明、plugin marketplace 段落） | 不採用 | fork 的 `README.md` 是繁體中文版，衝突取 fork 側 | 維護者要同步英文說明時，改 `README.en.md` |
+| 依賴衝突檔（各 `package.json`／lock／`requirements.txt`／`uv.lock`） | 取 fork 側 | fork 已套 2026-10-24 的 #48／#53 安全修補，Dependabot 會對 fork 自己開 PR | Dependabot 對應 PR |
+| 三個 `Cargo.lock`（`agent-governance-rust`、`policy-engine`、`policy-engine/examples/coding_agent/app`） | 取上游側／兩側合併 | `tests/ci/test_release_tooling.py::test_acs_registry_pair_and_backend_features_are_consistent` 要求 lock 與 ACS alpha.4 一致；逐套件比對沒有任何版本倒退（rustls 0.23.45／0.23.46），只移除 `serde_yaml`、`unsafe-libyaml`、`ryu` | — |
+| 已關閉未合併 #4420、#4344、#4271、#4262、#4246、#4235、#4225 | 不收 | 上游拒收或已由後續 PR 取代：#4344 已由 #4339（fork `agent-sre/.../tracing/__init__.py:108-116`）涵蓋；#4271 由 #4293／#4412 取代；#4262（移除 policy-engine）上游定調為方向但此 PR 載體不對 | #4262 方向若以新 PR 合併，會與 fork 閘門過的 `policy-engine-ci.yml`／`ci.yml` 衝突，屆時重審 |
+| open 的功能／重構／CI PR：#4417、#4416（破壞性）、#4407、#4346、#4327、#4292、#4288、#4276、#4275、#4274、#4270、#4269、#4268、#4267、#4261、#4259 | 不採用 | fork 不替上游決定功能。風險：#4407 新增未加 fork 閘門的 `release-stage-label` job 並會讓 `check_no_public_preview.sh` 掃到 fork 檔而失敗；#4259 的 `--sync-registry` 會把 `policy-engine-ci.yml` 手加的閘門洗掉；#4261／#4274／#4292／#4346 若合併會帶入未閘門的 job | 上游合併後，同步時逐一補 fork 閘門 |
+| 7 個 open Dependabot PR（#4398 aiohttp、#4379、#4303、#4302、#4301、#4300、#4299） | 不收 | fork 自己跑 Dependabot；aiohttp 已在 3.14.4 | — |
+
+**採用上游尚未合併的 open PR（缺陷在 fork 現碼中實際存在，附修正位置；皆已有各套件測試通過）**：
+
+| PR | 缺陷（fork 檔:行） | 修正 |
+| --- | --- | --- |
+| #4354（結案 issue #4291） | `agent-mesh/.../governance/policy.py:216-223`、`federation.py:1064-1069` 在引號內也切 `and`／`or`，deny 規則對所有請求命中、allow 永不命中 | 只在引號外切分 |
+| #4356（結案 issue #4355） | `agent-hypervisor/.../session/isolation.py:76-85` 不解析 `..`，且用裸 `startswith` 無目錄邊界 | 解析路徑並檢查邊界 |
+| #4409 | `agent-runtime/.../deploy.py:176-191` 呼叫端 `env` 可覆蓋 `AGT_*` 治理設定（含 kill switch） | `deploy()` 對含 `=` 的名稱，以及與 `governance_env` 的 7 個固定名稱（`AGT_POLICY_PATH`、`AGT_TRUST_LEVEL`、`AGT_AUDIT_ENABLED`、`AGT_MAX_TOOL_CALLS`、`AGT_RATE_LIMIT_RPM`、`AGT_KILL_SWITCH`、`AGT_RETENTION_DAYS`）同名的變數拒絕（`ValueError`）；其他 `AGT_*` 名稱照放行；內部呼叫端無此用法 |
+| #4284 | `agent-os/.../mcp_security.py:805` 忽略設定的 `privilege_escalation` 樣式 | 使用設定 |
+| #4282、#4283、#4234 | Go：`policy.go:450` 整數條件永不匹配；`identity.go:41` 壞金鑰長度 panic；`sandbox.go:266` docker exec 不吃 `TimeoutSeconds` | 補整數比較、長度檢查、逾時 |
+| #4285、#4233、#4226、#4232 | `token_budget.py:105` 進度條除法應為乘法；`rate_limiter` docstring 與程式矛盾；`oci-manifest.ts:18` 不存在的 OCI v2 media type；`context-poisoning.ts:122` 寫死 `MAX_ENTRIES_PER_KEY` | 各一行級修正 |
+| #4324、#4325（移植後套用） | `agent-discovery/cli/main.py:145,237` 掃描不存風險標籤與狀態；`config.py:156` Windows 反斜線使巢狀設定檔匹配失敗（Windows 專屬） | 補存檔、改用 posix 路徑；#4325 的第 3 個 hunk 與已採用的 `DOCKER_AGENT_PATTERNS` 變更衝突，已手動移植 |
+| #4418 | `agent-lightning/.../reward.py:168` multiplicative 模式回報的不是實際套用的懲罰 | 回報實際值 |
+
+這批會讓 fork 與上游短暫分歧；上游合併同一修正時，下次同步以上游版本為準。CHANGELOG 類檔案刻意不套（與 fork 的 CHANGELOG 衝突，且這些條目不屬於 fork 的變更紀錄）。
+
+**WATCH（缺陷在 fork 存在或可能存在，暫不採用）**：
+
+- #4411（結案 issue #4400）：補 `ExcessivePrivilegeEvaluation` 剩餘缺口（空白、list、巢狀、`admin:*`、大小寫鍵；`agent-learning/.../evaluation.py:224,236-245,563`），但語意放寬（含 `*` 的任何字串都算高權限；非字串葉節點 fail closed）。觸發：上游合併。
+- #4286：`extractSqlFacets` 對 UNKNOWN 動詞回空 facets，會讓以表名為鍵的 deny 規則抓不到該類語句，需改以 `verb==UNKNOWN` 規則。觸發：上游合併並說明遷移。
+- #4279：OpenCode `session.created` 移入 `event` hook（`agent-governance-opencode/lib/index.mjs:80`）；OpenCode 是否有該 hook 鍵的依據是文件，未實跑。觸發：能實跑 OpenCode 時。
+- #4419：`total_reward` 變更同時改規格步驟順序（目前程式符合 AGENT-LIGHTNING-FAST-PATH-1.0 第 8 步先於第 11 步）。觸發：上游規格與程式一起合併。
+- #4421／#4377（`agt-policies` 遷移器強化，互相衝突、各 +800 行）、#4376（webhook SSRF 守衛，+1791 行，預設擋內部端點；fork 的 webhook URL 來自自己的設定，不是不可信輸入）、#4320（MCP 簽章，破壞性、`CHANGES_REQUESTED`、依賴未合併的 #4132，對應 issue #4199）。觸發：上游合併其一／fork 允許不可信方設定 webhook URL。
+- issue #4343（Claude Code plugin 對每個工具呼叫引數跑 `McpSecurityScanner`，`agent-governance-claude-code/lib/policy.mjs:358,497`）：fork 仍存在，無上游修正 PR；#4372（`AgentControl` 無 `close()`，`policy-engine/sdk/python/.../_orchestration.py`）、#4363（功能提案）。觸發：上游出修正 PR。
+- issue #4331、#4334、#4335、#4357、#4358 已由 #4332、#4339、#4340、#4362、#4361 修掉（逐項在 fork 程式確認）；#4217、#4230、#4298、#4342、#4371、#4373、#4374、#4375、#4378、#4281、#4345、#4198 為 RFC／提案／維運，無動作。
+
+**fork 閘門提醒**：本輪新增的兩個 job（`docs-quality.yml` 的 `owasp-badge`、`supply-chain-check.yml` 的 `cargo-source-policy`）已補 `github.repository == 'microsoft/agent-governance-toolkit'` 閘門。注意 `tools/tests/test_fork_overlay.py` 只檢查檔案內有無閘門字串，不是逐 job 檢查，不能當作閘門齊全的證據，審查才抓到缺口。同步 #4318 時 `docs/i18n/README.zh-TW.md` 的 OWASP 徽章一併改為 `7_Full,_3_Partial`（`python -I scripts/docs/check_owasp_badge.py --root .` 通過）。上游 alpha.4 刪掉了 `policy-engine/sdk/rust/Cargo.toml` 內「OPA runtime env 會讀到主機秘密」的 SECURITY 註解，風險本身未被 alpha.4 修掉，留在此處備查。上游尚未合併的 #4261／#4274／#4292／#4346 若合併，同步後要補 `github.repository == 'microsoft/agent-governance-toolkit'` 閘門。
