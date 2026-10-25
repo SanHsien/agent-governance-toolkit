@@ -19,7 +19,7 @@ describe('fork coverage YAML dependency repair', () => {
   });
   afterEach(() => fs.rmSync(fixture, { recursive: true, force: true }));
 
-  test('scopes the YAML override and eliminates the sprintf dependency', () => {
+  test('scopes the YAML override and eliminates the sprintf and handlebars dependencies', () => {
     const root = path.resolve(__dirname, '../..');
     const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
     const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
@@ -27,7 +27,7 @@ describe('fork coverage YAML dependency repair', () => {
     expect(manifest.overrides['js-yaml']).toBeUndefined();
     expect(JSON.parse(fs.readFileSync(yamlPackage, 'utf8')).version).toBe('4.3.2');
     expect(Object.keys(lock.packages).filter(key => key.endsWith('node_modules/sprintf-js'))).toEqual([]);
-    expect(lock.packages['node_modules/handlebars'].version).toBe('4.7.10');
+    expect(lock.packages['node_modules/handlebars']).toBeUndefined();
   });
 
   test('loads real nyc YAML mappings and sequences', async () => {

@@ -602,11 +602,12 @@ GNU tar 把 `C:` 當遠端主機，System32 的 bsdtar 解 tarball 正常，PR �
 
 **採用（commit 軸）**：57 個非依賴 commit 扣除 TypeScript 7 遷移後的產品修正與功能（agent-sre、agent-hypervisor、agent-mesh、agent-os、agent-compliance、agent-discovery、agent-runtime、agent-sandbox、agent-lightning、agent-learning、haystack-agentmesh、a2a-protocol、dotnet、opencode、claude-code、policy-engine ACS alpha.4），包含 #4361／#4332／#4277（hypervisor denylist 繞過）、#4362（.NET 非 DID principal）、#4124（不可見字元繞過）、#4339（traceparent sampled 位元）。供應鏈 CI 腳本（#4229、#4231、#4213、#4151）一併採用。
 
-**未採用，附理由與觸發條件**：
+**未採用或延後，附理由與觸發條件**：
 
 | 項目 | 結論 | 證據與理由 | 觸發條件 |
 | --- | --- | --- | --- |
-| TypeScript 7 遷移（#4126、#4127，`tsconfig`／`jest.config`／測試）與其後 `@typescript-eslint`、vitest 5、`@swc/core` 等 dev 依賴 PR | 延後 | 遷移把 jest 換成 `@swc/jest`、`module: NodeNext`；fork 的 `package.json` 釘 `typescript 6.0.3`／`ts-jest`，套了會讓 jest 設定缺套件。此遷移不是安全修正 | TypeScript 7 穩定且 fork 的 Windows gate 能全綠時，整組（package.json＋lock＋tsconfig＋jest）一起採用 |
+| TypeScript 7 遷移（#4126、#4127） | 已於 2026-10-25 採用 | 前一輪因 jest 設定缺套件延後；本輪補齊 `@swc/jest`、`@typescript/native` 並重生 lock 後三套件 build／lint 通過、有測試的兩套件全綠，見「2026-10-25：採用 TypeScript 7 遷移」一節 | — |
+| 遷移之後的 dev 依賴 PR（`@typescript-eslint`、vitest 5、`@swc/core` 升版等） | 延後 | 非安全修正；fork 維持 `@typescript-eslint` 8.70.1、vitest 4.1.12，只加遷移必要的套件 | 對應套件有安全公告，或 fork 的 Windows gate 能整組驗證時再升 |
 | `README.md` 變更（ACS 說明、plugin marketplace 段落） | 不採用 | fork 的 `README.md` 是繁體中文版，衝突取 fork 側 | 維護者要同步英文說明時，改 `README.en.md` |
 | 依賴衝突檔（各 `package.json`／lock／`requirements.txt`／`uv.lock`） | 取 fork 側 | fork 已套 2026-10-24 的 #48／#53 安全修補，Dependabot 會對 fork 自己開 PR | Dependabot 對應 PR |
 | 三個 `Cargo.lock`（`agent-governance-rust`、`policy-engine`、`policy-engine/examples/coding_agent/app`） | 取上游側／兩側合併 | `tests/ci/test_release_tooling.py::test_acs_registry_pair_and_backend_features_are_consistent` 要求 lock 與 ACS alpha.4 一致；逐套件比對沒有任何版本倒退（rustls 0.23.45／0.23.46），只移除 `serde_yaml`、`unsafe-libyaml`、`ryu` | — |
@@ -640,3 +641,12 @@ GNU tar 把 `C:` 當遠端主機，System32 的 bsdtar 解 tarball 正常，PR �
 - issue #4331、#4334、#4335、#4357、#4358 已由 #4332、#4339、#4340、#4362、#4361 修掉（逐項在 fork 程式確認）；#4217、#4230、#4298、#4342、#4371、#4373、#4374、#4375、#4378、#4281、#4345、#4198 為 RFC／提案／維運，無動作。
 
 **fork 閘門提醒**：本輪新增的兩個 job（`docs-quality.yml` 的 `owasp-badge`、`supply-chain-check.yml` 的 `cargo-source-policy`）已補 `github.repository == 'microsoft/agent-governance-toolkit'` 閘門。注意 `tools/tests/test_fork_overlay.py` 只檢查檔案內有無閘門字串，不是逐 job 檢查，不能當作閘門齊全的證據，審查才抓到缺口。同步 #4318 時 `docs/i18n/README.zh-TW.md` 的 OWASP 徽章一併改為 `7_Full,_3_Partial`（`python -I scripts/docs/check_owasp_badge.py --root .` 通過）。上游 alpha.4 刪掉了 `policy-engine/sdk/rust/Cargo.toml` 內「OPA runtime env 會讀到主機秘密」的 SECURITY 註解，風險本身未被 alpha.4 修掉，留在此處備查。上游尚未合併的 #4261／#4274／#4292／#4346 若合併，同步後要補 `github.repository == 'microsoft/agent-governance-toolkit'` 閘門。
+
+## 2026-10-25：採用 TypeScript 7 遷移（#4126）
+
+前一輪延後的 #4126／#4127 本輪補齊後採用。#4127 的供應鏈驗證腳本前一輪已隨整批套用在 fork；#4126 的三個套件（`agent-governance-typescript`、`agent-os/extensions/copilot`、`agent-os/extensions/mcp-server`）改用 `@typescript/native`（`npm:typescript@7.0.2`）編譯，`typescript` 別名到 `@typescript/typescript6@6.0.2` 供 lint 使用，jest 改 `@swc/jest`。
+
+- 依賴版本保持 fork 側（`@types/node` 26.6.2、`@typescript-eslint` 8.70.1、vitest 4.1.12），只加遷移必要套件；三份 lock 以 `npm install` 重生。
+- 移除 `ts-jest` 連帶移除 `handlebars`（它只是 ts-jest 的間接依賴），所以兩個 `coverage-yaml.test.ts` 的斷言從「handlebars 4.7.10」改為「lock 內無 handlebars」。
+- 驗證：三套件 `build`／`lint` 通過；typescript 712 tests、copilot 17 tests 全綠；`check_lockfile_integrity`、`check_install_scripts --strict`、`check_release_age`、`check_dependency_confusion --strict` 通過；`scripts/tests`＋`tests/ci` 失敗集合（9 項）與 main 逐項相同。
+- 依賴審計：`docs/dependency-audits/2026-09-24-typescript-7-toolchain.md`（取自上游）。
