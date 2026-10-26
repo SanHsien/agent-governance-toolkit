@@ -104,3 +104,13 @@ README 衝突的解法：保留頂部 fork overlay，把上游新英文內容留
   - Commit：`70a4ab8e`（`70a4ab8e8a0434f481ba85a52ccf988a0572ceeb`）
   - PR：4197 → 4421
   - Issue：4178 → 4400
+
+
+## 2026-10-26：補審兩個 commit 與 PR #4427、issue #4426，水位推進至 `46b370e7`
+
+- 範圍：`70a4ab8e..46b370e7` 的 2 個 commit（`6dc2093e`、`46b370e7`）、PR #4427、issue #4426。逐項結論與證據見 `DECISIONS.md` 同日「補」段落。
+- 結果：`6dc2093e` 的程式與測試早已以 open PR #4418 形式在 fork，僅補規格文件；`46b370e7`（`--sync-registry`）不採用，因 fork 的 `generate_workflows.py --check` 已因手加閘門而紅，且其 4 個符號連結測試在 Windows 無權限環境直接 `OSError`；PR #4427 不採用；issue #4426 列 WATCH。
+- 水位更新：
+  - Commit：`46b370e7`（`46b370e77b7c13569d7525e337e31a9d3216c0b9`）
+  - PR：4423 → 4427
+  - Issue：4425 → 4426

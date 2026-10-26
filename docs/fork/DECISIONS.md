@@ -661,3 +661,15 @@ commit 水位不變（`70a4ab8e`，上游無新 commit）；PR 水位 4421 → 4
 | PR #4423（ACS pre/post tool committed effects 測試） | 不採用 | 只加測試，fork 不跑 policy-engine 該套測試 | — |
 | issue #4424（`run_tool` 在 `post_tool_call` 未綁定時先執行工具再拒絕） | WATCH | 行為屬 fail-closed 設計（#3528），提案是補文件並可選提早失敗；尚無修正 PR | 上游出修正 PR |
 | issue #4425（8 個範例的 requirements 釘舊套件，缺 `agent_control_specification`） | WATCH | 範例相依問題，fork 不跑這些範例；尚無修正 PR | 上游出修正 PR，或 fork 要驗收這些範例時 |
+
+
+## 2026-10-26（補）：上游 2 個新 commit、PR #4427、issue #4426
+
+commit 水位 `70a4ab8e` → `46b370e7`（上游 `6dc2093e`、`46b370e7`）；PR 水位 4423 → 4427、issue 水位 4425 → 4426。PR #4427 依 PLAYBOOK 判準八取目前 head `bc596b0410d6a3d21978c7a82c70a16724d37e98`（單一 commit，359 行 diff）掃描：無長空白夾帶內容、無超過 300 字元的行、無 `eval`／`exec`／`subprocess`／長 base64 或 hex；唯一的 `base64` 是測試用的簽章編碼。
+
+| 項目 | 結論 | 證據與理由 | 觸發條件 |
+| --- | --- | --- | --- |
+| commit `6dc2093e`（#4418，agent-lightning multiplicative 模式回報實際懲罰） | 已存在，補規格文件 | 程式與測試 2026-10-24 以 open PR 形式採用：`reward.py` 與 `tests/test_lightning_comprehensive.py` 和上游 `main` 逐位元組相同（`git diff HEAD upstream/main -- <file>` 該測試檔為空；`reward.py` 唯一差異是本 fork 領先的 #4422 dict severity，見上一節）。fork 缺的只有規格文件段落：`docs/specs/AGENT-LIGHTNING-FAST-PATH-1.0.md` 第 6.5 節仍寫舊的「penalty 一律取自 severity 表」，與已採用的程式矛盾，本輪從上游 `main` 取該檔（上游與 fork 的差異就只有這個 commit 的 11 行／5 行，無 fork 分歧）。CHANGELOG 條目照慣例不套 | — |
+| commit `46b370e7`（#4259，`generate_workflows.py --sync-registry`） | 不採用 | 上一輪就預判過它的風險，本輪實測：(1) fork 的 `generate_workflows.py --check` 在現況已紅（`policy-engine-ci.yml (out of date, run --write)`），原因是 fork 手加了 `github.repository == 'microsoft/agent-governance-toolkit'` 閘門，生成器不知道；`--sync-registry` 結尾會呼叫 `--write` 路徑，會把這些閘門洗掉。(2) 上游 `tests/ci/test_generate_workflows.py` 新增的 4 個符號連結測試（`test_sync_registry_refuses_symlinked_registry_path`、`test_intra_repo_symlinked_composite_file_is_rejected`、`test_symlinked_composite_actions_dir_is_rejected`、`test_composite_action_symlink_escape_is_rejected`）在本機 Windows 用 `Path.symlink_to` 直接拋 `OSError: [WinError 1314]`（沒有建立符號連結的權限），也沒有 `skipif`；套用後 `pytest tests/ci/test_generate_workflows.py` 由 2 failed／14 passed 變成 6 failed／30 passed。(3) 該工具是 opt-in，fork 的 `ci-generation-check.yml` 已被 `github.repository` 閘門擋掉，fork 不跑它。 | 把 fork 閘門做進 `.github/ci/workflows.toml` 清單、讓 `--check` 在 fork 轉綠；或上游讓符號連結測試在無權限時 `skip`。屆時整批取上游版本 |
+| PR #4427（`agentmesh-integrations/parmana-trust-verify`，新增第三方 Parmana trust-record 驗證整合；7 檔 +317） | 不採用 | 新增整合套件，不是缺陷修正；依賴 PyPI 上的外部套件 `parmana-verifier`，會進 fork 的依賴新鮮度與供應鏈閘門，而 fork 沒有任何使用 Parmana 的呼叫端（`git grep -il parmana` 除本節外無命中）。fork 不替上游決定新增哪些第三方整合；首次貢獻者、尚無 review | 上游合併，且 fork 有實際要驗證 Parmana 記錄的使用者 |
+| issue #4426（RFC：ApprovalResolution 的 detached Ed25519 簽章，ADR-0030 選用延伸） | WATCH | RFC，沒有缺陷、沒有修正 PR；提案預設關閉、不動 hash chain，金鑰管理明列為範圍外 | 上游出實作 PR；屆時看 Python 與 .NET 的簽章欄位是否一致 |
