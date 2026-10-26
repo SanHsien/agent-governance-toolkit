@@ -650,3 +650,14 @@ GNU tar 把 `C:` 當遠端主機，System32 的 bsdtar 解 tarball 正常，PR �
 - 移除 `ts-jest` 連帶移除 `handlebars`（它只是 ts-jest 的間接依賴），所以兩個 `coverage-yaml.test.ts` 的斷言從「handlebars 4.7.10」改為「lock 內無 handlebars」。
 - 驗證：三套件 `build`／`lint` 通過；typescript 712 tests、copilot 17 tests 全綠；`check_lockfile_integrity`、`check_install_scripts --strict`、`check_release_age`、`check_dependency_confusion --strict` 通過；`scripts/tests`＋`tests/ci` 失敗集合（9 項）與 main 逐項相同。
 - 依賴審計：`docs/dependency-audits/2026-09-24-typescript-7-toolchain.md`（取自上游）。
+
+## 2026-10-26：補審 PR #4422–#4423、issue #4424–#4425
+
+commit 水位不變（`70a4ab8e`，上游無新 commit）；PR 水位 4421 → 4423、issue 水位 4400 → 4425。
+
+| 項目 | 結論 | 證據與理由 | 觸發條件 |
+| --- | --- | --- | --- |
+| PR #4422（agent-lightning `policy_penalty` 對 dict 違規取 severity） | 採用（移植） | fork `reward.py` 以 `getattr(violation, "severity", ...)` 讀取，dict 一律得 medium 懲罰；重現測試在舊碼失敗。只移植程式與測試，規格文件 `AGENT-LIGHTNING-FAST-PATH-1.0.md` 與 CHANGELOG 不動 | 上游合併後以上游版本為準 |
+| PR #4423（ACS pre/post tool committed effects 測試） | 不採用 | 只加測試，fork 不跑 policy-engine 該套測試 | — |
+| issue #4424（`run_tool` 在 `post_tool_call` 未綁定時先執行工具再拒絕） | WATCH | 行為屬 fail-closed 設計（#3528），提案是補文件並可選提早失敗；尚無修正 PR | 上游出修正 PR |
+| issue #4425（8 個範例的 requirements 釘舊套件，缺 `agent_control_specification`） | WATCH | 範例相依問題，fork 不跑這些範例；尚無修正 PR | 上游出修正 PR，或 fork 要驗收這些範例時 |
