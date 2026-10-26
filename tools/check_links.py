@@ -54,7 +54,9 @@ def _missing_relative(path: Path, target: str) -> str | None:
     file_part = unquote(target.split("#", 1)[0])
     if not file_part:
         return None
-    resolved = (path.parent / file_part).resolve()
+    # GitHub renders a leading "/" against the repository root, not the drive root.
+    base = ROOT if file_part.startswith("/") else path.parent
+    resolved = (base / file_part.lstrip("/")).resolve()
     if not resolved.is_relative_to(ROOT):
         return f"{target} → 逃出 repo 根目錄"
     if resolved.exists():
