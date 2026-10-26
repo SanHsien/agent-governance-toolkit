@@ -68,9 +68,26 @@ def _missing_relative(path: Path, target: str) -> str | None:
     return f"{target} → 找不到 {shown}"
 
 
+def strip_fenced_code(text: str) -> str:
+    """Blank out fenced code blocks: links shown there are examples, not links."""
+    kept: list[str] = []
+    fence = ""
+    for line in text.splitlines():
+        marker = line.lstrip()[:3]
+        if fence:
+            if marker == fence:
+                fence = ""
+            continue
+        if marker in ("```", "~~~"):
+            fence = marker
+            continue
+        kept.append(line)
+    return "\n".join(kept)
+
+
 def check_document(path: Path) -> list[str]:
     problems: list[str] = []
-    text = path.read_text(encoding="utf-8")
+    text = strip_fenced_code(path.read_text(encoding="utf-8"))
     for pattern in (LINK_PATTERN, IMAGE_PATTERN, HTML_SRC_PATTERN):
         for match in pattern.finditer(text):
             missing = _missing_relative(path, match.group(1))
