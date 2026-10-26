@@ -78,7 +78,10 @@ def policy_penalty(
 
     total_penalty = 0.0
     for violation in violations:
-        severity = getattr(violation, "severity", "medium")
+        if isinstance(violation, dict):
+            severity = violation.get("severity", "medium")
+        else:
+            severity = getattr(violation, "severity", "medium")
         total_penalty += severity_penalties.get(severity, medium_penalty)
 
     return total_penalty
