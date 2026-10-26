@@ -42,13 +42,17 @@ def iter_documents() -> list[Path]:
     return [path for path in documents if path.name not in SKIP_NAMES]
 
 
-def _missing_relative(path: Path, target: str) -> str | None:
-    target = target.strip()
-    # `[x](<a b.md> "title")` / `[x](a.md "title")`: the title is not part of the path.
-    if target.startswith("<") and ">" in target:
-        target = target[1 : target.index(">")]
-    else:
-        target = target.split()[0] if target.split() else ""
+def _link_target(raw: str) -> str:
+    """The path of a Markdown link target, without its optional title."""
+    raw = raw.strip()
+    if raw.startswith("<") and ">" in raw:
+        return raw[1 : raw.index(">")]
+    parts = raw.split()
+    return parts[0] if parts else ""
+
+
+def _missing_relative(path: Path, target: str, *, markdown: bool = True) -> str | None:
+    target = _link_target(target) if markdown else target.strip()
     if not target or target.startswith(SKIP_PREFIXES):
         return None
     file_part = unquote(target.split("#", 1)[0])
@@ -68,18 +72,32 @@ def _missing_relative(path: Path, target: str) -> str | None:
     return f"{target} → 找不到 {shown}"
 
 
+FENCE_OPEN = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
+
+
 def strip_fenced_code(text: str) -> str:
-    """Blank out fenced code blocks: links shown there are examples, not links."""
+    """Drop fenced code blocks: links shown there are examples, not links.
+
+    Follows CommonMark: a fence is 3+ backticks or tildes indented at most 3
+    spaces; it closes on the same character, at least as long, with no info
+    string. A backtick fence's info string cannot contain a backtick.
+    """
     kept: list[str] = []
     fence = ""
     for line in text.splitlines():
-        marker = line.lstrip()[:3]
         if fence:
-            if marker == fence:
+            stripped = line.strip()
+            if (
+                len(line) - len(line.lstrip(" ")) <= 3
+                and stripped
+                and set(stripped) == {fence[0]}
+                and len(stripped) >= len(fence)
+            ):
                 fence = ""
             continue
-        if marker in ("```", "~~~"):
-            fence = marker
+        match = FENCE_OPEN.match(line)
+        if match and not (match.group(1)[0] == "`" and "`" in match.group(2)):
+            fence = match.group(1)
             continue
         kept.append(line)
     return "\n".join(kept)
@@ -90,7 +108,9 @@ def check_document(path: Path) -> list[str]:
     text = strip_fenced_code(path.read_text(encoding="utf-8"))
     for pattern in (LINK_PATTERN, IMAGE_PATTERN, HTML_SRC_PATTERN):
         for match in pattern.finditer(text):
-            missing = _missing_relative(path, match.group(1))
+            missing = _missing_relative(
+                path, match.group(1), markdown=pattern is not HTML_SRC_PATTERN
+            )
             if missing:
                 problems.append(missing)
     return problems

@@ -26,3 +26,18 @@ def test_links_outside_the_fence_are_still_checked(tmp_path: Path) -> None:
         "```\n[a](x.md)\n```\n[real](missing-real.md)\n", encoding="utf-8"
     )
     assert len(check_links.check_document(doc)) == 1
+
+
+def test_longer_fence_is_not_closed_by_a_shorter_one() -> None:
+    text = "````md\n```\n[x](nope1.md)\n```\n````\n[y](nope2.md)\n"
+    assert check_links.strip_fenced_code(text) == "[y](nope2.md)"
+
+
+def test_indented_four_spaces_is_not_a_fence() -> None:
+    text = "    ```\n[z](nope3.md)\n"
+    assert "nope3.md" in check_links.strip_fenced_code(text)
+
+
+def test_closing_fence_must_not_carry_an_info_string() -> None:
+    text = "```\n```md\n[x](a.md)\n```\n[y](b.md)\n"
+    assert check_links.strip_fenced_code(text) == "[y](b.md)"
