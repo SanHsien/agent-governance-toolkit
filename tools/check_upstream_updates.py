@@ -22,6 +22,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 BASELINE_PATH = REPO_ROOT / "tools" / "upstream_baseline.json"
 UPSTREAM_REF_PREFIX = "refs/upstream-check"
 DEFAULT_DECISION_LOG = "docs/fork/DECISIONS.md"
+TICKET_LIST_LIMIT = 1000
 
 
 class UpstreamCheckError(RuntimeError):
@@ -134,7 +135,7 @@ def collect_new_tickets(baseline: dict, kind: str) -> list[dict] | None:
     result = subprocess.run(
         [
             "gh", kind, "list", "--repo", slug, "--state", "all",
-            "--limit", "1000", "--json", "number,title",
+            "--limit", str(TICKET_LIST_LIMIT), "--json", "number,title",
         ],
         capture_output=True,
         text=True,
@@ -150,6 +151,13 @@ def collect_new_tickets(baseline: dict, kind: str) -> list[dict] | None:
     try:
         items = json.loads(result.stdout)
     except ValueError:
+        return None
+    # `gh` returns the newest N items. If the oldest one it returned is still above
+    # the watermark, items between the watermark and that one were cut off, and the
+    # list is not the whole backlog. Say "not checked", not "this is everything".
+    if len(items) >= TICKET_LIST_LIMIT and min(
+        item["number"] for item in items
+    ) > watermark:
         return None
     return sorted(
         (item for item in items if item["number"] > watermark),
