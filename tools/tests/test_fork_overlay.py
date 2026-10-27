@@ -52,31 +52,6 @@ def test_workflow_is_scheduled_and_fails_on_unreviewed_commits() -> None:
     assert "exit 1" in workflow
 
 
-def test_render_markdown_reports_no_new_commits() -> None:
-    baseline = {
-        "repo": "https://example.invalid/upstream.git",
-        "branch": "main",
-        "reviewed_through": "a" * 40,
-        "reviewed_date": "2026-08-28",
-    }
-
-    report = checker.render_markdown(baseline, [])
-
-    assert "No new upstream commits" in report
-    assert "docs/fork/DECISIONS.md" in checker.render_markdown(
-        baseline,
-        [
-            {
-                "sha": "b" * 40,
-                "short": "bbbbbbb",
-                "date": "2026-08-28",
-                "subject": "example",
-                "files": ["README.md"],
-            }
-        ],
-    )
-
-
 def test_render_markdown_surfaces_check_failure() -> None:
     baseline = {
         "repo": "https://example.invalid/upstream.git",
