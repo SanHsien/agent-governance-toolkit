@@ -145,3 +145,7 @@ Before opening a PR:
 - 提交前跑 `pwsh -NoProfile -File tools\dev_check.ps1`；產品檔有改再依 `docs/fork/DEVELOPMENT.md` 跑對應套件測試。
 - API key、`.env`、Azure 憑證、稽核日誌與帳號資料一律不可提交。
 - 使用繁體中文溝通，直接交付可驗證結果，避免冗長背景鋪陳。
+
+## Roadmap
+
+- `ROADMAP.md` is the single source of truth for this repository's next work. When you finish or add work, update it in the same commit: delete finished rows, add new ones. Do not keep a to-do list in any other file.
