@@ -114,3 +114,12 @@ README 衝突的解法：保留頂部 fork overlay，把上游新英文內容留
   - Commit：`46b370e7`（`46b370e77b7c13569d7525e337e31a9d3216c0b9`）
   - PR：4423 → 4427
   - Issue：4425 → 4426
+
+## 2026-10-28：第五輪審查，水位推進至 `9bfdd5f4`
+
+- 範圍：`46b370e7..9bfdd5f4` 的 37 個 commit、PR #4428–#4467（40 個）、0 個新 issue。逐項結論與證據見 `DECISIONS.md` 同日段落。
+- 結果：採用 #4460、#4419（取上游版本，含規格文件）、#4422 補註解與測試、#4461（上游尚未合併的 open PR，移植程式與測試）；#4409 早已與上游相同；#4428 記為 adoption pending（本機無法建出 `_native` 驗證）；33 個 Dependabot commit 沿用 fork 自跑 Dependabot；#4464 已關閉未合併，不收。
+- 水位更新：
+  - Commit：`9bfdd5f4`（`9bfdd5f4ade7998ca3f0068e7b88764eab132911`）
+  - PR：4427 → 4467
+  - Issue：4426（不變）

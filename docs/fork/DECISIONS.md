@@ -673,3 +673,35 @@ commit 水位 `70a4ab8e` → `46b370e7`（上游 `6dc2093e`、`46b370e7`）；PR
 | commit `46b370e7`（#4259，`generate_workflows.py --sync-registry`） | 不採用 | 上一輪就預判過它的風險，本輪實測：(1) fork 的 `generate_workflows.py --check` 在現況已紅（`policy-engine-ci.yml (out of date, run --write)`），原因是 fork 手加了 `github.repository == 'microsoft/agent-governance-toolkit'` 閘門，生成器不知道；`--sync-registry` 結尾會呼叫 `--write` 路徑，會把這些閘門洗掉。(2) 上游 `tests/ci/test_generate_workflows.py` 新增的 4 個符號連結測試（`test_sync_registry_refuses_symlinked_registry_path`、`test_intra_repo_symlinked_composite_file_is_rejected`、`test_symlinked_composite_actions_dir_is_rejected`、`test_composite_action_symlink_escape_is_rejected`）在本機 Windows 用 `Path.symlink_to` 直接拋 `OSError: [WinError 1314]`（沒有建立符號連結的權限），也沒有 `skipif`；套用後 `pytest tests/ci/test_generate_workflows.py` 由 2 failed／14 passed 變成 6 failed／30 passed。(3) 該工具是 opt-in，fork 的 `ci-generation-check.yml` 已被 `github.repository` 閘門擋掉，fork 不跑它。 | 把 fork 閘門做進 `.github/ci/workflows.toml` 清單、讓 `--check` 在 fork 轉綠；或上游讓符號連結測試在無權限時 `skip`。屆時整批取上游版本 |
 | PR #4427（`agentmesh-integrations/parmana-trust-verify`，新增第三方 Parmana trust-record 驗證整合；7 檔 +317） | 不採用 | 新增整合套件，不是缺陷修正；依賴 PyPI 上的外部套件 `parmana-verifier`，會進 fork 的依賴新鮮度與供應鏈閘門，而 fork 沒有任何使用 Parmana 的呼叫端（`git grep -il parmana` 除本節外無命中）。fork 不替上游決定新增哪些第三方整合；首次貢獻者、尚無 review | 上游合併，且 fork 有實際要驗證 Parmana 記錄的使用者 |
 | issue #4426（RFC：ApprovalResolution 的 detached Ed25519 簽章，ADR-0030 選用延伸） | WATCH | RFC，沒有缺陷、沒有修正 PR；提案預設關閉、不動 hash chain，金鑰管理明列為範圍外 | 上游出實作 PR；屆時看 Python 與 .NET 的簽章欄位是否一致 |
+
+## 2026-10-28：上游審查第五輪（46b370e7 → 9bfdd5f4）
+
+**範圍**：37 個 commit、40 個 PR（#4428–#4467，`--state all`：34 已合併、5 open、1 已關閉未合併）、0 個新 issue（上游最新 issue 仍是 #4426）。水位：commit `46b370e7` → `9bfdd5f4`、PR 4427 → 4467、issue 4426 不變。
+
+**方法**：先量分歧（PLAYBOOK §2 判準六）。`git diff --stat upstream/main HEAD -- <產品目錄>` 仍有 79 個檔案分歧（上一輪採用的 open PR 修正、TypeScript 7 遷移、依賴鎖檔），所以不能用結構性論證，逐筆處理：37 個 commit 中 33 個是 Dependabot 依賴升版（PR #4429–#4466），4 個是產品修正（#4409、#4419、#4422 是水位之前的 PR，#4460 在範圍內）；40 個 PR 中 34 個已合併（33 個依賴升版加 #4460）、3 個是 open 的 Dependabot PR（#4431、#4453、#4467），其餘 3 個（#4428、#4461、#4464）逐筆讀 diff。三個仍開著或被關閉的 PR 依判準八取目前 head 並掃描：#4428 `919e9262`、#4461 `d10a479e`、#4464 `6159f330`，另掃三個 open 的 Dependabot PR（#4431 `1b35880a`、#4453 `249181b6`、#4467 `a2ece0cb`），皆無長空白夾帶內容、無 `eval`／`new Function(`／`globalThis`、無長 base64／hex；超過 300 字元的行都是 CHANGELOG 條目。
+
+### 採用
+
+| 項目 | 結論 | 證據 | 重看條件 |
+| --- | --- | --- | --- |
+| commit `e490800`（#4460，agent-sre 實驗流量依相對權重分配） | 採用（取上游版本） | fork `experiments/__init__.py:143,146` 用 `random.random()` 對未正規化的權重累加：三個預設權重 0.5 的變體，第三個永遠拿不到流量。上游新增的 4 個流量測試在舊碼 3 個失敗，換上游實作後 21 個全過（連跑 3 次） | — |
+| commit `9bfdd5f`（#4419，`GovernedEnvironment.total_reward` 含成功獎勵） | 採用（取上游版本，含規格文件） | fork `environment.py:306` 在加入 `success_bonus`（`:325`）之前就累計 `total_reward`，回合總報酬少算每個乾淨步驟的 10.0。上一輪 WATCH 的觸發條件是「上游規格與程式一起合併」，這次一起合了：`docs/specs/AGENT-LIGHTNING-FAST-PATH-1.0.md` 與程式都取上游，fork 在這些檔上的分歧只剩上一輪的 #4422 註解。新測試在舊碼失敗，agent-lightning 全套 211 passed／1 skipped | — |
+| commit `c3f0555`（#4422，`policy_penalty` 對 dict 違規取 severity） | 已存在，補註解與上游測試 | 2026-10-26 已移植邏輯；這次取上游 `reward.py`（差異只有 docstring 與註解）與 `test_lightning_comprehensive.py` 的 3 個測試。fork 自己的 `tests/test_policy_penalty_dict.py` 保留（重複但無害） | — |
+| commit `fcc8eb1`（#4409，DockerDeployer 的 `env` 不得覆蓋治理設定） | 已存在 | 2026-10-24 以 open PR 形式採用；`git diff HEAD upstream/main -- deploy.py tests/test_deploy.py` 為空，逐位元組相同 | — |
+| PR #4461（agent-sre GitOps `RolloutSpec.to_dict()` 寫 CRD 欄位名；open，上游作者被要求再 rebase） | 採用上游尚未合併的 open PR（移植程式與測試，CHANGELOG 不動；`.cspell-repo-terms.txt` 補 `gitops`） | fork `gitops.py:95-96` 寫 `duration_seconds`／`manual_gate`／`comparator`，而 reconciler `k8s/__init__.py:328-340` 讀 `durationSeconds`／`manualGate`／`operator`，所以 GitOps 規格經 reconciler 讀回來時步驟間隔變預設 3600、人工閘門消失、回滾運算子變 `gte`。PR 的 2 個新測試在 fork 現碼失敗，套用後 agent-sre 全套 1413 passed，失敗與錯誤集合與套用前逐項相同（皆為本機缺 otel／langfuse／openlit 套件）。上游合併同一修正時以上游版本為準 | 上游合併或改寫此修正 |
+
+### 不採用或 WATCH
+
+| 項目 | 結論 | 證據與理由 | 重看條件 |
+| --- | --- | --- | --- |
+| PR #4428（`AgentControl.run_tool` 在 `post_tool_call` 未綁定時先拒絕、不執行工具；對應 issue #4424；open，Ricky-G 已 approve） | WATCH（adoption pending，本機無法驗證） | 缺陷在 fork 存在：`policy-engine/sdk/python/agent_control_specification/_orchestration.py:301-363` 與上游逐位元組相同，`run_tool` 先執行工具、再收到 `post_tool_call` 的拒絕。PR 改 `_orchestration.py`（+90）、`_types.py`、3 份文件、1 個 308 行測試。這個 SDK 的測試要先建出 Rust 原生擴充 `_native`（`pytest tests/test_orchestration.py` 在 collection 即 `ImportError: cannot import name '_native'`），本機沒有 `cargo`／`maturin`，無法在採用前跑測試；fork 目前也沒有任何呼叫端依賴這條路徑 | 上游合併；或本機／CI 能建出 `_native` 再移植 |
+| PR #4464（`AgentControl.close()` 與 context manager；對應 issue #4372） | 不收 | 已關閉未合併，作者 MaryamIjazMaryam 自己關閉，PR 本文是未填的範本；是新增 API 而不是修正，測試同樣需要 `_native`。issue #4372 維持 WATCH | 上游出合併的修正 PR |
+| PR #4431（Rust `serde-saphyr` 1.2.0 → 2.0.0，open） | 不採用 | 主版本升級，改 `Cargo.toml`／`Cargo.lock`（+32/-5）；fork 在 `agent-governance-rust/Cargo.toml:29` 精確釘 `=1.2.0`，主機沒有 `cargo` 無法建置驗證。fork 自己跑 Dependabot | fork 的 Dependabot 對應 PR，且 Windows gate 能建置 |
+| PR #4453（pypdf 6.19.0 → 6.21.2，open） | 已存在 | fork `agent-os/modules/caas/requirements.txt:4` 已是 `pypdf==6.21.2` | — |
+| PR #4467（agent-hypervisor `certifi` 2026.5.20 → 2026.10.18，open） | 不採用 | 該 PR 的目標版本比 fork 低：fork `agent-hypervisor/uv.lock:348` 已是 `2026.10.19`，PR 是 225/189 行的整份 lock 重生 | — |
+| 33 個已合併 Dependabot commit／PR（#4429、#4430、#4432–#4452、#4454–#4459、#4462、#4463、#4465、#4466） | 不收 | 沿用前幾輪的結論：fork 自己跑 Dependabot，鎖檔衝突取 fork 側。逐項比對 fork 現況：已持有的有 setuptools 84.1.0（`requirements/ci-build.txt:4`、`agent-learning/pyproject.toml:2`）、`fast-uri` 3.1.9（mcp-server、mcp-proxy、mastra 三份 lock）、`body-parser` 2.4.0／1.20.9（copilot、mcp-server、mcp-proxy、api 的 lock）、`zod` 4.6.7（mcp-proxy）、certifi 2026.10.19。落後的只有：Rust `cedar-policy`（`Cargo.toml:18`，`=4.13.0` → 4.14.0）、`regorus`（`:26`，`=0.12.0` → 0.13.0），這兩個是精確釘版的 minor 升級，沒有 `cargo` 無法建置；`gh-action-pypi-publish` 1.14.2（`publish.yml:350,444`，該 workflow 閘在官方 repo，fork 不跑）；.NET `Microsoft.Agents.AI` 1.22.0、`Microsoft.Extensions.DependencyInjection` 10.0.12、`Microsoft.NET.Test.Sdk` 18.10.1、`Microsoft.SourceLink.GitHub` 10.0.401；mcp-server 的 `zod` 4.6.6；Python 開發工具的宣告下限（`fastapi>=0.143.0`、`hypothesis>=6.169.0`、`opentelemetry-sdk>=1.44.0`、`setuptools>=84.0.0`）。後者是相容性承諾，不為了追新而調高（PLAYBOOK §1）。以上只比對 fork 現況與上游目標版本，本輪沒有逐項查安全公告，所以不主張這些落後是安全無關 | 對應套件有安全公告，或 fork 的 Dependabot 開出 PR |
+
+### 順帶記錄
+
+- `agent-governance-python/agent-sre` 全套測試在本機有 18 failed／11 errors，來源是缺 `opentelemetry`、`langfuse`、`langsmith`、`openlit` 套件（採用前後集合逐項相同），不是本輪改動造成。
+- `tools\dev_check.ps1` 的「fork-divergent product code」只列 `test_mcp_auth_enforcement.py`；上一輪與本輪採用的 open PR 修正（#4354、#4356、#4461 等）的測試沒有列入。這是既有缺口，需要先決定 agent-sre 等套件的測試依賴怎麼在 Windows gate 安裝，列為需維護者決定的事。
