@@ -9,6 +9,8 @@ on:
       - 'agent-governance-typescript/**'
       - 'agent-governance-python/agentmesh-integrations/mastra-agentmesh/**'
       - 'agent-governance-python/agent-os/extensions/copilot/**'
+      - 'agent-governance-python/agent-sre/**'
+      - 'agent-governance-python/agent-lightning/**'
       - '.github/workflows/fork-product-windows.yml'
       - 'tools/tests/test_fork_product_windows.py'
   pull_request:
@@ -225,3 +227,82 @@ jobs:
         run: npm test
       - name: Reject manifest and lockfile mutation
         run: git diff --exit-code -- package.json package-lock.json
+
+  agent-sre:
+    if: github.repository == 'SanHsien/agent-governance-toolkit'
+    name: fork agent-sre (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: agent-governance-python/agent-sre
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Resolve dev extra from pyproject
+        timeout-minutes: 2
+        # The dev extra is the single source of truth for test dependencies.
+        # `pip install -e ".[dev]"` is not usable here: the package resolves
+        # agent-governance-toolkit-core, whose pinned agent-control-specification
+        # pre-release is not on PyPI (upstream builds a native SDK for it), so pip
+        # falls back to the published 4.x wheels. The package under test is
+        # imported straight from src/ through PYTHONPATH instead.
+        run: |
+          @'
+          import sys
+          import tomllib
+          with open(sys.argv[1], "rb") as handle:
+              extras = tomllib.load(handle)["project"]["optional-dependencies"]
+          print(*extras["dev"], sep=chr(10))
+          '@ | python - pyproject.toml | Set-Content -Encoding utf8 -LiteralPath "$env:RUNNER_TEMP/dev-requirements.txt"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-Content -LiteralPath "$env:RUNNER_TEMP/dev-requirements.txt"
+      - name: Install test dependencies
+        timeout-minutes: 10
+        run: |
+          # httpx and cryptography are not in the dev extra (the package ships them
+          # through agent-governance-toolkit-core) but the API-server and SBOM
+          # signing tests skip silently without them, so install the same ranges
+          # core declares to keep those tests running.
+          python -m pip install --no-cache-dir -r "$env:RUNNER_TEMP/dev-requirements.txt" 'httpx>=0.27.0,<1.0' 'cryptography>=46.0.7,<49.0'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Run agent-sre tests
+        timeout-minutes: 10
+        env:
+          PYTHONPATH: src
+          PYTHONUTF8: '1'
+        run: python -m pytest tests -q --tb=short -p no:cacheprovider
+
+  agent-lightning:
+    if: github.repository == 'SanHsien/agent-governance-toolkit'
+    name: fork agent-lightning (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: agent-governance-python/agent-lightning
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Install package with dev extra
+        timeout-minutes: 10
+        # No runtime dependencies, so the editable install resolves offline from
+        # the pyproject. The optional agent-os extra is deliberately not installed:
+        # it pulls agent-governance-toolkit-core (see the agent-sre job), and only
+        # test_backward_compat_shim needs it; that test skips via importorskip.
+        run: |
+          python -m pip install --no-cache-dir -e '.[dev]'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Run agent-lightning tests
+        timeout-minutes: 10
+        env:
+          PYTHONUTF8: '1'
+        run: python -m pytest tests -q --tb=short -p no:cacheprovider

@@ -85,8 +85,8 @@ docker compose --profile dashboard up --build dashboard
 ## 有限 Windows 產品驗收
 
 `fork-product-windows.yml` 僅在本 fork 的相關產品路徑 push／PR 與手動觸發時執行。
-五個獨立 job 分別驗收 Rust workspace、Copilot extension、原生 policy Node SDK、
-TypeScript SDK 與 Mastra adapter。
+七個獨立 job 分別驗收 Rust workspace、Copilot extension、原生 policy Node SDK、
+TypeScript SDK、Mastra adapter、agent-sre 與 agent-lightning。
 官方生成的 `policy-engine-ci.yml` 與發布 guard 保持原狀。
 
 - Rust 執行 `cargo build --release --workspace --locked` 與
@@ -99,6 +99,14 @@ TypeScript SDK 與 Mastra adapter。
   explicit patch／verify 不可省略。完整契約見 Mastra adapter 的 README。
   兩者使用 Node 22，job cap 為 20 分鐘；維護回歸放在各自產品套件，
   不讓 fork gate 要求已安裝產品依賴。驗收後以 git diff 拒絕 manifest／lock 變動。
+- agent-sre 與 agent-lightning 各跑整套 `python -m pytest tests`（Python 3.13，job cap 20 分鐘），
+  不使用 `--deselect` 或 marker 過濾；新的失敗不得靠排除測試來變綠。
+  agent-sre 的 `pip install -e ".[dev]"` 會解析 `agent-governance-toolkit-core`，其釘住的
+  `agent-control-specification` 預發行版不在 PyPI（上游要另外建原生 SDK），pip 會退回已發佈的 4.x
+  wheel。因此 job 以內嵌 Python（`tomllib`）讀 `pyproject.toml` 的 `dev` extra 安裝，
+  另補 `httpx`、`cryptography`（否則 API server 與 SBOM 簽章測試會 skip），並以
+  `PYTHONPATH=src` 直接匯入原始碼。agent-lightning 無執行期相依，直接 `pip install -e ".[dev]"`；
+  其 `test_backward_compat_shim` 需要 `agent_os`（optional extra），會以 `importorskip` 跳過。
 - Node SDK 執行 `npm ci --ignore-scripts`、checksum 固定的 Windows OPA 下載與
   `npm run test:ci`。專用 `build:test:ci`／`test:ci` 保留既有 `npm test` 的建置與測試操作，
   另透過 napi 的 `--cargo-flags="--locked"` 傳至 Cargo，僅建置一次。

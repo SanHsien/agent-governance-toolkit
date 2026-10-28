@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import codecs
 import json
 import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -31,7 +33,9 @@ def test_windows_product_scope_and_permissions() -> None:
     assert "agent-governance-rust/**" in doc["on"]["push"]["paths"]
     assert "policy-engine/**" in doc["on"]["push"]["paths"]
     assert "agent-governance-python/agent-os/extensions/copilot/**" in doc["on"]["push"]["paths"]
-    assert set(doc["jobs"]) == {"rust", "copilot", "node", "typescript", "mastra"}
+    assert "agent-governance-python/agent-sre/**" in doc["on"]["push"]["paths"]
+    assert "agent-governance-python/agent-lightning/**" in doc["on"]["push"]["paths"]
+    assert set(doc["jobs"]) == {"rust", "copilot", "node", "typescript", "mastra", "agent-sre", "agent-lightning"}
     for job in doc["jobs"].values():
         assert job["if"] == "github.repository == 'SanHsien/agent-governance-toolkit'"
         assert job["runs-on"] == "windows-latest"
@@ -204,3 +208,62 @@ def test_mastra_backport_install_contract_and_artifact_binding() -> None:
     assert artifact["max_response_bytes"] == 8 * 1024 * 1024
     assert [f["path"] for f in artifact["files"]] == ["dist/index.js", "dist/index.mjs"]
     assert all(re.fullmatch("[0-9a-f]{64}", f[k]) for f in artifact["files"] for k in ("before_sha256", "after_sha256"))
+
+
+PYTHON_JOBS = {
+    "agent-sre": "agent-governance-python/agent-sre",
+    "agent-lightning": "agent-governance-python/agent-lightning",
+}
+
+
+@pytest.mark.parametrize("name,directory", sorted(PYTHON_JOBS.items()))
+def test_python_package_jobs_run_full_suite(name: str, directory: str) -> None:
+    doc = workflow()
+    assert directory + "/**" in doc["on"]["push"]["paths"]
+    assert directory + "/**" in doc["on"]["pull_request"]["paths"]
+    job = doc["jobs"][name]
+    assert job["timeout-minutes"] == "20"
+    assert job["defaults"]["run"]["working-directory"] == directory
+    assert next(s for s in job["steps"] if s.get("uses", "").startswith("actions/setup-python@"))["with"]["python-version"] == "3.13"
+    steps = [s for s in job["steps"] if "run" in s]
+    assert all(0 < int(s["timeout-minutes"]) <= 10 for s in steps)
+    # The whole suite must run: the exact command has no path narrowing, marker
+    # filter or --deselect, so a new failure cannot be hidden by excluding it.
+    test_step = steps[-1]
+    assert test_step["run"] == "python -m pytest tests -q --tb=short -p no:cacheprovider"
+    assert test_step["env"]["PYTHONUTF8"] == "1"
+    assert "continue-on-error" not in job and not any("continue-on-error" in s for s in job["steps"])
+
+
+def test_agent_sre_imports_source_tree_and_installs_dev_extra() -> None:
+    steps = {s["name"]: s for s in workflow()["jobs"]["agent-sre"]["steps"] if "name" in s}
+    # The stub's `.[dev]` install would resolve agent-governance-toolkit-core, whose
+    # pre-release dependency is not on PyPI; the tree under test comes from PYTHONPATH.
+    assert steps["Run agent-sre tests"]["env"]["PYTHONPATH"] == "src"
+    install = steps["Install test dependencies"]["run"]
+    assert 'dev-requirements.txt' in install and "httpx" in install and "cryptography" in install
+    assert "-e " not in install and "--deselect" not in install
+
+
+def test_agent_lightning_installs_editable_dev_extra() -> None:
+    steps = {s["name"]: s for s in workflow()["jobs"]["agent-lightning"]["steps"] if "name" in s}
+    assert "python -m pip install --no-cache-dir -e '.[dev]'" in steps["Install package with dev extra"]["run"]
+    assert "PYTHONPATH" not in steps["Run agent-lightning tests"].get("env", {})
+
+
+def test_agent_sre_dev_extra_resolution_matches_pyproject(tmp_path: Path) -> None:
+    # Run the real workflow step (pwsh + embedded Python) and compare with pyproject.
+    import tomllib
+
+    pwsh = shutil.which("pwsh")
+    assert pwsh, "dev extra resolution regression needs PowerShell"
+    step = next(s for s in workflow()["jobs"]["agent-sre"]["steps"] if s.get("name") == "Resolve dev extra from pyproject")
+    directory = ROOT / PYTHON_JOBS["agent-sre"]
+    env = dict(os.environ, RUNNER_TEMP=str(tmp_path))
+    env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + env["PATH"]
+    subprocess.run([pwsh, "-NoProfile", "-Command", step["run"]], cwd=directory, env=env, check=True, capture_output=True, timeout=60)
+    expected = tomllib.loads((directory / "pyproject.toml").read_text(encoding="utf-8"))["project"]["optional-dependencies"]["dev"]
+    raw = (tmp_path / "dev-requirements.txt").read_bytes()
+    assert not raw.startswith(codecs.BOM_UTF8)
+    assert raw.decode("utf-8").splitlines() == expected
+    assert any(line.startswith("pytest") for line in expected)
