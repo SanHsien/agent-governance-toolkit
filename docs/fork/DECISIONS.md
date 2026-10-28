@@ -705,3 +705,23 @@ commit 水位 `70a4ab8e` → `46b370e7`（上游 `6dc2093e`、`46b370e7`）；PR
 
 - `agent-governance-python/agent-sre` 全套測試在本機有 18 failed／11 errors，來源是缺 `opentelemetry`、`langfuse`、`langsmith`、`openlit` 套件（採用前後集合逐項相同），不是本輪改動造成。
 - `tools\dev_check.ps1` 的「fork-divergent product code」只列 `test_mcp_auth_enforcement.py`；上一輪與本輪採用的 open PR 修正（#4354、#4356、#4461 等）的測試沒有列入。這是既有缺口，需要先決定 agent-sre 等套件的測試依賴怎麼在 Windows gate 安裝，列為需維護者決定的事。
+
+## 2026-10-28：Dependabot 15 筆新告警（rustls 8、qs 4、deepmerge 2、dnspython 1）
+
+**成因**：不是 `6e3b703a`、`40800add` 造成。這兩個提交只動 `.github/workflows/fork-product-windows.yml`、`FORK.md`、`docs/fork/DEVELOPMENT.md`、`tools/tests/`，沒有碰任何 manifest 或 lock。告警來自新發佈的公告：dnspython GHSA-45c3-73f7-pv4m（2026-10-27 15:37Z，high）、rustls 四則 GHSA-h2v8-394m-p7vv／c8m5-c952-6cm4／w44r-93j7-qv28／vp88-798v-h67f（16:08Z 前後，low×3、medium×1）、qs GHSA-6pq8-jhm2-2vcw（16:10Z，medium）；GitHub 在 2026-10-28 07:03Z 一次建立。deepmerge GHSA-gcqx-w48m-w2h4 公告是 2026-09-18，同一批建立。10-24 清掉的 68 筆當時沒有這些公告，所以「開放告警歸零」的前提是公告不再新增。
+
+**做法**（依 2026-10-24 的慣例：fork 自己改告警 `manifest_path` 對應的 lock，選最小修補版）：
+
+- rustls 0.23.45 → 0.23.46（`cargo update -p rustls --precise 0.23.46`）：`agent-governance-rust/Cargo.lock`、`policy-engine/Cargo.lock`，各只改 rustls 的 version 與 checksum 兩行，`Cargo.toml` 不動。`policy-engine/examples/coding_agent/app/Cargo.lock` 已是 0.23.46。`benchmarks/prompt-injection/harness/agt-rules-baseline/Cargo.lock` 仍是 0.23.45：沒有告警，而且該 lock 落後 `Cargo.toml`，`cargo update -p rustls` 會連帶改 56 行（thiserror、移除 unsafe-libyaml 等），超出告警範圍，所以還原不動。
+- qs 6.16.0／6.15.2 → 6.16.1：copilot 擴充與 `agent-mesh/services/api` 原本就有精確釘版 override（`"qs": "6.16.0"`），改成 `"6.16.1"`；mastra-agentmesh 與 `policy-engine/sdk/node` 沒有 override，依同一慣例新增 `"qs": "6.16.1"`。不用 `npm update`，因為它會挑 6.17.0（2026-10-27 才發佈，不到 7 天冷卻期）。lock 由 `npm install --package-lock-only --ignore-scripts` 重生；`policy-engine/sdk/node` 連帶 `side-channel` 1.1.0 → 1.1.1（qs 6.16.1 的依賴要求）。
+- dnspython 2.8.0 → 2.9.0：`agent-hypervisor/uv.lock` **只手術式替換 dnspython 一個區塊**（版本、sdist、wheel 的 URL 與 sha256，與 PyPI JSON 逐項相符）。原因：此 lock 自 `2c18a903` 之後就落後於 `pyproject.toml` 的 dev 下限（fastapi、hypothesis、mypy、pydantic、ruff、uvicorn），`uv lock --upgrade-package dnspython==2.9.0` 會把整份 lock 重生（841 行，ruff 0.16→0.17、pydantic-core 2.46→2.50 等）。重生區塊取自該指令的輸出，其餘不動；`pyproject.toml` 沒有改，也沒有提高任何宣告下限。2.9.0 需要 Python ≥3.11，與 `requires-python = ">=3.11"` 相符。
+
+**驗證**：
+
+- Rust：兩個 lock `cargo metadata --locked` 通過；`agent-governance-rust` `cargo test --locked` 414＋24＋13＋6＋1 全過（Windows MSVC 工具鏈現在可用，`cargo check` 也通過）；`policy-engine` `cargo test --locked --workspace --no-fail-fast` 144 passed／5 failed，與還原原 lock 後的基準逐項相同（5 個都是 `*zero_config*`／`real_*` 測試；本機 PATH 沒有 `opa`，推測與此有關，未逐一驗證原因，重點是前後集合相同）。
+- npm：五個 lock 都 `npm ci --ignore-scripts` 乾淨；copilot build＋Jest 17 passed；mastra patch 檢查、build、`tsc --noEmit`、vitest 31 passed（`pack-contract` 在 Git 的 GNU tar 下失敗，是 2026-10-24 已記的環境問題，PATH 前置 System32 的 bsdtar 後通過）；`services/api` build＋測試 11 passed。`policy-engine/sdk/node` 只驗 `npm ci` 與 `npm ls qs`，沒有跑 `build:test`（需要 napi 原生建置與固定 OPA），qs 只經 `@modelcontextprotocol/sdk` 的 express 進入。
+- Python：hypervisor 在 dnspython 2.8.0 與 2.9.0 下 `pytest tests` 都是 90 failed／571 passed／9 errors，集合相同，是既有失敗（乾淨 venv 缺鎖定版本）。
+
+**延後：deepmerge（2 筆，GHSA-gcqx-w48m-w2h4，low）**：`agent-governance-typescript/package-lock.json` 與 `agent-os/extensions/copilot/package-lock.json`。影響版本 4.2.0–4.3.1，`npm view deepmerge versions` 最新就是 4.3.1，**沒有修補版**。scope 是 development，唯一路徑是 `jest` → `@jest/core` → `jest-config` → `deepmerge@4.3.1`，只在測試時執行，不進發佈物。不用 override 換成別的套件（deepmerge 的 API 會被 jest-config 直接呼叫，換掉等於 fork jest）。告警維持 open，不 dismiss。**重看條件**：①npm 出現 deepmerge > 4.3.1；②`jest-config` 升版後不再依賴 deepmerge（`npm ls deepmerge` 為空）；③Dependabot 對這兩筆列出 `first_patched_version`；④任何一個路徑變成 runtime（非 development）依賴。
+
+**既有問題，本次不處理**：`agent-hypervisor/uv.lock` 與 `pyproject.toml` 的 dev 下限不同步（見上），下次因告警必須重生 lock 時一併處理，並單獨審視 mypy／ruff／pydantic 的跳版。

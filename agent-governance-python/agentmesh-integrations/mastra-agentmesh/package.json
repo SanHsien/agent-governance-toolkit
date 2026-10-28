@@ -53,6 +53,7 @@
     "zod": "3.25.76"
   },
   "overrides": {
+    "qs": "6.16.1",
     "esbuild": "^0.28.1",
     "proxy-addr": "^2.0.8",
     "source-map-js": "^1.2.0",

@@ -94,5 +94,8 @@
     "langchain": {
       "optional": true
     }
+  },
+  "overrides": {
+    "qs": "6.16.1"
   }
 }
