@@ -268,7 +268,7 @@ jobs:
           # through agent-governance-toolkit-core) but the API-server and SBOM
           # signing tests skip silently without them, so install the same ranges
           # core declares to keep those tests running.
-          python -m pip install --no-cache-dir -r "$env:RUNNER_TEMP/dev-requirements.txt" 'httpx>=0.27.0,<1.0' 'cryptography>=46.0.7,<49.0'
+          python -m pip install --no-cache-dir -r "$env:RUNNER_TEMP/dev-requirements.txt" 'httpx>=0.27.0,<1.0' 'cryptography>=46.0.7,<51.0'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Run agent-sre tests
         timeout-minutes: 10
@@ -294,7 +294,7 @@ jobs:
           python-version: '3.13'
       - name: Install package with dev extra
         timeout-minutes: 10
-        # No runtime dependencies, so the editable install resolves offline from
+        # No runtime dependencies to resolve; only the dev extra comes from PyPI via
         # the pyproject. The optional agent-os extra is deliberately not installed:
         # it pulls agent-governance-toolkit-core (see the agent-sre job), and only
         # test_backward_compat_shim needs it; that test skips via importorskip.
