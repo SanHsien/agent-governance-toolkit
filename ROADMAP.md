@@ -16,7 +16,7 @@
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
 | 採用 run_tool 提前拒絕修正 | 上游合併，或已能建出 `_native` 並驗證當前 PR head | 先證明未綁定 post_tool_call 時工具不被執行；回歸與 SDK 測試通過，採用裁決可追溯 | Codex | docs/fork/DECISIONS.md:697；上游 PR #4428 |
-| 重新裁決既有 WATCH 提案 | 各項已記錄的合併、遷移說明、實機可測或威脅模型條件成立 | 逐項連回既有裁決，只採用能在 Windows 重現問題且修後通過的變更；不重開已採用項目 | Claude Opus | [裁決](docs/fork/DECISIONS.md):633-639 |
+| 重新裁決既有 WATCH 提案 | 各項已記錄的合併、遷移說明、實機可測或威脅模型條件成立 | 逐項連回既有裁決，只採用能在 Windows 重現問題且修後通過的變更；不重開已採用項目 | Claude Opus | `docs/fork/DECISIONS.md:633-639` |
 | 重新評估 workflow 生成器同步 | 生成器可保留 fork guard，且無符號連結權限時測試可合理處理 | `generate_workflows.py --check` 通過，重新生成前後所有官方 repo guard 保留，相關測試通過 | Codex | docs/fork/DECISIONS.md:673 |
 
 ## 刻意不做
