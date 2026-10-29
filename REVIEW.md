@@ -40,6 +40,10 @@ pwsh -NoProfile -File tools\dev_check.ps1
 
 **沒有**用 Docker 啟動 dashboard，**沒有**對 LangChain／CrewAI 跑真實 LLM。
 
+## 2026-10-29：deepmerge 重查回註
+
+在 `ef6ee043688861922d852bc972b18ef852b1c5e2` 工作樹重查：Dependabot #292／#286 仍為 open、low、development，`first_patched_version` 都是 null；npm 最新仍為 4.3.1。兩套件安裝鎖定依賴後，`npm ls deepmerge` 均只經 Jest 引入，`--omit=dev` 均無匹配依賴。繼續延後、不 dismiss，不改產品或 lock；完整指令與裁決見 [維護決策](docs/fork/DECISIONS.md#2026-10-29deepmerge-延後項目重查)。本段僅回註此次依賴查核，不更新上方歷史全庫審查基準。
+
 ## 已修 findings
 
 | ID | 內容 | 處理 |

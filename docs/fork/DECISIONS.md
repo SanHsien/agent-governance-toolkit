@@ -1,3 +1,9 @@
+---
+title: 維護決策
+last_reviewed: 2026-10-29
+owner: agt-maintainers
+---
+
 # 維護決策
 
 ## 2026-08-28：建立 Windows-first 維護型 fork
@@ -725,3 +731,26 @@ commit 水位 `70a4ab8e` → `46b370e7`（上游 `6dc2093e`、`46b370e7`）；PR
 **延後：deepmerge（2 筆，GHSA-gcqx-w48m-w2h4，low）**：`agent-governance-typescript/package-lock.json` 與 `agent-os/extensions/copilot/package-lock.json`。影響版本 4.2.0–4.3.1，`npm view deepmerge versions` 最新就是 4.3.1，**沒有修補版**。scope 是 development，唯一路徑是 `jest` → `@jest/core` → `jest-config` → `deepmerge@4.3.1`，只在測試時執行，不進發佈物。不用 override 換成別的套件（deepmerge 的 API 會被 jest-config 直接呼叫，換掉等於 fork jest）。告警維持 open，不 dismiss。**重看條件**：①npm 出現 deepmerge > 4.3.1；②`jest-config` 升版後不再依賴 deepmerge（`npm ls deepmerge` 為空）；③Dependabot 對這兩筆列出 `first_patched_version`；④任何一個路徑變成 runtime（非 development）依賴。
 
 **既有問題，本次不處理**：`agent-hypervisor/uv.lock` 與 `pyproject.toml` 的 dev 下限不同步（見上），下次因告警必須重生 lock 時一併處理，並單獨審視 mypy／ruff／pydantic 的跳版。
+
+## 2026-10-29：deepmerge 延後項目重查
+
+**範圍**：在 `ef6ee043688861922d852bc972b18ef852b1c5e2` 工作樹重新查核前節延後裁決；查詢時間為 2026-10-29（Asia/Taipei）。本次只更新維護文件，不修補產品行為。
+
+**修補訊號**：
+
+- `gh api 'repos/SanHsien/agent-governance-toolkit/dependabot/alerts?state=open' --paginate` 成功（exit 0）。全部開放告警仍只有 #292（`agent-governance-typescript/package-lock.json`）與 #286（`agent-governance-python/agent-os/extensions/copilot/package-lock.json`）；兩筆皆為 `GHSA-gcqx-w48m-w2h4`、low、development、transitive，`first_patched_version: null`，影響範圍 `>= 4.2.0, <= 4.3.1`。
+- `npm view deepmerge versions --json` 成功（exit 0），結尾為 `4.3.0`、`4.3.1`，沒有更高版本。[GitHub 公告](https://github.com/advisories/GHSA-gcqx-w48m-w2h4) 同樣顯示 Patched versions 為 None；公告最後更新為 2026-10-27。
+
+**依賴用途**（Node `v26.12.1`、npm `11.20.0`）：
+
+- 兩套件起初尚未安裝依賴，`npm ls deepmerge` 都顯示 `(empty)` 並 exit 1；不能據此判定依賴已移除。
+- 分別執行 `npm ci --ignore-scripts --no-audit --no-fund --prefix agent-governance-typescript` 與 `npm ci --ignore-scripts --no-audit --no-fund --prefix agent-governance-python/agent-os/extensions/copilot`，皆 exit 0，分別安裝 400 與 522 個套件；manifest 與 lock 未變更。
+- 分別執行 `npm ls deepmerge --prefix agent-governance-typescript` 與 `npm ls deepmerge --prefix agent-governance-python/agent-os/extensions/copilot`，皆 exit 0，只有以下開發依賴路徑：
+
+```text
+jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
+```
+
+- 同兩個指令加上 `--omit=dev` 後皆為 `(empty)`、exit 1（npm 表示沒有匹配套件，並非安裝失敗）；正式執行依賴不含 deepmerge。兩套件的 `src/` 也未找到 deepmerge 引用。
+
+**裁決**：原有四項重看條件皆未成立，繼續延後；兩筆告警保留 open，不 dismiss、不替換 API、不重生 lock。已完成的是本次重查，並非漏洞已修復。後續仍依前節四項條件重看，不另立待辦清單。

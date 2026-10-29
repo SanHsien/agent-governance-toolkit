@@ -1,9 +1,22 @@
+---
+title: Fork 維護變更紀錄
+last_reviewed: 2026-10-29
+owner: agt-maintainers
+---
+
 # 變更紀錄
 
 格式參考 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)，新的在上面。
 本檔只記錄**本 fork 的維護歷史**（2026-08-28 起）；上游
 [`microsoft/agent-governance-toolkit`](https://github.com/microsoft/agent-governance-toolkit)
 的產品演進見其自身 [`CHANGELOG.md`](../../CHANGELOG.md) 與 [`docs/fork/UPSTREAM.md`](UPSTREAM.md) 的審查清冊。
+
+## 2026-10-29
+
+### 維護查核
+
+- 重查 deepmerge 兩筆開放告警與 npm 版本；仍無修補版，兩套件皆只經 Jest 開發依賴引入。延後裁決與實際查核指令記於 [DECISIONS.md](DECISIONS.md#2026-10-29deepmerge-延後項目重查)，不改 manifest／lock、不 dismiss 告警。
+- 更新 `REVIEW.md` 的本次查核範圍，從 `ROADMAP.md` 近期表格移除已完成的重查列；保留條件式重看規則。
 
 ## 2026-09-12
 
