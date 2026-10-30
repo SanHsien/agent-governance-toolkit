@@ -754,3 +754,48 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 - 同兩個指令加上 `--omit=dev` 後皆為 `(empty)`、exit 1（npm 表示沒有匹配套件，並非安裝失敗）；正式執行依賴不含 deepmerge。兩套件的 `src/` 也未找到 deepmerge 引用。
 
 **裁決**：原有四項重看條件皆未成立，繼續延後；兩筆告警保留 open，不 dismiss、不替換 API、不重生 lock。已完成的是本次重查，並非漏洞已修復。後續仍依前節四項條件重看，不另立待辦清單。
+
+## 2026-10-30：policy Python SDK 原生擴充（_native）Windows 建置能力盤點
+
+**背景與範圍**：
+路線圖「盤點 Windows gate 是否能建出 policy Python SDK 原生擴充」旨在確認本機／Windows 環境是否能建出 `policy-engine/sdk/python` 的 Rust 原生擴充 `_native`，為後續採用 PR #4428（`AgentControl.run_tool` 在 `post_tool_call` 未綁定時提前拒絕）提供驗收前提（對應 issue #4424、PR #4428；前次記錄見 2026-10-28 第 703 行）。盤點範圍限於 SDK 原生擴充建置與 `tests/test_orchestration.py` 驗收，不包含 PR #4428 的代碼移植，不宣稱已採用修正。
+
+**前置依賴盤點**：
+
+1. **MSVC C/C++ 工具鏈**：
+   - 需安裝 Visual Studio 2022 C++ Build Tools（本機 `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools`，MSVC v14.44）。
+   - 建置時需載入 DevShell（`Common7\Tools\Microsoft.VisualStudio.DevShell.dll`），確認 `cl.exe` 與 `link.exe` 可用。
+   - 需指定 `CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER` 指向 MSVC x64 linker，避免使用非 MSVC linker。
+2. **Rust 工具鏈**：
+   - 本機已安裝 cargo 1.98.1、rustc 1.98.1（`x86_64-pc-windows-msvc`），位於 `~/.cargo/bin`。
+   - 執行建置前須將 `~/.cargo/bin` 置於 `PATH`。
+3. **Python 與建置工具**：
+   - Python ≥ 3.11（實測 Python 3.14，patch 版本推定，見下）。
+   - 依 `pyproject.toml` 要求安裝 `maturin==1.8.7`、`pyyaml>=6.0`。
+   - 關鍵注意事項：`maturin` 在 PEP 517 build hook 內部透過 subprocess 呼叫 `maturin` CLI，因此虛擬環境的 `Scripts` 目錄必須包含在 `PATH` 中，否則會報 `FileNotFoundError: [WinError 2]`。
+
+**建置與驗證過程**：
+
+1. 建立乾淨隔離環境於系統臨時目錄（`$env:TEMP\agt_policy_sdk_env`，事後該目錄已不存在），安裝 `maturin==1.8.7`、`pytest`、`pyyaml`。
+   - 推定 base Python 為 `C:\Python314\python.exe`（現為 3.14.10；建置 PATH 含此目錄、測試 pyc 為 cpython-314；venv 已刪，無法回證確切 patch 版本）；建 venv 的確切指令當時未記錄，一般形式為 `C:\Python314\python.exe -m venv $env:TEMP\agt_policy_sdk_env`。
+   - VS 安裝路徑以 `vswhere -all -products '*' -property installationPath` 查得 `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools`；進 DevShell 的形式為 `Import-Module "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"; Enter-VsDevShell -VsInstallPath "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools" -DevCmdArguments '-arch=x64'`（路徑已驗證存在，當時實際輸入的字串未記錄）。
+   - 同機存在的 linker：`C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\link.exe`，`CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER` 應指向它；當時實際設定值未記錄。
+   - 建置時 PATH 前段（取自 `policy-engine/target/release/build/ring-*/output`）：cargo 自加的 target 與 rustup 路徑之後，依序為 `%TEMP%\agt_policy_sdk_env\Scripts`、`%USERPROFILE%\.cargo\bin`、MSVC 14.44.35207 `bin\HostX64\x64`，之後是 VS 工具路徑；`C:\Python314` 在其後。
+   - 現存產物佐證：`policy-engine/target/wheels/agent_control_specification-0.4.0b0-cp311-abi3-win_amd64.whl`、`policy-engine/target/maturin/_native.dll`。
+2. 在 `policy-engine` 根目錄執行：
+   `pip install --no-build-isolation ./sdk/python`
+   成功建置出 ABI3 wheel：`agent_control_specification-0.4.0b0-cp311-abi3-win_amd64.whl`（3.85 MB），並成功安裝至隔離環境。git 追蹤檔案無變動；建置產物 `policy-engine/target/` 與測試快取留在 .gitignore 範圍內。
+3. 匯入驗證：
+   `python -c "import agent_control_specification._native as _native; print(_native.NativeRuntime)"`
+   成功匯入 `_native.pyd`，確認 `NativeRuntime` 類別正常載入，未出現 `ImportError: cannot import name '_native'`。
+4. 測試驗收：
+   在 `policy-engine/sdk/python` 執行 `pytest tests/test_orchestration.py -v`：
+   12 passed in 0.21s，全數通過。
+5. 完整測試套件前置依賴補充盤點：
+   執行 `pytest tests -q --tb=short`（全套 347 測試）：
+   299 passed、42 skipped、6 failed。
+   失敗的 6 筆全數集中於 `tests/test_validation.py`，原因為系統 `PATH` 缺少 `opa.exe`（錯誤訊息為 `OPA validation failed: program not found`），與既有 Rust policy-engine 狀態一致。`test_orchestration.py` 本身不依賴 OPA，可獨立全數通過。
+
+**裁決**：
+- 實機確認 Windows 環境具備建置 policy Python SDK 原生擴充 `_native` 並通過 `test_orchestration.py` 的完整能力。
+- 解除 PR #4428（run_tool 提前拒絕修正）原先「本機無法驗證 _native」之封鎖條件，待後續任務進一步執行 PR #4428 的採用與驗證。本盤點不宣稱已採用該修正。
