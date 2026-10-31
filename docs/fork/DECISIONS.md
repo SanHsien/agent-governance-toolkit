@@ -799,3 +799,31 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 **裁決**：
 - 實機確認 Windows 環境具備建置 policy Python SDK 原生擴充 `_native` 並通過 `test_orchestration.py` 的完整能力。
 - 解除 PR #4428（run_tool 提前拒絕修正）原先「本機無法驗證 _native」之封鎖條件，待後續任務進一步執行 PR #4428 的採用與驗證。本盤點不宣稱已採用該修正。
+
+## 2026-10-31：採用 PR #4428（run_tool 提前拒絕修正）
+
+**背景與範圍**：
+對應 issue #4424、上游 PR #4428（`AgentControl.run_tool` 在 `post_tool_call` 未綁定時先拒絕、不執行工具；open，Ricky-G 已 approve）。在未修復前，`AgentControl.run_tool`（以及 `protect_tool` 與 MCP、LangChain 等 adapter）在 manifest 未綁定 `post_tool_call` 時，會先執行工具 callable 產生副作用，隨後才因未綁定干預點拋出 `AgentControlBlocked`（`runtime_error:intervention_point_unknown`），導致外部呼叫端收到阻擋錯誤但工具已實際被執行，且重試可能導致副作用重複發生。前次盤點（2026-10-30）已解除建置封鎖，本次任務進行移植、驗證與採用。
+
+**缺陷重現與驗證**：
+
+1. **缺陷重現**：
+   - 先將 PR #4428 的新測試檔案 `policy-engine/sdk/python/tests/test_run_tool_unbound_post.py` 移植至工作樹，在未修改 `_orchestration.py` 的現碼上執行 `pytest`。
+   - 實測結果：13 項測試中 4 項失敗（`AssertionError: Lists differ: [{'amount': 100}] != [] : the tool ran although the call was reported blocked`、`AssertionError: 1 != 0`、`AssertionError: Lists differ: [{'amount': 5}] != []`、`AssertionError: AgentControlBlocked not raised`）。確認在未修復前，未綁定 `post_tool_call` 時工具確實被執行且佔用 slot，缺陷在 Windows 環境確實重現。
+2. **移植修正**：
+   - 移植 PR #4428（commit `919e9262`）的實作與文件：
+     - `policy-engine/sdk/python/agent_control_specification/_orchestration.py`：在 enforce 模式下，`run_tool` 於 pre-check 通過後先檢查 manifest 是否綁定 `post_tool_call`（支援 `extends` 繼承鏈），若未綁定則在呼叫工具前直接拋出 `AgentControlBlocked(InterventionPoint.POST_TOOL_CALL, ...)` 並釋放 tool call 預留 slot。
+     - `policy-engine/sdk/python/agent_control_specification/_types.py`：更新 `AgentControlBlocked` 文件註解，說明 `run_tool` 在未綁定 `post_tool_call` 時提前拒絕的例外行為。
+     - 文件同步：`docs/tutorials/55-agent-control-specification.md`、`policy-engine/QUICKSTART.md`、`policy-engine/README.md`、`policy-engine/sdk/python/README.md`。
+3. **驗證結果**：
+   - `pytest tests/test_run_tool_unbound_post.py -v`：13 passed in 0.46s，全數通過。證明未綁定 `post_tool_call` 時工具 callable 不被調用（`tool.calls == []`）。
+   - `pytest tests/test_orchestration.py -v`：12 passed in 0.26s，既有編排測試全數維持通過。
+   - `pytest tests -q --tb=short`（全套 360 測試）：312 passed、42 skipped、6 failed（6 failed 均為缺少外部 `opa.exe` 依賴，與 2026-10-30 基準完全一致）。
+   - 本機閘門 `pwsh -NoProfile -File tools\dev_check.ps1`：全數綠燈（exit 0）。
+
+**裁決**：
+- 採用上游 PR #4428（commit `919e9262` head）之修正、測試與文件更新。
+- 路線圖「近期：可以直接動手」表格中相應項目完成並移除。
+- 上游 CHANGELOG 條目照慣例不套。
+- 這是與上游分歧的產品碼：上游合併或改寫此修正時，以上游版本為準。
+- 測試需要 `_native`；`tools/dev_check.ps1` 不裝產品套件，`fork-product-windows.yml` 也沒有 policy Python SDK job，所以目前只有本機跑過，沒有 CI 守著（路線圖中期已列）。

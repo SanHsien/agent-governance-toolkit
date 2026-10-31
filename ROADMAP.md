@@ -4,16 +4,16 @@
 > 現況段的數字是 2026-10-29 依 `main` `a515cd224d7f` 查的快照，開工前先重查 GitHub。
 
 ## 現況
-這是 Agent Governance Toolkit 的 Windows 維護型 fork，提供代理執行期政策、身分與沙箱治理（[FORK.md](FORK.md)）。2026-10-29 `gh` 查詢顯示 Fork maintenance、Fork product Windows、Upstream check 最近結果成功；Dependabot 仍有 deepmerge 的低風險告警 2 筆，尚無修補版，本次重查確認仍只經 Jest 開發依賴引入，理由與證據見 [DECISIONS](docs/fork/DECISIONS.md#2026-10-29deepmerge-延後項目重查)；Code scanning 未查到分析，不能當成零告警（2026-10-29 `gh` 查詢）。2026-10-30 完成 policy Python SDK `_native` 原生擴充 Windows 建置能力盤點，確認具備建置與驗收能力（[DECISIONS](docs/fork/DECISIONS.md#2026-10-30policy-python-sdk-原生擴充_nativewindows-建置能力盤點)）。
+這是 Agent Governance Toolkit 的 Windows 維護型 fork，提供代理執行期政策、身分與沙箱治理（[FORK.md](FORK.md)）。2026-10-29 `gh` 查詢顯示 Fork maintenance、Fork product Windows、Upstream check 最近結果成功；Dependabot 仍有 deepmerge 的低風險告警 2 筆，尚無修補版，本次重查確認仍只經 Jest 開發依賴引入，理由與證據見 [DECISIONS](docs/fork/DECISIONS.md#2026-10-29deepmerge-延後項目重查)；Code scanning 未查到分析，不能當成零告警（2026-10-29 `gh` 查詢）。2026-10-30 完成 policy Python SDK `_native` 原生擴充 Windows 建置能力盤點，確認具備建置與驗收能力（[DECISIONS](docs/fork/DECISIONS.md#2026-10-30policy-python-sdk-原生擴充_nativewindows-建置能力盤點)）。2026-10-31 採用 PR #4428 移植 AgentControl.run_tool 在 post_tool_call 未綁定時提前拒絕修正，新增回歸 13 項與 test_orchestration 12 項通過；SDK 全套 312 passed、42 skipped、6 failed（皆在 test_validation，缺 opa.exe，與 10-30 基準相同）（[DECISIONS](docs/fork/DECISIONS.md#2026-10-31採用-pr-4428run_tool-提前拒絕修正)）。
 
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
-| 採用 run_tool 提前拒絕修正 | 2026-10-30 已在 Windows 建出 _native 並通過 test_orchestration，原封鎖解除；上游 PR #4428 仍 open | 對當前 PR head 移植修正，先證明未綁定 post_tool_call 時工具不被執行；回歸與 SDK 測試通過，採用裁決寫入 DECISIONS | Codex | docs/fork/DECISIONS.md「2026-10-30：policy Python SDK 原生擴充」；docs/fork/DECISIONS.md:703；上游 PR #4428 |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
+| `fork-product-windows` 加 policy Python SDK job | 再次動到 `policy-engine/sdk/python` 的 fork 分歧碼，或維護者要求 | CI 能建出 `_native` 並跑 `test_run_tool_unbound_post.py`、`test_orchestration.py` | Antigravity | `docs/fork/DECISIONS.md` 2026-10-30；`tools/dev_check.ps1` 不裝產品套件 |
 | 重新裁決既有 WATCH 提案 | 各項已記錄的合併、遷移說明、實機可測或威脅模型條件成立 | 逐項連回既有裁決，只採用能在 Windows 重現問題且修後通過的變更；不重開已採用項目 | Claude Opus | `docs/fork/DECISIONS.md:639-645` |
 | 重新評估 workflow 生成器同步 | 生成器可保留 fork guard，且無符號連結權限時測試可合理處理 | `generate_workflows.py --check` 通過，重新生成前後所有官方 repo guard 保留，相關測試通過 | Codex | docs/fork/DECISIONS.md:679 |
 
