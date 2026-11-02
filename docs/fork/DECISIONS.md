@@ -830,7 +830,7 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 
 ## 2026-11-02：上游審查第六輪（9bfdd5f4 → d1d0ccea）
 
-**範圍**：9 個 commit、PR #4468–#4492 共 23 個（`--state all`：8 已合併、14 open、1 已關閉未合併；#4481、#4485 是 issue）、issue #4481、#4485。水位：commit `9bfdd5f4` → `d1d0ccea`、PR 4467 → 4492、issue 4426 → 4485。
+**範圍**：9 個 commit、PR #4468–#4492 共 23 個（`--state all`：8 已合併、14 open、1 已關閉未合併；#4481、#4485 是 issue）。已合併的 8 個中取上游版本 7 個（#4480 未取，見 WATCH）；open 的 14 個中移植 10 個（#4489 先移植後撤回）、採用 #4482、其餘 3 個（#4486、#4490、#4489）不在工作樹、issue #4481、#4485。水位：commit `9bfdd5f4` → `d1d0ccea`、PR 4467 → 4492、issue 4426 → 4485。
 
 **方法**：上游這幾天的 9 個 commit 全是 agent-sre／agent-runtime／agent-rag-governance 的缺陷修正與一個範例政策修正，沒有依賴升版。已合併的 PR 以「工作樹與 `upstream/main` 逐位元組相同」確認；仍 open 的 PR 依判準八取目前 head，移植程式與測試（CHANGELOG 不動），每筆由前一位 worker 先確認新測試在舊碼失敗、移植後通過，本輪收尾時再跑一次聚焦測試。採用後逐套件跑聚焦測試：agent-discovery `test_reconciler` 9、agent-hypervisor `test_observability` 31、agent-lightning `test_lightning_comprehensive` 108、agent-mesh `test_trust_policy` 37、agent-os `test_retry` 21、agent-rag-governance 全套 146、agent-runtime `test_deploy` 74、agent-sre 的 blue_green 23／chaos_scheduler 38／cost_optimizer 22／k8s 47／mcp_server 22／runbooks 35／incidents 20、a2a-protocol 52，全數通過。
 
@@ -859,7 +859,6 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 | PR #4484（拒絕負的 `max_retrievals_per_minute`；head `d843a2d6`） | 採用（移植） | `agent_rag_governance/policy.py` +10，`tests/test_policy.py` +16；rag 全套 146 passed | 同上 |
 | PR #4487（`emit_to_store` 只計 store 接受的 span；head `d54e0d73`） | 採用（移植） | `agent_lightning_gov/emitter.py` +11，測試 +16；lightning 108 passed | 同上 |
 | PR #4488（`TaskEnvelope.fail` 被拒時保留任務的錯誤；head `5fa782fa`） | 採用（移植） | `a2a_agentmesh/task.py` +8，`tests/test_a2a.py` +18；52 passed | 同上 |
-| PR #4489（trust-policy `matches` 允許有界量詞 regex，原本 fail-open；head `fb6c882b`） | 採用（移植） | `agentmesh/governance/trust_policy.py` +7，`tests/test_trust_policy.py` +11；37 passed | 同上 |
 | PR #4491（事件查詢 `limit=0` 回傳空陣列；head `4c11e876`） | 採用（移植） | `observability/event_bus.py` +11、`api/server.py` 1 行；`tests/unit/test_observability.py` +35，31 passed | 同上 |
 | PR #4492（`retry` 拒絕 `max_attempts` < 1 與負的 backoff；head `27c6928d`） | 採用（移植） | `agent_os/retry.py` +12，`tests/test_retry.py` +45；21 passed | 同上 |
 | PR #4482（agent-os 文件的 9 個相對連結；open，head `bbb2482e`） | 採用 | 只改 3 份 Markdown。fork 現況 `agent-os/docs/index.md:138-141,162`、`tutorials/copilot-governance.md:274-276` 的連結指向不存在的路徑（例如 `agent-os/docs/extensions/jetbrains/`、`agent-os/CONTRIBUTING.md`，兩者 `ls` 皆不存在），PR 改後的目標（`extensions/{jetbrains,cursor,copilot}`、`agent-governance-typescript/agent-os-vscode`、根 `CONTRIBUTING.md`、`docs/{policy-schema,kernel-internals,security-spec}.md`、`agent-os/examples/carbon-auditor`）逐一 `ls` 確認存在；套用後用腳本解析三份檔的相對連結，只剩 `index.md` 的 `../notebooks/04-verification.ipynb` 不存在（PR 沒碰，上游同樣壞） | 上游合併 |
@@ -871,6 +870,7 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 | commit `d1d0cce`（#4480，india cert-in／sebi Rego 政策對每個 evaluation 都 deny；已合併，head `330a8205`） | WATCH（adoption pending，本機無法驗證） | 修正改 `examples/policies/india-regulatory/rego/` 的 2 個政策與 3 個測試（+181/-2）。本機沒有 `opa`（`which opa` 無輸出），fork 也沒有任何 workflow 跑 `opa test`（`git grep 'opa test' -- .github tools` 無命中），無法證明舊碼失敗、新碼通過；不為此下載二進位檔。先移植過再還原，工作樹不含此檔 | 本機或 CI 取得 `opa`，再整批取上游版本並跑 `opa test examples/policies` |
 | PR #4486（cmvk 保留 HTTP 狀態與伺服器錯誤細節；open，head `9d20e027`，Fixes #4485） | WATCH（adoption pending，本機無法驗證） | TypeScript 修正（+24/-2），改 `cmvkClient.ts`。本機沒有可跑該套件 TypeScript 測試的環境，先移植再還原 | 本機能跑 `agent-os-vscode` 與 cursor 擴充的 TypeScript 測試；上游合併 |
 | PR #4471（Functions 編輯器設定；`.vscode/*`、`.gitignore`、`.funcignore`；已關閉未合併，head `8097f039`） | 不收 | 已關閉未合併。內容只是把個人編輯器設定納入版本控制，並改 `.gitignore` 的 `.vscode/` 排除（fork `.gitignore:28` 目前排除，`.vscode/` 在 fork 不存在）；與 fork 的產品行為無關，且改 `.gitignore` 會讓個人編輯器檔案進版控 | — |
+| PR #4489（trust-policy `matches` 允許有界量詞 regex；open，head `fb6c882b`） | WATCH（不採用，已撤回移植） | 上游審查者給 CHANGES_REQUESTED：放行 `{` 會重開 ReDoS。審查者實測 `^(a{1,10}){1,10}$` 通過移植後的檢查，32 字元輸入 4.38 s、34 字元 13.33 s；移植前的程式碼（拒絕 `{`）會直接擋下。已把 `trust_policy.py` 與 `tests/test_trust_policy.py` 還原為移植前版本，並新增 `test_matches_rejects_nested_bounded_quantifier_redos` 釘住該 pattern 必須被拒。代價：`^svc-[0-9]{4}$` 這類單層有界量詞仍被擋（fail-closed），PR 想修的問題在 fork 仍存在 | 上游以不重開 ReDoS 的方式合併（例如逐項檢查巢狀量詞）；已列入 `monitored` |
 | PR #4490（CI：在 policy-validation 跑範例 Rego 測試；open，head `6b4a17d9`，Fixes #4481） | 不採用 | 只改 `.github/workflows/policy-validation.yml`（`.github/` 變更需另做安全審查，見 `AGENTS.md` 路由規則 4）。fork 的 `policy-validation.yml` 每個 job 都閘在 `github.repository == 'microsoft/agent-governance-toolkit'`（第 14、35、109 行），fork 不會執行新 job；新 job 要在 runner 下載 OPA 1.22.0，且在 runner 下載外部二進位檔屬 CI 架構變更，本輪不為此開例外 | fork 要在自己的 CI 驗收範例 Rego 時，改以 fork 自己的 workflow 設計 |
 | issue #4481（264 個範例 Rego 測試從未在 CI 執行） | WATCH | 屬上游 CI 覆蓋缺口，不是產品缺陷；修正 PR #4490 已不採用。#4480 的 Rego 修正是這個缺口造成的實例，兩者一起重看 | 本機或 CI 能跑 `opa test`（同 #4480） |
 | issue #4485（CMVK client 丟掉非 401／429 的 HTTP 錯誤細節） | WATCH（對應 PR #4486 pending） | 缺陷描述成立於 fork（`cmvkClient.ts` 以 `error.message` 重新拋出，同 issue 所述）；修正是 PR #4486，本機無 TypeScript 測試環境，見上 | 同 PR #4486 |
@@ -879,3 +879,5 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 
 - 工作樹的 `docs/fork` 以外變更都來自上述採用項目；沒有動 `tools/check_upstream_updates.py`。
 - #4480、#4486 兩項的驗證條件已列入 `ROADMAP.md` 中期表。
+- 計數更正：本輪取上游版本的已合併 PR 為 7 個（#4468、#4469、#4470、#4473、#4474、#4475、#4476；#4480 未取）；移植的 open PR 為 10 個（#4472、#4477 部分、#4478、#4479、#4483、#4484、#4487、#4488、#4491、#4492），另採用 #4482；#4489 撤回。先前寫的「13 個」含 #4489，且「8 個已合併」含未取的 #4480。
+- `tools/upstream_baseline.json` 新增 `monitored`，把 14 個 open PR 的 head 與狀態釘住，上游改動 head 或合併／關閉時 `check_upstream_updates.py` 會報出。
