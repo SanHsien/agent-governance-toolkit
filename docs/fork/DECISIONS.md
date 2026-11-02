@@ -1,6 +1,6 @@
 ---
 title: 維護決策
-last_reviewed: 2026-10-29
+last_reviewed: 2026-11-02
 owner: agt-maintainers
 ---
 
@@ -827,3 +827,55 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 - 上游 CHANGELOG 條目照慣例不套。
 - 這是與上游分歧的產品碼：上游合併或改寫此修正時，以上游版本為準。
 - 測試需要 `_native`；`tools/dev_check.ps1` 不裝產品套件，`fork-product-windows.yml` 也沒有 policy Python SDK job，所以目前只有本機跑過，沒有 CI 守著（路線圖中期已列）。
+
+## 2026-11-02：上游審查第六輪（9bfdd5f4 → d1d0ccea）
+
+**範圍**：9 個 commit、PR #4468–#4492 共 23 個（`--state all`：8 已合併、14 open、1 已關閉未合併；#4481、#4485 是 issue）、issue #4481、#4485。水位：commit `9bfdd5f4` → `d1d0ccea`、PR 4467 → 4492、issue 4426 → 4485。
+
+**方法**：上游這幾天的 9 個 commit 全是 agent-sre／agent-runtime／agent-rag-governance 的缺陷修正與一個範例政策修正，沒有依賴升版。已合併的 PR 以「工作樹與 `upstream/main` 逐位元組相同」確認；仍 open 的 PR 依判準八取目前 head，移植程式與測試（CHANGELOG 不動），每筆由前一位 worker 先確認新測試在舊碼失敗、移植後通過，本輪收尾時再跑一次聚焦測試。採用後逐套件跑聚焦測試：agent-discovery `test_reconciler` 9、agent-hypervisor `test_observability` 31、agent-lightning `test_lightning_comprehensive` 108、agent-mesh `test_trust_policy` 37、agent-os `test_retry` 21、agent-rag-governance 全套 146、agent-runtime `test_deploy` 74、agent-sre 的 blue_green 23／chaos_scheduler 38／cost_optimizer 22／k8s 47／mcp_server 22／runbooks 35／incidents 20、a2a-protocol 52，全數通過。
+
+### 採用：已合併的上游 commit（取上游版本）
+
+| 項目 | 結論 | 證據 | 重看條件 |
+| --- | --- | --- | --- |
+| commit `ea12b73`（#4468，chaos 停機窗結束分鐘封鎖到最後一秒） | 採用（取上游版本） | `agent_sre/chaos/scheduler.py` 與 `tests/test_chaos_scheduler.py` 和 `upstream/main` 的 `git diff` 為空；新測試在舊碼失敗 | — |
+| commit `1b68053`（#4469，`CostOptimizer.recommend` 成本相同時選品質較高者） | 採用（取上游版本） | `cost/optimizer.py`、`tests/test_cost_optimizer.py` 與 `upstream/main` 差異為空；舊碼失敗、新碼 22 passed | — |
+| commit `e925024`（#4470，blue-green 驗證在逾時時停止） | 採用（取上游版本） | `delivery/blue_green.py`、`tests/test_blue_green.py` 與 `upstream/main` 差異為空；23 passed | — |
+| commit `7ee2acc`（#4473，chaos 停機時間無法解析時拒絕） | 採用（取上游版本） | 與 #4468 同檔，`scheduler.py` 差異為空；38 passed | — |
+| commit `e14fe19`（#4474，`DockerDeployer.logs` 含 agent 的 stderr） | 採用（取上游版本） | `agent_runtime/deploy.py`、`tests/test_deploy.py` 差異為空；74 passed | — |
+| commit `6d2a138`（#4475，被拒的 collection 以查詢雜湊稽核） | 採用（取上游版本） | `agent_rag_governance/governor.py`、`tests/test_governor.py` 差異為空；rag 全套 146 passed | — |
+| commit `95cd5f2`（#4476，AgentRollout CRD 保留步驟的 analysis criteria） | 採用（取上游版本，其上疊加 #4483） | `helm/README.md` 與 `upstream/main` 差異為空；`crd.yaml`、`k8s/__init__.py` 只差 #4483（open）加的 4 行與 9 行 | 上游合併 #4483 |
+| commit `4eca1f5`（#4461，GitOps 規格寫 CRD 欄位名） | 已存在 | 上一輪以 open PR 移植；`delivery/gitops.py`、`tests/unit/test_p2_features.py` 與 `upstream/main` 差異為空 | — |
+
+### 採用：仍 open 的上游 PR（移植程式與測試，CHANGELOG 不動；上游合併同一修正時以上游版本為準）
+
+| 項目 | 結論 | 證據與理由 | 重看條件 |
+| --- | --- | --- | --- |
+| PR #4472（agent-sre 把相關訊號合成一個 incident；head `8000fc71`） | 採用（移植） | `incidents/detector.py` +50，`tests/unit/test_incidents.py` +80；舊碼失敗、移植後 20 passed。規格 `docs/specs/AGENT-SRE-GOVERNANCE-1.0.md` 補 5 行訊號歸併說明 | 上游合併或改寫 |
+| PR #4477（agent-discovery 把 reconciliation 狀態與掃描風險標籤存回 inventory；head `37e5badc`） | 部分採用 | 只移植 `reconciler.py`（+3）與 `tests/test_reconciler.py`（+21），9 passed。PR 另改的 CLI／inventory 儲存部分不移植：fork 已有自己的 CLI 與 `inventory.save()` | 上游合併，且 fork 的 CLI 路徑需對齊 |
+| PR #4478（runbook rollback 失敗時回報失敗而不是 `rolled_back`；head `ff0e756a`） | 採用（移植） | `incidents/runbook_executor.py` +18；`tests/test_runbooks.py` +42，35 passed | 同上 |
+| PR #4479（MCP 成本工具拒絕負值與非有限數；head `9c198982`） | 採用（移植） | `mcp/server.py` +19；`tests/test_mcp_server.py` +36，22 passed；`docs/specs/MCP-SECURITY-GATEWAY-1.0.md` 補輸入驗證說明 | 同上 |
+| PR #4483（AgentRollout status 符合 CRD schema；head `c42730a4`） | 採用（移植） | `k8s/__init__.py`、`templates/crd.yaml`、`tests/test_k8s.py` +51；47 passed | 同上 |
+| PR #4484（拒絕負的 `max_retrievals_per_minute`；head `d843a2d6`） | 採用（移植） | `agent_rag_governance/policy.py` +10，`tests/test_policy.py` +16；rag 全套 146 passed | 同上 |
+| PR #4487（`emit_to_store` 只計 store 接受的 span；head `d54e0d73`） | 採用（移植） | `agent_lightning_gov/emitter.py` +11，測試 +16；lightning 108 passed | 同上 |
+| PR #4488（`TaskEnvelope.fail` 被拒時保留任務的錯誤；head `5fa782fa`） | 採用（移植） | `a2a_agentmesh/task.py` +8，`tests/test_a2a.py` +18；52 passed | 同上 |
+| PR #4489（trust-policy `matches` 允許有界量詞 regex，原本 fail-open；head `fb6c882b`） | 採用（移植） | `agentmesh/governance/trust_policy.py` +7，`tests/test_trust_policy.py` +11；37 passed | 同上 |
+| PR #4491（事件查詢 `limit=0` 回傳空陣列；head `4c11e876`） | 採用（移植） | `observability/event_bus.py` +11、`api/server.py` 1 行；`tests/unit/test_observability.py` +35，31 passed | 同上 |
+| PR #4492（`retry` 拒絕 `max_attempts` < 1 與負的 backoff；head `27c6928d`） | 採用（移植） | `agent_os/retry.py` +12，`tests/test_retry.py` +45；21 passed | 同上 |
+| PR #4482（agent-os 文件的 9 個相對連結；open，head `bbb2482e`） | 採用 | 只改 3 份 Markdown。fork 現況 `agent-os/docs/index.md:138-141,162`、`tutorials/copilot-governance.md:274-276` 的連結指向不存在的路徑（例如 `agent-os/docs/extensions/jetbrains/`、`agent-os/CONTRIBUTING.md`，兩者 `ls` 皆不存在），PR 改後的目標（`extensions/{jetbrains,cursor,copilot}`、`agent-governance-typescript/agent-os-vscode`、根 `CONTRIBUTING.md`、`docs/{policy-schema,kernel-internals,security-spec}.md`、`agent-os/examples/carbon-auditor`）逐一 `ls` 確認存在；套用後用腳本解析三份檔的相對連結，只剩 `index.md` 的 `../notebooks/04-verification.ipynb` 不存在（PR 沒碰，上游同樣壞） | 上游合併 |
+
+### 不採用或 WATCH
+
+| 項目 | 結論 | 證據與理由 | 重看條件 |
+| --- | --- | --- | --- |
+| commit `d1d0cce`（#4480，india cert-in／sebi Rego 政策對每個 evaluation 都 deny；已合併，head `330a8205`） | WATCH（adoption pending，本機無法驗證） | 修正改 `examples/policies/india-regulatory/rego/` 的 2 個政策與 3 個測試（+181/-2）。本機沒有 `opa`（`which opa` 無輸出），fork 也沒有任何 workflow 跑 `opa test`（`git grep 'opa test' -- .github tools` 無命中），無法證明舊碼失敗、新碼通過；不為此下載二進位檔。先移植過再還原，工作樹不含此檔 | 本機或 CI 取得 `opa`，再整批取上游版本並跑 `opa test examples/policies` |
+| PR #4486（cmvk 保留 HTTP 狀態與伺服器錯誤細節；open，head `9d20e027`，Fixes #4485） | WATCH（adoption pending，本機無法驗證） | TypeScript 修正（+24/-2），改 `cmvkClient.ts`。本機沒有可跑該套件 TypeScript 測試的環境，先移植再還原 | 本機能跑 `agent-os-vscode` 與 cursor 擴充的 TypeScript 測試；上游合併 |
+| PR #4471（Functions 編輯器設定；`.vscode/*`、`.gitignore`、`.funcignore`；已關閉未合併，head `8097f039`） | 不收 | 已關閉未合併。內容只是把個人編輯器設定納入版本控制，並改 `.gitignore` 的 `.vscode/` 排除（fork `.gitignore:28` 目前排除，`.vscode/` 在 fork 不存在）；與 fork 的產品行為無關，且改 `.gitignore` 會讓個人編輯器檔案進版控 | — |
+| PR #4490（CI：在 policy-validation 跑範例 Rego 測試；open，head `6b4a17d9`，Fixes #4481） | 不採用 | 只改 `.github/workflows/policy-validation.yml`（`.github/` 變更需另做安全審查，見 `AGENTS.md` 路由規則 4）。fork 的 `policy-validation.yml` 每個 job 都閘在 `github.repository == 'microsoft/agent-governance-toolkit'`（第 14、35、109 行），fork 不會執行新 job；新 job 要在 runner 下載 OPA 1.22.0，且在 runner 下載外部二進位檔屬 CI 架構變更，本輪不為此開例外 | fork 要在自己的 CI 驗收範例 Rego 時，改以 fork 自己的 workflow 設計 |
+| issue #4481（264 個範例 Rego 測試從未在 CI 執行） | WATCH | 屬上游 CI 覆蓋缺口，不是產品缺陷；修正 PR #4490 已不採用。#4480 的 Rego 修正是這個缺口造成的實例，兩者一起重看 | 本機或 CI 能跑 `opa test`（同 #4480） |
+| issue #4485（CMVK client 丟掉非 401／429 的 HTTP 錯誤細節） | WATCH（對應 PR #4486 pending） | 缺陷描述成立於 fork（`cmvkClient.ts` 以 `error.message` 重新拋出，同 issue 所述）；修正是 PR #4486，本機無 TypeScript 測試環境，見上 | 同 PR #4486 |
+
+### 順帶記錄
+
+- 工作樹的 `docs/fork` 以外變更都來自上述採用項目；沒有動 `tools/check_upstream_updates.py`。
+- #4480、#4486 兩項的驗證條件已列入 `ROADMAP.md` 中期表。

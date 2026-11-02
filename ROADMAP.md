@@ -14,6 +14,7 @@
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
 | `fork-product-windows` 加 policy Python SDK job | 再次動到 `policy-engine/sdk/python` 的 fork 分歧碼，或維護者要求 | CI 能建出 `_native` 並跑 `test_run_tool_unbound_post.py`、`test_orchestration.py` | Antigravity | `docs/fork/DECISIONS.md` 2026-10-30；`tools/dev_check.ps1` 不裝產品套件 |
+| 驗證並採用上游 #4480（india Rego 政策修正）與 #4486（cmvk 錯誤細節，TypeScript） | 本機或 CI 取得 `opa`（`opa test examples/policies`），或能跑 `agent-os-vscode` 的 TypeScript 測試 | 重現舊碼失敗、套用後通過；#4480 取上游版本，#4486 移植；順帶重看 issue #4481、#4485 | Codex | `docs/fork/DECISIONS.md` 2026-11-02 第六輪 |
 | 重新裁決既有 WATCH 提案 | 各項已記錄的合併、遷移說明、實機可測或威脅模型條件成立 | 逐項連回既有裁決，只採用能在 Windows 重現問題且修後通過的變更；不重開已採用項目 | Claude Opus | `docs/fork/DECISIONS.md:639-645` |
 | 重新評估 workflow 生成器同步 | 生成器可保留 fork guard，且無符號連結權限時測試可合理處理 | `generate_workflows.py --check` 通過，重新生成前後所有官方 repo guard 保留，相關測試通過 | Codex | docs/fork/DECISIONS.md:679 |
 
