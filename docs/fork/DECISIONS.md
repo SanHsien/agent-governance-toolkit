@@ -952,3 +952,13 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 5. policy-engine：`cargo test --locked --no-fail-fast -p agent_control_specification_core -p agent_control_specification` 除 `host::tests::from_path_zero_config_evaluates_rego_manifest` 外全過；該項在未改的 lock 上同樣失敗（Deny／Allow 斷言），走 Rego 路徑，本機沒有 `opa`，與 cedar 無關。
 6. 稽核文件：`docs/dependency-audits/2026-11-07-npm-hono-follow-redirects-deepmerge.md`、`2026-11-07-caas-pypdf-6.21.4.md`、`2026-11-07-policy-engine-cedar-policy-4.11.1.md`。
 - 處理後仍開著的告警只剩 #292／#286（deepmerge，上述延後）。Dependabot 告警要等 push 後 GitHub 重新掃描才會自動關閉，本輪沒有 dismiss 任何告警。
+
+## 2026-11-08：更正 TypeScript SDK 的 minimatch override 寫法（CI 的 npm 10 不認範圍鍵）
+
+**症狀**：`main` 上 `Fork product Windows` 的 `fork typescript SDK (Windows)` 紅燈（run 42371378694，之前的 42368203339、42367260399 同樣），`npm ci --ignore-scripts` 報 `EUSAGE`、`Missing: minimatch@10.2.6 from lock file`。其他 job（含 Copilot extension）綠。
+
+**成因**：上一則把 `agent-governance-typescript` 寫成範圍鍵（`"minimatch@^10": "11.0.1"`、`"glob@^10": {...}`），在本機 npm 11.20.0（Node 26）下解析正確，我只在本機 npm 驗過。CI 用 Node 22.23.4／npm 10.9.9（setup-node log 的 `node: v22.23.4`、`npm: 10.9.9`）。用 `npx npm@10.9.9 ci --ignore-scripts` 在本機重現同樣錯誤；以 npm 10.9.9 重新解析時，`rimraf` 6.1.3 巢狀的 `glob` 13 會落在 minimatch 10.2.6（仍在受影響範圍內），與 npm 11 產出的 lock 不一致。範圍鍵在 npm 10 不會套用到每個巢狀使用者。
+
+**做法**：`agent-governance-typescript/package.json` 改為全域 `"minimatch": "11.0.1"` 加明確豁免 `"test-exclude": { "minimatch": "3.1.5", "glob": { "minimatch": "3.1.5" } }`（移除範圍鍵），`@isaacs/nonrecursive-glob-match` 仍釘 1.0.3。這組寫法在 npm 10.9.9 與 11.20.0 下都解析成「根層 11.0.1 ＋ `test-exclude` 巢狀 3.1.5」，所以 lockfile 一個字都不用改；`npm ci` 在兩個版本都過，`jest --coverage` 仍可跑。不要用 npm 10 重生 lock：它會刪掉 npm 11 寫入的 `libc` 欄位（18 行）。回歸測試補上：TypeScript SDK 的 override 必須是全域 11.0.1 加 `test-exclude` 3.1.5 豁免。copilot extension 與 mcp-server 用 `npx npm@10.9.9 ci --ignore-scripts --dry-run` 驗過，皆 exit 0，維持原寫法。
+
+**教訓**：本機 npm 比 CI（Node 22 內建 npm 10.9.x）新；動 `overrides` 或 lockfile 後，除了本機也要用 `npx npm@10.9.9 ci --ignore-scripts` 驗一次。

@@ -357,6 +357,14 @@ def test_minimatch_advisory_remediation_leaves_no_vulnerable_lock_entry() -> Non
             f"test-exclude must keep its CommonJS-function minimatch 3.x copy in {rel_path} (jest --coverage)"
         )
 
+    # npm 10 (bundled with the Node 22 used by CI) does not apply range-keyed overrides such as
+    # "minimatch@^10" to every nested consumer (it left rimraf's glob 13 on minimatch 10.2.6 and
+    # `npm ci` failed with "Missing: minimatch@10.2.6 from lock file"). The TypeScript SDK therefore
+    # uses a global pin plus an explicit test-exclude exemption, which both npm 10 and 11 resolve alike.
+    ts_overrides = json.loads((ROOT / "agent-governance-typescript/package.json").read_text(encoding="utf-8"))["overrides"]
+    assert ts_overrides.get("minimatch") == "11.0.1"
+    assert ts_overrides.get("test-exclude", {}).get("minimatch") == "3.1.5"
+
 
 def _lock_versions(lock: dict, name: str) -> list[tuple[str, str]]:
     return [

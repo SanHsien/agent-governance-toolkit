@@ -56,6 +56,10 @@ Risk: low.
 - Regression tests in `tools/tests/test_fork_product_windows.py`: `test_minimatch_advisory_remediation_leaves_no_vulnerable_lock_entry` now covers copilot (no lock entry in `>= 7.0.0, < 11.0.1`, root 11.0.1, pinned nonrecursive-glob-match, `test-exclude` keeps minimatch below 7 in both jest packages) and `test_hono_node_server_advisory_remediation_and_lock_integrity` now covers the mcp-server extension (override present, lock version >= 2.1.3 and equal to the override). Both fail on the previous HEAD for these packages.
 - Monorepo gate: `pwsh -NoProfile -File tools/dev_check.ps1`.
 
+## npm version note
+
+`Fork product Windows` runs npm 10.9.9 (Node 22.23.4). The range-keyed overrides used here (same form as the TypeScript SDK originally used) passed `npm ci --ignore-scripts --dry-run` under `npx npm@10.9.9` for both extensions, and the Copilot extension job was green on `main`. The TypeScript SDK needed a different form because of a rimraf/glob 13 edge that npm 10 resolves differently; see `2026-11-07-minimatch-advisory.md`, "CI correction". If the copilot lock is ever regenerated, re-check it with npm 10.9.9 as well.
+
 ## Not covered here
 
 Open alerts remaining after this change (unrelated advisories): #300 (`@hono/node-server`, `agent-mesh/packages/mcp-proxy`), #301 (`follow-redirects`, copilot), #292 and #286 (`deepmerge`), #306 to #312 (`pypdf`, caas), #316 (`cedar-policy`).
