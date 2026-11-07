@@ -326,7 +326,10 @@ def test_hono_node_server_advisory_remediation_and_lock_integrity() -> None:
     sdk_required = int(re.search(r"\d+", sdk_hono["engines"]["node"]).group())
     if not (sdk_hono.get("dev") and sdk_hono.get("optional") and "dependencies" not in sdk_pkg):
         assert sdk_declared >= sdk_required, "policy-engine/sdk/node hono is no longer dev-only; raise engines.node"
-    assert sdk_lock["packages"][""]["engines"]["node"] == sdk_pkg["engines"]["node"]
+    assert sdk_lock["packages"][""]["engines"]["node"] == sdk_pkg["engines"]["node"], (
+        "policy-engine/sdk/node package-lock.json root engines.node differs from package.json; "
+        "run npm install to resync the lock"
+    )
 
     mastra_lock = json.loads(
         (ROOT / "agent-governance-python/agentmesh-integrations/mastra-agentmesh/package-lock.json").read_text(encoding="utf-8")

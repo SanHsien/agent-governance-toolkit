@@ -985,4 +985,4 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 
 **理由**：沒有可安裝的修補版，開著不會觸發任何動作；以別的套件 override 替換 API 反而引入未驗證風險。
 
-**重新考慮的條件**：deepmerge 發佈修補版、jest-config 移除該相依、或 deepmerge 進入 runtime 依賴。屆時 Dependabot 會對新告警重新開立。
+**重新考慮的條件**：deepmerge 發佈修補版、jest-config 移除該相依、或 deepmerge 進入 runtime 依賴。已 dismiss 的告警不會因公告補上修補版而自動重開，所以每週上游審查時重看 GHSA-gcqx-w48m-w2h4 是否出現 first_patched_version、或 deepmerge 是否進入 runtime 依賴。
