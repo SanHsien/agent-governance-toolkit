@@ -881,3 +881,16 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 - #4480、#4486 兩項的驗證條件已列入 `ROADMAP.md` 中期表。
 - 計數更正：本輪取上游版本的已合併 PR 為 7 個（#4468、#4469、#4470、#4473、#4474、#4475、#4476；#4480 未取）；移植的 open PR 為 10 個（#4472、#4477 部分、#4478、#4479、#4483、#4484、#4487、#4488、#4491、#4492），另採用 #4482；#4489 撤回。先前寫的「13 個」含 #4489，且「8 個已合併」含未取的 #4480。
 - `tools/upstream_baseline.json` 新增 `monitored`，把 14 個 open PR 的 head 與狀態釘住，上游改動 head 或合併／關閉時 `check_upstream_updates.py` 會報出。
+
+## 2026-11-04：修補 Dependabot 告警 #298/#299；取代 PR #57（其 lockfile 刪掉 hono-openapi（@mastra/core 的相依）的 peer 條目，PR CI 因此失敗）
+
+**成因**：GitHub 於 2026-10-28 發佈 `@hono/node-server` 安全公告 GHSA-rmxm-3fg6-px4f（CVE-2026-118663，medium，影響 `>= 1.19.10, < 2.1.3`，首個修補版 2.1.3）。GitHub 於 2026-11-04 在 fork 開立告警 #298（`policy-engine/sdk/node`）與 #299（`agentmesh-integrations/mastra-agentmesh`），Dependabot 自動開啟 PR #57。`main` 分支最新的 Fork product Windows workflow（commit `938ccb42`，run 41477235564）維持綠燈；紅燈發生在 PR #57 分支的 PR CI（run 41891134325）。Dependabot 的 lockfile 演算法更新時移除了 `@mastra/core` 所依賴的 `hono-openapi` 1.3.0 宣告的 peerDependencies（`@standard-community/standard-json`、`@types/json-schema` 等），導致 Windows runner 執行 `npm ci --ignore-scripts` 時拋出 `npm error code EUSAGE` 錯誤紅燈。
+
+**做法**（依 2026-10-24 與 2026-10-28 處理依賴安全告警的慣例）：
+- `@hono/node-server` 1.19.17 → 2.1.3：最新版 2.1.6 於 2026-11-02 發佈，未滿 7 天冷卻期；依 2026-10-28 先例釘首個修補版 2.1.3（發佈於 2026-09-29，已超過 35 天）。1.x 無已修補版本（1.19.18 仍在受影響範圍）。`mastra-agentmesh` 與 `policy-engine/sdk/node` 兩處的 `package.json` 在 `overrides` 中新增精確釘版 `"@hono/node-server": "2.1.3"`。不採用 PR #57 損壞的 lockfile，改由 `npm install --package-lock-only --ignore-scripts` 重生乾淨 lockfile，僅精確更新 `@hono/node-server` 條目，完整保留既有 peerDependencies 與相依結構。
+- 回歸測試：在 `tools/tests/test_fork_product_windows.py` 新增 `test_hono_node_server_advisory_remediation_and_lock_integrity`，斷言兩套件的 `overrides` 均存在、lockfile 的 `@hono/node-server` 版本 >= 2.1.3 且與 override 相等，並斷言 `mastra-agentmesh` 保留 `@standard-community/standard-json`。在未修復的乾淨 HEAD 上執行該測試呈現先紅（Missing @hono/node-server override），套用修復後呈現後綠。
+- 驗證：
+  1. `agentmesh-integrations/mastra-agentmesh` 跑 `npm ci --ignore-scripts` exit 0；`npm run patch:dependencies && node scripts/patch-provider-utils.mjs --check` 通過；`npm run build` 通過；`npm run lint` 通過；`npm test` 31 passed。
+  2. `policy-engine/sdk/node` 跑 `npm ci --ignore-scripts` exit 0。
+  3. 全套本機 gate `pwsh -NoProfile -File tools\dev_check.ps1` exit 0。
+  4. `python -m pytest tools/tests/test_fork_product_windows.py` 15 passed。

@@ -62,6 +62,7 @@
       "gray-matter": "npm:@11ty/gray-matter@3.0.0",
       "@ai-sdk/provider-utils-v5": "npm:@ai-sdk/provider-utils@3.0.28",
       "@ai-sdk/provider-utils-v6": "npm:@ai-sdk/provider-utils@4.0.33"
-    }
+    },
+    "@hono/node-server": "2.1.3"
   }
 }

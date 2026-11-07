@@ -267,3 +267,34 @@ def test_agent_sre_dev_extra_resolution_matches_pyproject(tmp_path: Path) -> Non
     assert not raw.startswith(codecs.BOM_UTF8)
     assert raw.decode("utf-8").splitlines() == expected
     assert any(line.startswith("pytest") for line in expected)
+
+def test_hono_node_server_advisory_remediation_and_lock_integrity() -> None:
+    # GHSA-rmxm-3fg6-px4f / CVE-2026-118663 remediation:
+    # @hono/node-server must be >= 2.1.3 (first patched release) in both lockfiles.
+    # Lockfiles must maintain peerDependencies sync without dropping required packages.
+    def parse_version(v: str) -> tuple[int, ...]:
+        clean = v.split("-")[0]
+        return tuple(int(x) for x in clean.split("."))
+
+    for rel_path in (
+        "agent-governance-python/agentmesh-integrations/mastra-agentmesh",
+        "policy-engine/sdk/node",
+    ):
+        dir_path = ROOT / rel_path
+        pkg = json.loads((dir_path / "package.json").read_text(encoding="utf-8"))
+        lock = json.loads((dir_path / "package-lock.json").read_text(encoding="utf-8"))
+        override_version = pkg.get("overrides", {}).get("@hono/node-server")
+        assert override_version is not None, f"Missing @hono/node-server override in {rel_path}"
+
+        packages = lock.get("packages", {})
+        hono_entry = packages.get("node_modules/@modelcontextprotocol/sdk/node_modules/@hono/node-server") or packages.get("node_modules/@hono/node-server")
+        assert hono_entry is not None, f"Missing @hono/node-server entry in {rel_path} lockfile"
+        lock_version = hono_entry.get("version", "")
+        assert parse_version(lock_version) >= (2, 1, 3), f"@hono/node-server {lock_version} in {rel_path} is vulnerable (< 2.1.3)"
+        assert override_version == lock_version, f"Override ({override_version}) does not match lock ({lock_version}) in {rel_path}"
+
+    mastra_lock = json.loads(
+        (ROOT / "agent-governance-python/agentmesh-integrations/mastra-agentmesh/package-lock.json").read_text(encoding="utf-8")
+    )
+    # Regression against Dependabot PR #57 lock pruning bug:
+    assert "node_modules/@standard-community/standard-json" in mastra_lock.get("packages", {})
