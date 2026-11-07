@@ -279,6 +279,7 @@ def test_hono_node_server_advisory_remediation_and_lock_integrity() -> None:
     for rel_path in (
         "agent-governance-python/agentmesh-integrations/mastra-agentmesh",
         "policy-engine/sdk/node",
+        "agent-governance-python/agent-os/extensions/mcp-server",
     ):
         dir_path = ROOT / rel_path
         pkg = json.loads((dir_path / "package.json").read_text(encoding="utf-8"))
@@ -312,6 +313,7 @@ def test_minimatch_advisory_remediation_leaves_no_vulnerable_lock_entry() -> Non
 
     for rel_path in (
         "agent-governance-python/agent-os/extensions/mcp-server",
+        "agent-governance-python/agent-os/extensions/copilot",
         "agent-governance-typescript",
     ):
         dir_path = ROOT / rel_path
@@ -331,8 +333,9 @@ def test_minimatch_advisory_remediation_leaves_no_vulnerable_lock_entry() -> Non
                     (7, 0, 0) <= parse_version(version) < (11, 0, 1)
                 ), f"{key} {version} in {rel_path} is vulnerable (>= 7.0.0, < 11.0.1)"
 
-    ts_lock = json.loads((ROOT / "agent-governance-typescript/package-lock.json").read_text(encoding="utf-8"))
-    test_exclude = ts_lock["packages"].get("node_modules/test-exclude/node_modules/minimatch")
-    assert test_exclude is not None and parse_version(test_exclude["version"]) < (7, 0, 0), (
-        "test-exclude must keep its CommonJS-function minimatch 3.x copy (jest --coverage)"
-    )
+    for rel_path in ("agent-governance-typescript", "agent-governance-python/agent-os/extensions/copilot"):
+        jest_lock = json.loads((ROOT / rel_path / "package-lock.json").read_text(encoding="utf-8"))
+        test_exclude = jest_lock["packages"].get("node_modules/test-exclude/node_modules/minimatch")
+        assert test_exclude is not None and parse_version(test_exclude["version"]) < (7, 0, 0), (
+            f"test-exclude must keep its CommonJS-function minimatch 3.x copy in {rel_path} (jest --coverage)"
+        )

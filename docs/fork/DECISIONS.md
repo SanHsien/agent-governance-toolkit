@@ -909,3 +909,15 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 - 稽核文件：`docs/dependency-audits/2026-11-07-minimatch-advisory.md`。
 - 驗證：typescript SDK `npm ci --ignore-scripts`、`npm run build`、`npm run lint`、`npm test`（43 suites、712 tests）、`jest --coverage` 冒煙（`tests/audit.test.ts`，17 passed）皆 exit 0；mcp-server `npm ci --ignore-scripts`、build、lint、`npm test` 皆 exit 0（該套件沒有測試檔，也沒有 Fork product Windows job）。`npm ls minimatch`：mcp-server 全為 11.0.1；typescript 除 `test-exclude` 與其 `glob` 7.2.3 的 3.1.5 外全為 11.0.1。
 - 未處理：#303（copilot extension 的同一公告）與 #304（mcp-server 的 `@hono/node-server`）仍開著。
+
+## 2026-11-07：修補 Dependabot 告警 #303（copilot extension 的 minimatch）與 #304（mcp-server 的 @hono/node-server）
+
+**成因**：與同日 #305／#315 同一批。#303 是 minimatch GHSA-g3hv-75wg-m249（影響 `>= 7.0.0, < 11.0.1`，首個修補版 11.0.1），#304 是 `@hono/node-server` GHSA-rmxm-3fg6-px4f（CVE-2026-118663，影響 `>= 1.19.10, < 2.1.3`，首個修補版 2.1.3，公告發佈於 2026-10-28T21:05:00Z）；兩者都在 2026-11-07T10:28:37Z 開立。mcp-server 的 lock 當時是 `@hono/node-server` 2.1.1。
+
+**做法**（沿用同日 minimatch 條目與 2026-11-04 hono 條目）：
+- #303：`extensions/copilot` 的 `overrides` 新增 `"minimatch@^10": "11.0.1"`、`"glob@^10": { "minimatch": "11.0.1" }`、`"@isaacs/nonrecursive-glob-match": "1.0.3"`（與 `agent-governance-typescript` 相同的範圍型寫法）。該套件同樣有 `test-exclude` 6.0.0 與其 `glob` 7.2.3 以函式形式呼叫 `require('minimatch')`，minimatch 11 的物件匯出會讓 `jest --coverage` 噴 `minimatch is not a function`，所以它們的 3.1.5（含 brace-expansion 1.1.21、balanced-match 1.0.2、concat-map）刻意保留。lock 重生前先移除過期的 `glob/node_modules/{minimatch,brace-expansion,balanced-match}` 條目；第一次重生時 npm 把 11.0.1 分散放進各使用者底下而沒有提升到根層，所以連同這些中間條目一併移除後再重生，最終 lock 根層只有一份 minimatch 11.0.1（copilot lock 異動 12 增 37 刪）。
+- #304：`extensions/mcp-server` 的 `overrides` 新增精確釘版 `"@hono/node-server": "2.1.3"`（發佈於 2026-09-29T06:10:34Z，39 天；2.1.6 於 11-02 發佈未滿 7 天，依先例取首個修補版）。唯一使用者是 `@modelcontextprotocol/sdk@1.32.1`，其宣告 `"@hono/node-server": "^1.19.9 || ^2.0.5"`，2.1.3 在接受範圍內；lock 原本就是 2.x（2.1.1），屬同線小版本更新。2.x 要求 Node >= 20 而該套件 `engines` 為 `>=18.0.0`，與 2026-11-04 對 `policy-engine/sdk/node` 接受的差異相同。mcp-server lock 異動 3 增 3 刪（只動 `@hono/node-server` 版本／resolved／integrity）。
+- 回歸測試：`test_minimatch_advisory_remediation_leaves_no_vulnerable_lock_entry` 納入 copilot（lock 內無 `>= 7.0.0, < 11.0.1`、根層 11.0.1、`nonrecursive-glob-match` 1.0.3、兩個 jest 套件的 `test-exclude` minimatch 仍 < 7）；`test_hono_node_server_advisory_remediation_and_lock_integrity` 納入 mcp-server（override 存在、lock 版本 >= 2.1.3 且等於 override）。
+- 稽核文件：`docs/dependency-audits/2026-11-07-copilot-minimatch-mcp-server-hono.md`。
+- 驗證：copilot `npm ci --ignore-scripts`、`npm run build`、`npm run lint`、`npm test`（3 suites、17 tests）與 `jest --coverage` 冒煙（3 suites、17 tests）皆 exit 0，`npm audit` 不再列 minimatch；mcp-server `npm ci --ignore-scripts`、build、lint、`npm test` 皆 exit 0（沒有測試檔），`npm audit` 0 vulnerabilities。
+- 處理後仍開著的告警與本輪無關：#300（mcp-proxy 的 `@hono/node-server`）、#301（copilot 的 follow-redirects）、#292／#286（deepmerge）、#306–#312（pypdf）、#316（cedar-policy）。

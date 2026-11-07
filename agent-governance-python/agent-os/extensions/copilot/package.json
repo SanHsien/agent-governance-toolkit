@@ -217,6 +217,11 @@
   "overrides": {
     "qs": "6.16.1",
     "proxy-addr": "^2.0.8",
+    "minimatch@^10": "11.0.1",
+    "glob@^10": {
+      "minimatch": "11.0.1"
+    },
+    "@isaacs/nonrecursive-glob-match": "1.0.3",
     "@istanbuljs/load-nyc-config": {
       "js-yaml": "4.3.2"
     }
