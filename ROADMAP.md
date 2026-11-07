@@ -9,7 +9,7 @@
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
-| 決定 `policy-engine/sdk/node` 的 `engines.node`（現為 `>=18`，但 runtime 相依 `@hono/node-server` 2.1.3 要 Node >= 20） | mcp-server 與 mcp-proxy 已在 2026-11-07 升到 `>=20`；這個 napi 套件 2026-11-04 曾接受差異，但各平台套件另外發佈，升級前要先確認 | 查平台套件與 CI 的 Node 版本後，升到 `>=20` 或在 DECISIONS 記錄維持 `>=18` 的理由；同步 lock 根項目 `engines`，擴充 `test_hono_node_server_advisory_remediation_and_lock_integrity` 的 engines 檢查 | Codex | `docs/fork/DECISIONS.md` 2026-11-07（engines 決定） |
+| （目前沒有；`engines.node` 決定已於 2026-11-08 完成，維持 `>=18`） | 下一輪從中期表挑條件已成立者，或每週上游審查 | — | — | `docs/fork/DECISIONS.md` 2026-11-08 |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |
@@ -22,7 +22,7 @@
 ## 刻意不做
 | 不做什麼 | 理由 | 什麼情況下重新考慮 |
 | --- | --- | --- |
-| 無修補版時替換 deepmerge API 或 dismiss 告警 | 依賴用途與延後理由已在 DECISIONS.md 的 2026-10-29 重查段記錄 | 修補版、jest-config 移除依賴、API 提供 first_patched_version，或依賴進入 runtime |
+| 無修補版時替換 deepmerge API（告警 #292／#286 已依 2026-11-08 決定 dismiss） | 開發依賴、無修補版；用途與理由見 DECISIONS.md 的 2026-10-29 重查段與 2026-11-08 段 | 修補版、jest-config 移除依賴、API 提供 first_patched_version，或依賴進入 runtime |
 | 把上游產品 ROADMAP 的所有功能當成本 fork 承諾 | docs/ROADMAP.md 是上游產品方向；fork 維護邊界見 FORK.md | 維護者明確選定功能與 Windows 驗收範圍 |
 | 為 No common ancestor 改寫歷史或強推；啟用官方發布流程 | 已知歷史形態不影響逐筆審查；發布與 Pages 被 FORK.md 隔離 | 維護者另行授權歷史或發布政策變更 |
 

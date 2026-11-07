@@ -730,6 +730,8 @@ commit 水位 `70a4ab8e` → `46b370e7`（上游 `6dc2093e`、`46b370e7`）；PR
 
 **延後：deepmerge（2 筆，GHSA-gcqx-w48m-w2h4，low）**：`agent-governance-typescript/package-lock.json` 與 `agent-os/extensions/copilot/package-lock.json`。影響版本 4.2.0–4.3.1，`npm view deepmerge versions` 最新就是 4.3.1，**沒有修補版**。scope 是 development，唯一路徑是 `jest` → `@jest/core` → `jest-config` → `deepmerge@4.3.1`，只在測試時執行，不進發佈物。不用 override 換成別的套件（deepmerge 的 API 會被 jest-config 直接呼叫，換掉等於 fork jest）。告警維持 open，不 dismiss。**重看條件**：①npm 出現 deepmerge > 4.3.1；②`jest-config` 升版後不再依賴 deepmerge（`npm ls deepmerge` 為空）；③Dependabot 對這兩筆列出 `first_patched_version`；④任何一個路徑變成 runtime（非 development）依賴。
 
+> **已被 2026-11-08 取代**：本段「告警維持 open，不 dismiss」的裁決已改為 dismiss，見下方「2026-11-08：deepmerge 告警 #292／#286 改為 dismiss（tolerable_risk），不再維持開啟」。
+
 **既有問題，本次不處理**：`agent-hypervisor/uv.lock` 與 `pyproject.toml` 的 dev 下限不同步（見上），下次因告警必須重生 lock 時一併處理，並單獨審視 mypy／ruff／pydantic 的跳版。
 
 ## 2026-10-29：deepmerge 延後項目重查
@@ -753,7 +755,7 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 
 - 同兩個指令加上 `--omit=dev` 後皆為 `(empty)`、exit 1（npm 表示沒有匹配套件，並非安裝失敗）；正式執行依賴不含 deepmerge。兩套件的 `src/` 也未找到 deepmerge 引用。
 
-**裁決**：原有四項重看條件皆未成立，繼續延後；兩筆告警保留 open，不 dismiss、不替換 API、不重生 lock。已完成的是本次重查，並非漏洞已修復。後續仍依前節四項條件重看，不另立待辦清單。
+**裁決**：原有四項重看條件皆未成立，繼續延後；兩筆告警保留 open，不 dismiss、不替換 API、不重生 lock。已完成的是本次重查，並非漏洞已修復。後續仍依前節四項條件重看，不另立待辦清單。（**已被 2026-11-08 取代**：改為 dismiss，見「2026-11-08：deepmerge 告警 #292／#286 改為 dismiss」。）
 
 ## 2026-10-30：policy Python SDK 原生擴充（_native）Windows 建置能力盤點
 
@@ -934,11 +936,11 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 | #301 `follow-redirects`（copilot） | 修補：只更新 lock，1.16.1 → 1.16.2（3 增 3 刪），不加 override | 1.16.2 發佈於 2026-10-25（13 天），是最新版；axios 1.20.0 要 `^1.16.0`，範圍本來就含修補版；無相依、無新增套件 | — |
 | #306–#312 `pypdf`（caas） | 修補：`requirements.txt` 6.21.2 → 6.21.4；`requirements.lock` 的 pypdf 區塊 6.7.5 → 6.21.4（換成 6.21.4 的 wheel／sdist sha256） | 6.21.4 發佈於 2026-10-28（10 天）；6.21.3 不夠（#310–#312 要 6.21.4）；7.0.0（2026-11-06，1 天）未滿冷卻期且超過 `pyproject.toml` 的 `<7.0` 上限。`requirements.lock` 是手維護、沒有 lock 工具產生、也沒有任何檔案引用，只換 pypdf 區塊以免擴大異動 | — |
 | #316 `cedar-policy`（policy-engine） | 修補：`Cargo.lock` 的 cedar-policy／-core／-formatter 4.11.0 → 4.11.1（各 version＋checksum，共 6 增 6 刪）；`examples/coding_agent/app/Cargo.lock` 同樣鎖 4.11.0（Dependabot 沒報），一併修 | 4.11.1 發佈於 2026-06-09（151 天）；三個 crate 的相依清單與 4.11.0 相同，沒有新增套件。`agent-governance-rust` 與 benchmark 的 lock 已是 4.13.0，不動。不跳到 4.13.0／4.14.0：只需要首個修補版，且 4.14.1（11-02）未滿冷卻期 | 要把 policy-engine 與 agent-governance-rust 的 Cedar 版本對齊時另案處理 |
-| #292／#286 `deepmerge` | 維持延後（2026-10-29 的裁決再確認，不改 lock、不 dismiss） | 公告仍無修補版；`npm view deepmerge` 最新仍是 4.3.1（2023-03-16）；`npm ls deepmerge` 在兩個套件都只有 `jest` → `@jest/core` → `jest-config` 一條路徑，lock 皆 `dev: true`。以別的套件做 override 替換等於把低風險、僅開發環境的告警換成未審的套件，不做 | 公告出現 first_patched_version；npm 出現 > 4.3.1 且滿 7 天的版本；或 jest-config 移除該相依。重看時用範圍型 override 只改 `jest-config` 這個使用者 |
+| #292／#286 `deepmerge` | 維持延後（2026-10-29 的裁決再確認，不改 lock、不 dismiss；**已被 2026-11-08 取代**，改為 dismiss，見「2026-11-08：deepmerge 告警 #292／#286 改為 dismiss」） | 公告仍無修補版；`npm view deepmerge` 最新仍是 4.3.1（2023-03-16）；`npm ls deepmerge` 在兩個套件都只有 `jest` → `@jest/core` → `jest-config` 一條路徑，lock 皆 `dev: true`。以別的套件做 override 替換等於把低風險、僅開發環境的告警換成未審的套件，不做 | 公告出現 first_patched_version；npm 出現 > 4.3.1 且滿 7 天的版本；或 jest-config 移除該相依。重看時用範圍型 override 只改 `jest-config` 這個使用者 |
 
 **cedar lock 的做法**：`cargo update -p cedar-policy --precise 4.11.1` 除了三個 cedar crate，還把 8 條無關的 `windows-sys` 相依邊（errno、rustix、socket2、tempfile 等）從 0.61.2 改到 0.52.0／0.60.2，與告警無關且降級，所以丟棄該輸出，只手改 6 行（checksum 取自該次輸出），再用 `cargo metadata --locked` 驗證：兩個目錄都 exit 0，cargo 會拒絕需要改動的 lock 並核對下載 crate 的 checksum。
 
-**engines 決定（mcp-server、mcp-proxy 升到 `>=20`）**：`@hono/node-server` 2.x 要 Node >= 20，而它是這兩個套件的 runtime 相依（經 MCP SDK）。SDK 範圍雖留 1.x 出口，但 1.x 沒有修補版（影響 `>= 1.19.10, < 2.1.3`），override 之後每次安裝都是 2.x。維持 `>=18.0.0` 等於宣稱支援套件實際跑不起來的 Node 版本（npm 只印 EBADENGINE 警告就裝）。Node 18 已於 2025-04 結束支援，CI 建這些套件都用 Node 20 或 22，lock 本來就解到 2.x，所以升級沒有實質成本。兩個 `package-lock.json` 根項目的 `engines` 一併重生。**沒動 `policy-engine/sdk/node`**（仍是 `>=18`）：2026-11-04 已接受那個差異，它是 napi 原生綁定、各平台套件另外發佈，要另外決定；已列入 ROADMAP 近期表。
+**engines 決定（mcp-server、mcp-proxy 升到 `>=20`）**：`@hono/node-server` 2.x 要 Node >= 20，而它是這兩個套件的 runtime 相依（經 MCP SDK）。SDK 範圍雖留 1.x 出口，但 1.x 沒有修補版（影響 `>= 1.19.10, < 2.1.3`），override 之後每次安裝都是 2.x。維持 `>=18.0.0` 等於宣稱支援套件實際跑不起來的 Node 版本（npm 只印 EBADENGINE 警告就裝）。Node 18 已於 2025-04 結束支援，CI 建這些套件都用 Node 20 或 22，lock 本來就解到 2.x，所以升級沒有實質成本。兩個 `package-lock.json` 根項目的 `engines` 一併重生。**沒動 `policy-engine/sdk/node`**（仍是 `>=18`）：2026-11-04 已接受那個差異，它是 napi 原生綁定、各平台套件另外發佈，要另外決定；已列入 ROADMAP 近期表。（**此項已被 2026-11-08 取代**：決定維持 `>=18`，見「2026-11-08：`policy-engine/sdk/node` 的 `engines.node` 維持 `>=18`」。）
 
 **回歸測試**（`tools/tests/test_fork_product_windows.py`）：
 - `test_hono_node_server_advisory_remediation_and_lock_integrity` 納入 mcp-proxy，並新增斷言：mcp-server 與 mcp-proxy 宣告的 `engines.node` 不低於 lock 內 hono 要求的版本，且與 lock 根項目一致。
@@ -962,3 +964,25 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 **做法**：`agent-governance-typescript/package.json` 改為全域 `"minimatch": "11.0.1"` 加明確豁免 `"test-exclude": { "minimatch": "3.1.5", "glob": { "minimatch": "3.1.5" } }`（移除範圍鍵），`@isaacs/nonrecursive-glob-match` 仍釘 1.0.3。這組寫法在 npm 10.9.9 與 11.20.0 下都解析成「根層 11.0.1 ＋ `test-exclude` 巢狀 3.1.5」，所以 lockfile 一個字都不用改；`npm ci` 在兩個版本都過，`jest --coverage` 仍可跑。不要用 npm 10 重生 lock：它會刪掉 npm 11 寫入的 `libc` 欄位（18 行）。回歸測試補上：TypeScript SDK 的 override 必須是全域 11.0.1 加 `test-exclude` 3.1.5 豁免。copilot extension 與 mcp-server 用 `npx npm@10.9.9 ci --ignore-scripts --dry-run` 驗過，皆 exit 0，維持原寫法。
 
 **教訓**：本機 npm 比 CI（Node 22 內建 npm 10.9.x）新；動 `overrides` 或 lockfile 後，除了本機也要用 `npx npm@10.9.9 ci --ignore-scripts` 驗一次。
+
+## 2026-11-08：`policy-engine/sdk/node` 的 `engines.node` 維持 `>=18`
+
+**決定**：不升級，維持 `>=18`（維護者授權艦隊規劃長裁決）。
+
+**證據**（2026-11-08 查本機 `main`）：`package.json` 沒有 `dependencies` 欄，只有 `devDependencies` 與可選 `peerDependencies`；lock 內 `node_modules/@hono/node-server` 2.1.3 標 `dev: true`、`optional: true`，不會隨已發佈的套件安裝，所以它的 Node >= 20 要求不構成對使用者的承諾。十個平台套件（`npm/*/package.json`）沒有宣告 `engines`。`policy-engine-ci.yml` 以 Node 20、`fork-product-windows.yml` 以 Node 22 建置與測試，沒有 Node 18 的 job。這和 mcp-server／mcp-proxy 不同：那兩個套件的 hono 是 runtime 相依，所以 2026-11-07 已升到 `>=20`。
+
+**理由**：napi 原生綁定走 N-API，`>=18` 沒有被任何已發現的相依打破；升到 `>=20` 會無謂地讓仍在 Node 18 的使用者收到 EBADENGINE，卻沒有修任何實際問題。
+
+**重新考慮的條件**：hono（或任何 Node >= 20 的套件）進入 `policy-engine/sdk/node` 的 runtime `dependencies`，或平台套件開始宣告 `engines`。
+
+**測試**：`test_hono_node_server_advisory_remediation_and_lock_integrity` 新增斷言：只要 hono 不再是 dev/optional 或 package.json 出現 `dependencies`，`engines.node` 就必須不低於 hono 要求；且 lock 根項目 `engines` 與 package.json 一致。
+
+## 2026-11-08：deepmerge 告警 #292／#286 改為 dismiss（tolerable_risk），不再維持開啟
+
+**決定**：兩筆 deepmerge 告警（GHSA-gcqx-w48m-w2h4，low）以 `tolerable_risk` dismiss。維護者規則：不需要一直開著的告警就關掉。
+
+**證據**（2026-11-08 `gh api repos/SanHsien/agent-governance-toolkit/dependabot/alerts/292`）：`first_patched_version` 為 null、scope 為 `development`、影響範圍 `>= 4.2.0, <= 4.3.1`；2026-10-29 重查已確認唯一路徑是 `jest` → `@jest/core` → `jest-config` → `deepmerge@4.3.1`，`--omit=dev` 為空，`src/` 無引用（見上方「2026-10-29：deepmerge 延後項目重查」）。
+
+**理由**：沒有可安裝的修補版，開著不會觸發任何動作；以別的套件 override 替換 API 反而引入未驗證風險。
+
+**重新考慮的條件**：deepmerge 發佈修補版、jest-config 移除該相依、或 deepmerge 進入 runtime 依賴。屆時 Dependabot 會對新告警重新開立。

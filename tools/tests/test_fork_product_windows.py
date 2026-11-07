@@ -311,6 +311,23 @@ def test_hono_node_server_advisory_remediation_and_lock_integrity() -> None:
         assert declared >= required, f"{rel_path} declares node {declared_engine} but @hono/node-server needs {hono_engine}"
         assert lock["packages"][""]["engines"]["node"] == declared_engine, f"{rel_path} lock root engines is out of sync with package.json"
 
+    # policy-engine/sdk/node keeps engines >=18 only while hono stays dev-only/optional (reached via
+    # the optional MCP SDK peer in devDependencies) and the package has no runtime "dependencies".
+    # If hono ever becomes a runtime dependency there, engines must be raised to the 2.x requirement.
+    sdk_dir = ROOT / "policy-engine/sdk/node"
+    sdk_pkg = json.loads((sdk_dir / "package.json").read_text(encoding="utf-8"))
+    sdk_lock = json.loads((sdk_dir / "package-lock.json").read_text(encoding="utf-8"))
+    sdk_hono = sdk_lock["packages"].get("node_modules/@hono/node-server")
+    assert sdk_hono is not None, (
+        "policy-engine/sdk/node lock has no node_modules/@hono/node-server entry; "
+        "drop this engines check together with the dependency, or restore the lock entry"
+    )
+    sdk_declared = int(re.search(r"\d+", sdk_pkg["engines"]["node"]).group())
+    sdk_required = int(re.search(r"\d+", sdk_hono["engines"]["node"]).group())
+    if not (sdk_hono.get("dev") and sdk_hono.get("optional") and "dependencies" not in sdk_pkg):
+        assert sdk_declared >= sdk_required, "policy-engine/sdk/node hono is no longer dev-only; raise engines.node"
+    assert sdk_lock["packages"][""]["engines"]["node"] == sdk_pkg["engines"]["node"]
+
     mastra_lock = json.loads(
         (ROOT / "agent-governance-python/agentmesh-integrations/mastra-agentmesh/package-lock.json").read_text(encoding="utf-8")
     )
