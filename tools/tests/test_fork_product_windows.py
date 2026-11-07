@@ -280,6 +280,7 @@ def test_hono_node_server_advisory_remediation_and_lock_integrity() -> None:
         "agent-governance-python/agentmesh-integrations/mastra-agentmesh",
         "policy-engine/sdk/node",
         "agent-governance-python/agent-os/extensions/mcp-server",
+        "agent-governance-python/agent-mesh/packages/mcp-proxy",
     ):
         dir_path = ROOT / rel_path
         pkg = json.loads((dir_path / "package.json").read_text(encoding="utf-8"))
@@ -293,6 +294,22 @@ def test_hono_node_server_advisory_remediation_and_lock_integrity() -> None:
         lock_version = hono_entry.get("version", "")
         assert parse_version(lock_version) >= (2, 1, 3), f"@hono/node-server {lock_version} in {rel_path} is vulnerable (< 2.1.3)"
         assert override_version == lock_version, f"Override ({override_version}) does not match lock ({lock_version}) in {rel_path}"
+
+    # The 2.x line needs Node >= 20 and it is a runtime dependency (via the MCP SDK) of the two
+    # MCP server packages, so their declared engines must not promise Node 18.
+    for rel_path in (
+        "agent-governance-python/agent-os/extensions/mcp-server",
+        "agent-governance-python/agent-mesh/packages/mcp-proxy",
+    ):
+        dir_path = ROOT / rel_path
+        pkg = json.loads((dir_path / "package.json").read_text(encoding="utf-8"))
+        lock = json.loads((dir_path / "package-lock.json").read_text(encoding="utf-8"))
+        hono_engine = lock["packages"]["node_modules/@hono/node-server"]["engines"]["node"]
+        required = int(re.search(r"\d+", hono_engine).group())
+        declared_engine = pkg["engines"]["node"]
+        declared = int(re.search(r"\d+", declared_engine).group())
+        assert declared >= required, f"{rel_path} declares node {declared_engine} but @hono/node-server needs {hono_engine}"
+        assert lock["packages"][""]["engines"]["node"] == declared_engine, f"{rel_path} lock root engines is out of sync with package.json"
 
     mastra_lock = json.loads(
         (ROOT / "agent-governance-python/agentmesh-integrations/mastra-agentmesh/package-lock.json").read_text(encoding="utf-8")
@@ -339,3 +356,92 @@ def test_minimatch_advisory_remediation_leaves_no_vulnerable_lock_entry() -> Non
         assert test_exclude is not None and parse_version(test_exclude["version"]) < (7, 0, 0), (
             f"test-exclude must keep its CommonJS-function minimatch 3.x copy in {rel_path} (jest --coverage)"
         )
+
+
+def _lock_versions(lock: dict, name: str) -> list[tuple[str, str]]:
+    return [
+        (key, entry.get("version", ""))
+        for key, entry in lock.get("packages", {}).items()
+        if key == f"node_modules/{name}" or key.endswith(f"/node_modules/{name}")
+    ]
+
+
+def test_follow_redirects_advisory_remediation_leaves_no_vulnerable_lock_entry() -> None:
+    # GHSA-mrwp-f3q8-3g9p / CVE-2026-116689: follow-redirects >= 1.16.0, <= 1.16.1 is vulnerable
+    # (first patched 1.16.2). axios asks for ^1.16.0, so a plain lock refresh is enough and no
+    # override is needed; the property is that no lock entry sits in the vulnerable range.
+    lock = json.loads(
+        (ROOT / "agent-governance-python/agent-os/extensions/copilot/package-lock.json").read_text(encoding="utf-8")
+    )
+    entries = _lock_versions(lock, "follow-redirects")
+    assert entries, "copilot extension no longer locks follow-redirects; update this test"
+    for key, version in entries:
+        parts = tuple(int(x) for x in version.split("-")[0].split("."))
+        assert not ((1, 16, 0) <= parts <= (1, 16, 1)), f"{key} {version} is vulnerable (>= 1.16.0, <= 1.16.1)"
+
+
+def test_pypdf_advisory_remediation_pins_patched_release_in_every_caas_manifest() -> None:
+    # GHSA-x3rh-gjgm-fmqc and six sibling pypdf advisories (published 2026-10-30): everything below
+    # 6.21.4 is affected. The caas image installs requirements.txt; requirements.lock is the
+    # hash-pinned copy and must not lag behind it, and pyproject must still admit the pin.
+    caas = ROOT / "agent-governance-python/agent-os/modules/caas"
+    txt = (caas / "requirements.txt").read_text(encoding="utf-8")
+    pinned = re.search(r"^pypdf==(\d+)\.(\d+)\.(\d+)\b", txt, re.MULTILINE)
+    assert pinned is not None, "caas requirements.txt must pin pypdf exactly"
+    version = tuple(int(x) for x in pinned.groups())
+    assert (6, 21, 4) <= version < (7, 0, 0), f"pypdf {version} is vulnerable or crosses the <7.0 cap in pyproject"
+
+    lock = (caas / "requirements.lock").read_text(encoding="utf-8")
+    locked = re.search(r"^pypdf==(\S+) \\\n((?:\s+--hash=sha256:[0-9a-f]{64}(?: \\)?\n?)+)", lock, re.MULTILINE)
+    assert locked is not None, "caas requirements.lock must carry a hash-pinned pypdf block"
+    assert locked.group(1) == ".".join(map(str, version)), "requirements.lock pypdf differs from requirements.txt"
+    assert len(re.findall(r"--hash=sha256:", locked.group(2))) >= 2, "pypdf needs wheel and sdist hashes"
+
+    pyproject = (caas / "pyproject.toml").read_text(encoding="utf-8")
+    assert re.search(r'"pypdf>=[\d.]+,<7\.0"', pyproject), "pyproject pypdf range changed; re-check the pin"
+
+
+def test_cedar_policy_advisory_remediation_leaves_no_vulnerable_cargo_lock() -> None:
+    # GHSA-c33x-vcv4-vg3g: cedar-policy >= 4.0.0, < 4.11.1 is vulnerable (first patched 4.11.1).
+    # Property over every tracked Cargo.lock, not only the one Dependabot flagged, and the three
+    # cedar crates must move together (cedar-policy pins its core and formatter exactly).
+    tracked = subprocess.run(
+        ["git", "ls-files", "*Cargo.lock"], cwd=ROOT, check=True, capture_output=True, text=True
+    ).stdout.split()
+    checked = 0
+    for rel in tracked:
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        versions = dict(re.findall(r'name = "(cedar-policy(?:-core|-formatter)?)"\nversion = "([^"]+)"', text))
+        if "cedar-policy" not in versions:
+            continue
+        checked += 1
+        parts = tuple(int(x) for x in versions["cedar-policy"].split("."))
+        assert parts >= (4, 11, 1), f"{rel} locks cedar-policy {versions['cedar-policy']} (< 4.11.1)"
+        assert len(set(versions.values())) == 1, f"{rel} has mismatched cedar crate versions {versions}"
+    assert checked >= 2, "expected several Cargo.lock files to carry cedar-policy"
+
+
+def test_deepmerge_unpatched_advisory_is_only_tolerated_with_a_dated_deferral() -> None:
+    # GHSA-gcqx-w48m-w2h4 / CVE-2026-93753: deepmerge <= 4.3.1 has no patched release (npm latest is
+    # 4.3.1). It is a dev-only dependency of jest-config. While any lock still resolves a vulnerable
+    # deepmerge, the audit trail must carry a dated deferral with a reopen condition; once every
+    # lock is above 4.3.1 the deferral is moot.
+    vulnerable = []
+    for rel in (
+        "agent-governance-typescript/package-lock.json",
+        "agent-governance-python/agent-os/extensions/copilot/package-lock.json",
+    ):
+        lock = json.loads((ROOT / rel).read_text(encoding="utf-8"))
+        for key, version in _lock_versions(lock, "deepmerge"):
+            parts = tuple(int(x) for x in version.split("."))
+            assert lock["packages"][key].get("dev") is True, f"{rel} {key} is no longer dev-only; revisit the deferral"
+            if (4, 2, 0) <= parts <= (4, 3, 1):
+                vulnerable.append((rel, version))
+    if not vulnerable:
+        return
+    audit = (ROOT / "docs/dependency-audits/2026-11-07-npm-hono-follow-redirects-deepmerge.md").read_text(encoding="utf-8")
+    assert "GHSA-gcqx-w48m-w2h4" in audit and "#292" in audit and "#286" in audit
+    assert "Deferred since 2026-10-29" in audit, "deepmerge deferral must be dated"
+    assert "Reopen when" in audit, "deepmerge deferral must state its reopen condition"
+    decisions = (ROOT / "docs/fork/DECISIONS.md").read_text(encoding="utf-8")
+    assert "## 2026-10-29：deepmerge 延後項目重查" in decisions, "the original dated deferral entry went missing"

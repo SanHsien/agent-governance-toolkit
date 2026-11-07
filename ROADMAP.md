@@ -9,6 +9,7 @@
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
+| 決定 `policy-engine/sdk/node` 的 `engines.node`（現為 `>=18`，但 runtime 相依 `@hono/node-server` 2.1.3 要 Node >= 20） | mcp-server 與 mcp-proxy 已在 2026-11-07 升到 `>=20`；這個 napi 套件 2026-11-04 曾接受差異，但各平台套件另外發佈，升級前要先確認 | 查平台套件與 CI 的 Node 版本後，升到 `>=20` 或在 DECISIONS 記錄維持 `>=18` 的理由；同步 lock 根項目 `engines`，擴充 `test_hono_node_server_advisory_remediation_and_lock_integrity` 的 engines 檢查 | Codex | `docs/fork/DECISIONS.md` 2026-11-07（engines 決定） |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |

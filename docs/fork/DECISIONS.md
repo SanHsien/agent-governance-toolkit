@@ -921,3 +921,34 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 - 稽核文件：`docs/dependency-audits/2026-11-07-copilot-minimatch-mcp-server-hono.md`。
 - 驗證：copilot `npm ci --ignore-scripts`、`npm run build`、`npm run lint`、`npm test`（3 suites、17 tests）與 `jest --coverage` 冒煙（3 suites、17 tests）皆 exit 0，`npm audit` 不再列 minimatch；mcp-server `npm ci --ignore-scripts`、build、lint、`npm test` 皆 exit 0（沒有測試檔），`npm audit` 0 vulnerabilities。
 - 處理後仍開著的告警與本輪無關：#300（mcp-proxy 的 `@hono/node-server`）、#301（copilot 的 follow-redirects）、#292／#286（deepmerge）、#306–#312（pypdf）、#316（cedar-policy）。
+
+## 2026-11-07：清掉其餘開放的 Dependabot 告警（#300、#301、#306–#312、#316；#292／#286 維持延後）；mcp-server／mcp-proxy 的 engines 升到 Node 20
+
+**成因**：同日 minimatch／hono 兩輪之後，開放告警剩 12 筆：#300（mcp-proxy 的 `@hono/node-server`，GHSA-rmxm-3fg6-px4f，首個修補版 2.1.3）、#301（copilot extension 的 follow-redirects，GHSA-mrwp-f3q8-3g9p，High，影響 `>= 1.16.0, <= 1.16.1`，首個修補版 1.16.2）、#306–#312（caas 的 pypdf，七則 High 公告，首個修補版 6.21.3 或 6.21.4，要 6.21.4 才全部清掉）、#316（policy-engine 的 cedar-policy，GHSA-c33x-vcv4-vg3g，Low，首個修補版 4.11.1）、#292／#286（deepmerge，GHSA-gcqx-w48m-w2h4，Low，無修補版）。每筆都先用 `gh api repos/SanHsien/agent-governance-toolkit/dependabot/alerts/<n>` 與 `gh api advisories/<ghsa>` 查實範圍與首個修補版，再用 npm／PyPI／crates.io 查每個新版本的發佈時間。
+
+**歸屬判斷**：全部由本 fork 直接處理。mcp-proxy 沿用同日其他套件的 fork `overrides` 慣例；copilot 與 pypdf 分別是 lock 更新與一行精確釘版；cedar-policy 是 lock 內的間接相依（`agent_control_specification_core` 的 `cedar` feature 轉給 `agent-control-spec` 0.4.0-alpha.4，其 `cedar-policy ^4`），沒有任何 `Cargo.toml` 寫到它，只能動 lock。
+
+| 告警 | 結論 | 證據 | 重看條件 |
+| --- | --- | --- | --- |
+| #300 `@hono/node-server`（mcp-proxy） | 修補：`overrides` 釘 `2.1.3`，lock 2.1.1 → 2.1.3（4 增 4 刪） | 2.1.3 發佈於 2026-09-29（39 天）；2.1.6（11-02）未滿冷卻期，依先例取首個修補版。唯一使用者是 `@modelcontextprotocol/sdk` 1.32.0，其範圍 `^1.19.9 \|\| ^2.0.5` 含 2.1.3。`src` 不引用 hono，import 冒煙通過 | 上游 SDK 範圍或 hono 公告變動 |
+| #301 `follow-redirects`（copilot） | 修補：只更新 lock，1.16.1 → 1.16.2（3 增 3 刪），不加 override | 1.16.2 發佈於 2026-10-25（13 天），是最新版；axios 1.20.0 要 `^1.16.0`，範圍本來就含修補版；無相依、無新增套件 | — |
+| #306–#312 `pypdf`（caas） | 修補：`requirements.txt` 6.21.2 → 6.21.4；`requirements.lock` 的 pypdf 區塊 6.7.5 → 6.21.4（換成 6.21.4 的 wheel／sdist sha256） | 6.21.4 發佈於 2026-10-28（10 天）；6.21.3 不夠（#310–#312 要 6.21.4）；7.0.0（2026-11-06，1 天）未滿冷卻期且超過 `pyproject.toml` 的 `<7.0` 上限。`requirements.lock` 是手維護、沒有 lock 工具產生、也沒有任何檔案引用，只換 pypdf 區塊以免擴大異動 | — |
+| #316 `cedar-policy`（policy-engine） | 修補：`Cargo.lock` 的 cedar-policy／-core／-formatter 4.11.0 → 4.11.1（各 version＋checksum，共 6 增 6 刪）；`examples/coding_agent/app/Cargo.lock` 同樣鎖 4.11.0（Dependabot 沒報），一併修 | 4.11.1 發佈於 2026-06-09（151 天）；三個 crate 的相依清單與 4.11.0 相同，沒有新增套件。`agent-governance-rust` 與 benchmark 的 lock 已是 4.13.0，不動。不跳到 4.13.0／4.14.0：只需要首個修補版，且 4.14.1（11-02）未滿冷卻期 | 要把 policy-engine 與 agent-governance-rust 的 Cedar 版本對齊時另案處理 |
+| #292／#286 `deepmerge` | 維持延後（2026-10-29 的裁決再確認，不改 lock、不 dismiss） | 公告仍無修補版；`npm view deepmerge` 最新仍是 4.3.1（2023-03-16）；`npm ls deepmerge` 在兩個套件都只有 `jest` → `@jest/core` → `jest-config` 一條路徑，lock 皆 `dev: true`。以別的套件做 override 替換等於把低風險、僅開發環境的告警換成未審的套件，不做 | 公告出現 first_patched_version；npm 出現 > 4.3.1 且滿 7 天的版本；或 jest-config 移除該相依。重看時用範圍型 override 只改 `jest-config` 這個使用者 |
+
+**cedar lock 的做法**：`cargo update -p cedar-policy --precise 4.11.1` 除了三個 cedar crate，還把 8 條無關的 `windows-sys` 相依邊（errno、rustix、socket2、tempfile 等）從 0.61.2 改到 0.52.0／0.60.2，與告警無關且降級，所以丟棄該輸出，只手改 6 行（checksum 取自該次輸出），再用 `cargo metadata --locked` 驗證：兩個目錄都 exit 0，cargo 會拒絕需要改動的 lock 並核對下載 crate 的 checksum。
+
+**engines 決定（mcp-server、mcp-proxy 升到 `>=20`）**：`@hono/node-server` 2.x 要 Node >= 20，而它是這兩個套件的 runtime 相依（經 MCP SDK）。SDK 範圍雖留 1.x 出口，但 1.x 沒有修補版（影響 `>= 1.19.10, < 2.1.3`），override 之後每次安裝都是 2.x。維持 `>=18.0.0` 等於宣稱支援套件實際跑不起來的 Node 版本（npm 只印 EBADENGINE 警告就裝）。Node 18 已於 2025-04 結束支援，CI 建這些套件都用 Node 20 或 22，lock 本來就解到 2.x，所以升級沒有實質成本。兩個 `package-lock.json` 根項目的 `engines` 一併重生。**沒動 `policy-engine/sdk/node`**（仍是 `>=18`）：2026-11-04 已接受那個差異，它是 napi 原生綁定、各平台套件另外發佈，要另外決定；已列入 ROADMAP 近期表。
+
+**回歸測試**（`tools/tests/test_fork_product_windows.py`）：
+- `test_hono_node_server_advisory_remediation_and_lock_integrity` 納入 mcp-proxy，並新增斷言：mcp-server 與 mcp-proxy 宣告的 `engines.node` 不低於 lock 內 hono 要求的版本，且與 lock 根項目一致。
+- 新增 `test_follow_redirects_advisory_remediation_leaves_no_vulnerable_lock_entry`、`test_pypdf_advisory_remediation_pins_patched_release_in_every_caas_manifest`（`requirements.txt` 在 `[6.21.4, 7.0.0)`、`requirements.lock` 同版且有 wheel 與 sdist 兩個 hash、`pyproject.toml` 範圍仍含該版）、`test_cedar_policy_advisory_remediation_leaves_no_vulnerable_cargo_lock`（掃所有 git 追蹤的 `Cargo.lock`，不只 Dependabot 點名的那個，且三個 cedar crate 版本一致）、`test_deepmerge_unpatched_advisory_is_only_tolerated_with_a_dated_deferral`（仍有有漏洞的 deepmerge 時，必須 `dev: true`，且稽核文件與 10-29 條目都要保有日期與重看條件）。
+
+**驗證**：
+1. mcp-proxy：`npm ci --ignore-scripts`、`npm run build`、`npm test`（11 passed）、`npm audit`（0 vulnerabilities）皆 exit 0；`npm run lint` exit 2，原因是 `eslint src` 在 ESLint 8 沒有 `--ext .ts`，找不到任何檔案（file pattern 錯誤，與本輪的 override／engines 無關，未處理）。
+2. copilot：`npm ci --ignore-scripts`、build、lint、`npm test`（3 suites、17 tests）與 `jest --coverage` 冒煙（同樣 17 passed）皆 exit 0；`npm audit` 不再列 follow-redirects，仍列 deepmerge（延後）與不相關項。
+3. mcp-server：`npm ci --ignore-scripts`、build、lint、`npm test`（無測試檔）皆 exit 0，`npm audit` 0 vulnerabilities；mcp-proxy 與 mcp-server 的 hono／MCP SDK transport import 冒煙都印出 `transport function hono 2.1.3 function function`。
+4. pypdf：拋棄式 venv 裝 6.21.4，`PdfWriter`／`PdfReader` 往返成功；caas `tests` 119 passed、18 failed，換成 6.21.2 同環境失敗的 18 項完全相同，所以非本輪造成（原因未查）。
+5. policy-engine：`cargo test --locked --no-fail-fast -p agent_control_specification_core -p agent_control_specification` 除 `host::tests::from_path_zero_config_evaluates_rego_manifest` 外全過；該項在未改的 lock 上同樣失敗（Deny／Allow 斷言），走 Rego 路徑，本機沒有 `opa`，與 cedar 無關。
+6. 稽核文件：`docs/dependency-audits/2026-11-07-npm-hono-follow-redirects-deepmerge.md`、`2026-11-07-caas-pypdf-6.21.4.md`、`2026-11-07-policy-engine-cedar-policy-4.11.1.md`。
+- 處理後仍開著的告警只剩 #292／#286（deepmerge，上述延後）。Dependabot 告警要等 push 後 GitHub 重新掃描才會自動關閉，本輪沒有 dismiss 任何告警。
