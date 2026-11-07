@@ -298,3 +298,41 @@ def test_hono_node_server_advisory_remediation_and_lock_integrity() -> None:
     )
     # Regression against Dependabot PR #57 lock pruning bug:
     assert "node_modules/@standard-community/standard-json" in mastra_lock.get("packages", {})
+
+
+def test_minimatch_advisory_remediation_leaves_no_vulnerable_lock_entry() -> None:
+    # GHSA-g3hv-75wg-m249 / CVE-2026-118764: minimatch >= 7.0.0, < 11.0.1 is vulnerable.
+    # Property: no minimatch entry anywhere in the lockfile (including nested copies pulled in
+    # by glob) may sit in the vulnerable range, and the root copy is the patched 11.0.1.
+    # minimatch 3.x is deliberately left alone for test-exclude: it calls require("minimatch")
+    # as a function, which 11.x (an object export) breaks under `jest --coverage`.
+    # @isaacs/nonrecursive-glob-match is pinned to 1.0.3 to respect the seven-day cooling-off.
+    def parse_version(v: str) -> tuple[int, ...]:
+        return tuple(int(x) for x in v.split("-")[0].split("."))
+
+    for rel_path in (
+        "agent-governance-python/agent-os/extensions/mcp-server",
+        "agent-governance-typescript",
+    ):
+        dir_path = ROOT / rel_path
+        pkg = json.loads((dir_path / "package.json").read_text(encoding="utf-8"))
+        lock = json.loads((dir_path / "package-lock.json").read_text(encoding="utf-8"))
+        overrides = pkg.get("overrides", {})
+        assert any(key == "minimatch" or key.startswith("minimatch@") for key in overrides), f"Missing minimatch override in {rel_path}"
+        assert overrides.get("@isaacs/nonrecursive-glob-match") == "1.0.3", f"Missing cooling-off pin in {rel_path}"
+
+        packages = lock.get("packages", {})
+        assert packages["node_modules/minimatch"]["version"] == "11.0.1", f"Root minimatch is not 11.0.1 in {rel_path}"
+        assert packages["node_modules/@isaacs/nonrecursive-glob-match"]["version"] == "1.0.3", f"Unpinned nonrecursive-glob-match in {rel_path}"
+        for key, entry in packages.items():
+            if key == "node_modules/minimatch" or key.endswith("/node_modules/minimatch"):
+                version = entry.get("version", "")
+                assert not (
+                    (7, 0, 0) <= parse_version(version) < (11, 0, 1)
+                ), f"{key} {version} in {rel_path} is vulnerable (>= 7.0.0, < 11.0.1)"
+
+    ts_lock = json.loads((ROOT / "agent-governance-typescript/package-lock.json").read_text(encoding="utf-8"))
+    test_exclude = ts_lock["packages"].get("node_modules/test-exclude/node_modules/minimatch")
+    assert test_exclude is not None and parse_version(test_exclude["version"]) < (7, 0, 0), (
+        "test-exclude must keep its CommonJS-function minimatch 3.x copy (jest --coverage)"
+    )

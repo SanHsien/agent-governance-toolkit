@@ -1,6 +1,6 @@
 ---
 title: 維護決策
-last_reviewed: 2026-11-02
+last_reviewed: 2026-11-07
 owner: agt-maintainers
 ---
 
@@ -894,3 +894,18 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
   2. `policy-engine/sdk/node` 跑 `npm ci --ignore-scripts` exit 0。
   3. 全套本機 gate `pwsh -NoProfile -File tools\dev_check.ps1` exit 0。
   4. `python -m pytest tools/tests/test_fork_product_windows.py` 15 passed。
+
+## 2026-11-07：修補 Dependabot 告警 #305/#315（minimatch）；兩個 Dependabot 安全更新 job 因 `update_not_possible` 失敗
+
+**成因**：GitHub 於 2026-10-30 發佈 minimatch 公告 GHSA-g3hv-75wg-m249（CVE-2026-118764，medium，影響 `>= 7.0.0, < 11.0.1`，首個修補版 11.0.1），於 2026-11-07 在 fork 開立告警 #305（`agent-os/extensions/mcp-server`）與 #315（`agent-governance-typescript`；#303 在 `extensions/copilot`，本輪未處理）。兩個 Dependabot 安全更新 job（run 42364114916、42364114656，commit `42e75556`）都以 `update_not_possible` 失敗：log 寫明修補版存在，但唯一的解法路徑會把 `@typescript-eslint/eslint-plugin` 從 8.70.1 降到 7.0.0，因為 `eslint` 10.11.0、`@eslint/config-array` 0.23.5、`@typescript-eslint/typescript-estree` 8.70.1 都宣告 `minimatch ^10.2.x`，不接受 11.x。Dependabot 能做的最高版本是 10.2.5（mcp-server）與 9.0.9（typescript，lock 內 `glob` 的巢狀副本），兩者都在受影響範圍內。
+
+**歸屬判斷**：兩個 `package.json` 本來就帶有 fork 維護的 `overrides`（`@modelcontextprotocol/sdk`、`proxy-addr` 等），且 2026-11-04 hono 處理已有 fork 以 overrides 修依賴告警的先例，所以由本 fork 直接處理，不等上游。
+
+**做法**（依 2026-10-28、2026-11-04 慣例）：
+- minimatch 釘 11.0.1（發佈於 2026-10-27T22:26:03Z，11 天），滿足 7 天冷卻；11.0.4（11-02）、11.0.5（11-05）未滿，依先例取首個修補版。7.x–10.x 無修補版。minimatch 11.0.1 新增相依 `@isaacs/nonrecursive-glob-match ^1.0.1`，其最新版 1.1.0 發佈於 2026-11-05T21:38:25Z（未滿 7 天），兩套件的 `overrides` 改釘 1.0.3（2026-10-28T19:50:48Z，10 天）。
+- `mcp-server` 沒有 minimatch 3.x 的使用者，`overrides` 用全域 `"minimatch": "11.0.1"`。`agent-governance-typescript` 先試過全域釘版，結果 `jest --coverage` 壞掉：minimatch 11 的 CommonJS 匯出從函式變成物件，`test-exclude` 6.0.0 與其巢狀 `glob` 7.2.3 以 3.x 風格 `require('minimatch')(...)` 呼叫，丟 `TypeError: minimatch is not a function`（`is-outside-dir-win32.js`）。改為只動有漏洞的使用者：`"minimatch@^10": "11.0.1"`（eslint 系）與 `"glob@^10": { "minimatch": "11.0.1" }`（glob 10.5.0 要求 `^9.0.4`）。`"minimatch@^9"` 這種範圍鍵在增量更新 lock 時動不了巢狀的 9.0.9，所以改用巢狀形式，並先從 lock 移除 `glob/node_modules` 下過期的 minimatch／brace-expansion／balanced-match 條目再重生。`test-exclude` 的 minimatch 3.1.5（含 brace-expansion 1.1.21、balanced-match 1.0.2、concat-map）不在公告範圍（`>= 7.0.0`），刻意保留。
+- 以 `npm install --package-lock-only --ignore-scripts` 重生 lockfile。`mcp-server` 只動 `minimatch` 10.2.5 → 11.0.1 並新增 `@isaacs/nonrecursive-glob-match` 1.0.3；typescript 另移除 `glob/node_modules` 下的 minimatch 9.0.9、brace-expansion 2.1.7、balanced-match 1.0.2。
+- 回歸測試：`tools/tests/test_fork_product_windows.py::test_minimatch_advisory_remediation_leaves_no_vulnerable_lock_entry`，斷言 lock 內無 `>= 7.0.0, < 11.0.1` 的 minimatch 條目、根層為 11.0.1、`nonrecursive-glob-match` 為 1.0.3、`test-exclude` 的 minimatch 仍 < 7；乾淨 HEAD 上紅。
+- 稽核文件：`docs/dependency-audits/2026-11-07-minimatch-advisory.md`。
+- 驗證：typescript SDK `npm ci --ignore-scripts`、`npm run build`、`npm run lint`、`npm test`（43 suites、712 tests）、`jest --coverage` 冒煙（`tests/audit.test.ts`，17 passed）皆 exit 0；mcp-server `npm ci --ignore-scripts`、build、lint、`npm test` 皆 exit 0（該套件沒有測試檔，也沒有 Fork product Windows job）。`npm ls minimatch`：mcp-server 全為 11.0.1；typescript 除 `test-exclude` 與其 `glob` 7.2.3 的 3.1.5 外全為 11.0.1。
+- 未處理：#303（copilot extension 的同一公告）與 #304（mcp-server 的 `@hono/node-server`）仍開著。
