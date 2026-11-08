@@ -855,7 +855,7 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 | --- | --- | --- | --- |
 | PR #4472（agent-sre 把相關訊號合成一個 incident；head `8000fc71`） | 採用（移植） | `incidents/detector.py` +50，`tests/unit/test_incidents.py` +80；舊碼失敗、移植後 20 passed。規格 `docs/specs/AGENT-SRE-GOVERNANCE-1.0.md` 補 5 行訊號歸併說明 | 上游合併或改寫 |
 | PR #4477（agent-discovery 把 reconciliation 狀態與掃描風險標籤存回 inventory；head `37e5badc`） | 部分採用 | 只移植 `reconciler.py`（+3）與 `tests/test_reconciler.py`（+21），9 passed。PR 另改的 CLI／inventory 儲存部分不移植：fork 已有自己的 CLI 與 `inventory.save()` | 上游合併，且 fork 的 CLI 路徑需對齊 |
-| PR #4478（runbook rollback 失敗時回報失敗而不是 `rolled_back`；head `ff0e756a`） | 採用（移植） | `incidents/runbook_executor.py` +18；`tests/test_runbooks.py` +42，35 passed | 同上 |
+| PR #4478（runbook rollback 失敗時回報失敗而不是 `rolled_back`；head `ff0e756a`） | 採用（移植；3447f79e 漏收 `.cspell-repo-terms.txt` 的 `runbook`，2026-11-08 事後稽核發現並補上） | `incidents/runbook_executor.py` +18；`tests/test_runbooks.py` +42，35 passed | 同上 |
 | PR #4479（MCP 成本工具拒絕負值與非有限數；head `9c198982`） | 採用（移植） | `mcp/server.py` +19；`tests/test_mcp_server.py` +36，22 passed；`docs/specs/MCP-SECURITY-GATEWAY-1.0.md` 補輸入驗證說明 | 同上 |
 | PR #4483（AgentRollout status 符合 CRD schema；head `c42730a4`） | 採用（移植） | `k8s/__init__.py`、`templates/crd.yaml`、`tests/test_k8s.py` +51；47 passed | 同上 |
 | PR #4484（拒絕負的 `max_retrievals_per_minute`；head `d843a2d6`） | 採用（移植） | `agent_rag_governance/policy.py` +10，`tests/test_policy.py` +16；rag 全套 146 passed | 同上 |
