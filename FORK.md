@@ -30,6 +30,7 @@
 | `docker-compose.yml` | dashboard 埠綁 `127.0.0.1:8501` |
 | `examples/demos/openclaw-governed/docker-compose.yaml` | sidecar 埠綁 `127.0.0.1:8081` |
 | `docs/fork/` | Windows 開發、上游審查、裁決、本線 changelog |
+| `agent-governance-python/agent-mesh/src/agentmesh/integrations/mcp/__init__.py` | `TrustGatedMCPClient.connect` 在設了 `trust_bridge` 卻發現不到伺服器 DID 時回傳 `False`（上游為放行）；上游 #4529 合併前，接上 `trust_bridge` 將連不上任何伺服器。見 `docs/fork/DECISIONS.md` 2026-11-10 |
 
 產品程式碼（`agent-governance-python/`、各語言 SDK、`policy-engine/`、上游 `docs/`）以上游為準，除非 `REVIEW.md`／`docs/fork/DECISIONS.md` 已記錄 fork overlay。本機 overlay：根目錄 dashboard 與 OpenClaw demo 的 Compose 埠綁 `127.0.0.1`。
 

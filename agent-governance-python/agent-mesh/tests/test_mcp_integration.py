@@ -823,15 +823,19 @@ class TestMCPClientConnect:
         assert client._connected_servers == {"https://mcp.example.com:8080"}
 
     @pytest.mark.asyncio
-    async def test_connect_with_bridge_no_server_did(
+    async def test_connect_with_bridge_no_server_did_is_refused(
         self, client_identity: AgentIdentity
     ) -> None:
-        """When _discover_server_did returns None, bridge is skipped."""
+        """Fail closed: a configured bridge with no discoverable server DID refuses.
+
+        Fork mitigation for upstream issue #4528 until upstream #4529 lands.
+        """
         bridge = AsyncMock()
-        bridge.verify_peer = AsyncMock(return_value=False)
+        bridge.verify_peer = AsyncMock(return_value=True)
         client = TrustGatedMCPClient(client_identity, trust_bridge=bridge)
         result = await client.connect("https://mcp.example.com:8080")
-        assert result is True
+        assert result is False
+        assert client._connected_servers == set()
         bridge.verify_peer.assert_not_awaited()
 
     @pytest.mark.asyncio

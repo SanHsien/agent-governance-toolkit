@@ -414,7 +414,15 @@ class TrustGatedMCPClient:
         self._connected_servers: set[str] = set()
 
     async def connect(self, server_url: str) -> bool:
-        """Connect to MCP server with trust verification."""
+        """Connect to MCP server with trust verification.
+
+        Fork behavior, differs from upstream until upstream PR #4529 lands:
+        when a ``trust_bridge`` is configured and no server DID can be
+        discovered, ``connect`` returns ``False``. ``_discover_server_did``
+        is still a stub that returns ``None``, so before #4529 is merged
+        a client with a ``trust_bridge`` cannot connect to any server.
+        Without a ``trust_bridge`` the client connects unverified, as before.
+        """
         # V18: Validate server URL scheme
         from urllib.parse import urlparse
         parsed = urlparse(server_url)
@@ -434,10 +442,18 @@ class TrustGatedMCPClient:
         if self.trust_bridge:
             # Extract server DID from URL or discovery
             server_did = await self._discover_server_did(server_url)
-            if server_did:
-                if not await self.trust_bridge.verify_peer(server_did):
-                    logger.warning(f"Server {server_url} failed trust verification")
-                    return False
+            if not server_did:
+                # Fork mitigation for upstream issue #4528: fail closed when
+                # the server identity cannot be established.
+                logger.warning(
+                    "Server %s identity could not be discovered; refusing to "
+                    "connect because a trust bridge is configured",
+                    server_url,
+                )
+                return False
+            if not await self.trust_bridge.verify_peer(server_did):
+                logger.warning(f"Server {server_url} failed trust verification")
+                return False
 
         self._connected_servers.add(server_url)
         logger.info(f"Connected to MCP server: {server_url}")

@@ -9,7 +9,7 @@
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
-| （目前沒有；`engines.node` 決定已於 2026-11-08 完成，維持 `>=18`） | 下一輪從中期表挑條件已成立者，或每週上游審查 | — | — | `docs/fork/DECISIONS.md` 2026-11-08 |
+| 上游 #4529 合併後，把 `TrustGatedMCPClient` 的 fork 失敗關閉緩解換成上游版本 | 上游合併 #4529（目前仍 open，CHANGES_REQUESTED） | 取上游 `integrations/mcp/` 與測試，`test_mcp_server_verification.py`、`test_mcp_integration.py` 通過，並移除 FORK.md 差異表該列 | Claude Opus | `docs/fork/DECISIONS.md` 2026-11-10 緩解段；`agent-governance-python/agent-mesh/src/agentmesh/integrations/mcp/__init__.py` |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |
