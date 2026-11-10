@@ -1,6 +1,6 @@
 ---
 title: 維護決策
-last_reviewed: 2026-11-07
+last_reviewed: 2026-11-10
 owner: agt-maintainers
 ---
 
@@ -986,3 +986,81 @@ jest@30.4.2 -> @jest/core@30.4.2 -> jest-config@30.4.2 -> deepmerge@4.3.1
 **理由**：沒有可安裝的修補版，開著不會觸發任何動作；以別的套件 override 替換 API 反而引入未驗證風險。
 
 **重新考慮的條件**：deepmerge 發佈修補版、jest-config 移除該相依、或 deepmerge 進入 runtime 依賴。已 dismiss 的告警不會因公告補上修補版而自動重開，所以每週上游審查時重看 GHSA-gcqx-w48m-w2h4 是否出現 first_patched_version、或 deepmerge 是否進入 runtime 依賴。
+
+## 2026-11-10：上游審查第七輪（d1d0ccea → 48f04e5a）
+
+**範圍**：31 個 commit（`d1d0ccea..48f04e5a`）、PR #4493–#4540 共 45 個（`gh pr view` 逐號查：22 已合併、23 open；#4526 不存在）、issue #4527、#4528。水位：commit `d1d0ccea` → `48f04e5a`、PR 4492 → 4540、issue 4485 → 4528。
+
+**方法**：31 個 commit 中 9 個是產品修正（#4059、#4477、#4478、#4483、#4484、#4487、#4488、#4491、#4492，全是水位以前就存在的 PR），22 個是 Dependabot 依賴升版（PR #4493、#4495–#4511、#4514–#4516、#4519）。產品修正先用 `git diff HEAD upstream/main -- <該 commit 的非 CHANGELOG 檔>` 量分歧：#4478、#4483、#4484、#4487、#4488、#4491、#4492 的差異為空（上一輪以 open PR 移植的內容與合併版逐位元組相同；#4478 那一檔 `.cspell-repo-terms.txt` 唯一的差異是 `vapt`，屬 #4480，見下）。45 個 PR 中已合併的 22 個全是依賴升版；23 個 open 的 PR 每一個都用 `gh pr diff` 取目前 head 的 diff：採用與判斷依據所在的 PR（#4512、#4513、#4521–#4524、#4530–#4540）讀完程式與測試，4 個 Dependabot PR（#4494、#4517、#4518、#4520）讀變更行，#4525、#4529 讀檔案清單、PR 本文與審查意見。這些 diff 存下後全部掃描過（長空白、`eval`／`new Function(`／`globalThis`／`child_process`／`curl |`、長 base64／hex、零寬與雙向控制字元、超過 300 字元的非 CHANGELOG 行）：沒有夾帶內容，只有三處命中，是 #4517、#4520 的 npm integrity 雜湊與 #4490 的 OPA sha256。
+
+open PR 的採用規則：fork 存在同一缺陷、新測試在 fork 現碼失敗（先紅）、套用後通過（後綠），CHANGELOG 不動（沿用前幾輪）。上游審查者的 CHANGES_REQUESTED 若只涉及 PR 範本、CLA、CHANGELOG 或拼字，而審查者自己跑過程式與測試並認可程式正確，不當作程式問題；若涉及行為取捨或安全性（#4489、#4529）則不移植。先紅後綠是先只套測試檔取得紅、再套來源檔取得綠，指令為 `pytest <新測試檔>`，環境為 `PYTHONPATH=src`，`sqlglot`、`pytest-asyncio` 裝在暫存目錄，HOME 與 USERPROFILE 指到暫存目錄。
+
+### 採用：已合併的上游 commit
+
+| 項目 | 結論 | 證據 | 重看條件 |
+| --- | --- | --- | --- |
+| commit `0895688`（#4477，agent-discovery 把 reconciliation 狀態與掃描風險標籤存回 inventory；已合併） | 採用（取上游合併版） | 上一輪只移植了 `reconciler.py`。`git diff HEAD upstream/main` 在 `agent-discovery` 顯示三個檔不同：`cli/main.py`（fork 的 `reconcile` 在 `reconciler.reconcile()` 之後多呼叫 `inv.save()`）、`inventory.py`（`save()` 的位置與 docstring）、`tests/test_cli.py`（兩個測試取代一個）。三個檔取上游版：套用前 `pytest tests` 90 passed，套用後 91 passed。fork 在 `scanners/config.py` 與 `tests/test_scanners.py` 另有自己的分歧（路徑以 `as_posix()` 輸出），不動 | — |
+| commits `9c6907a`、`a918f76`、`ade4d5a`、`ea260c5`、`abaf404`、`fa310ff`、`48f04e5`（#4478、#4483、#4484、#4487、#4488、#4491、#4492） | 已存在 | 上一輪以 open PR 移植，合併後的檔案與 `upstream/main` 逐位元組相同（上述 `git diff` 為空）。這七項（連同 #4477）從 `monitored` 移除 | — |
+
+### 採用：仍 open 的上游 PR（移植程式與測試，CHANGELOG 不動；上游合併同一修正時以上游版本為準）
+
+| 項目（head） | 結論 | 先紅後綠與證據 | 重看條件 |
+| --- | --- | --- | --- |
+| PR #4538（`ResponseLatency` 拒絕 0.0–1.0 以外的 percentile；`93c50e00`） | 採用（移植） | 傳入 `95` 會被夾成最大值。`tests/unit/test_indicators.py`：舊碼 6 failed、33 passed；套用後 39 passed | 上游合併 |
+| PR #4539（burn-rate 視窗必須為正；`0689cbd4`） | 採用（移植） | `slo/objectives.py` 視窗為 0 時 `window_seconds or 3600` 靜默改量 1 小時，負值則永遠不觸發。`tests/unit/test_objectives.py`：舊碼 6 failed、29 passed；套用後 35 passed | 同上 |
+| PR #4512（`SLOSpec.to_yaml` 保留未設定欄位以維持繼承；`075f65d8`，審查者確認程式正確，要求補 PR 範本與 CLA） | 採用（移植） | `to_yaml` 把子規格展開成預設值，讀回後蓋掉父規格。`tests/test_slo_spec.py`：舊碼 1 failed、29 passed；套用後 30 passed | 同上 |
+| PR #4513（`ReplayEngine.diff` 比對每一個重名 span；`6f682bb1`，審查者要求補 CHANGELOG 與範本） | 採用（移植） | 舊碼以名稱建字典，只比最後一個。`tests/unit/test_engine.py`：舊碼 3 failed、16 passed；套用後 19 passed | 同上 |
+| PR #4521（rag-governance 速率限制在鎖內取時間；`2945c018`，審查者重現競態，要求補範本） | 採用（移植） | `rate_limiter.py` 在取得鎖之前讀時鐘，延遲的執行緒會把過期時間戳排在新時間戳之後。`tests/test_rate_limiter.py`：舊碼 1 failed、7 passed；套用後 8 passed | 同上 |
+| PR #4522（marketplace 安裝時強制依賴版本約束；`de7a6076`，審查者認可，要求補範本） | 採用（移植） | 舊碼的 `_parse_dependency` 只留 `==`，其餘約束丟掉，且已安裝的依賴不檢查版本。`tests/test_dependency_ranges.py`：舊碼 5 failed、4 passed；套用後 9 passed | 同上 |
+| PR #4523（marketplace artifact 升級失敗時保留已安裝外掛；`df09e682`，審查者認可，要求補範本） | 採用（移植） | 改為在 `plugins_dir` 下的暫存目錄準備、驗證、掃描，全部通過才以 `os.replace` 換入，換入失敗時還原。`tests/test_artifact_fetch.py`：舊碼 4 failed、16 passed；套用後 20 passed（Windows 上的目錄換位測試包含在內）。marketplace 全套 340 passed、2 skipped | 同上 |
+| PR #4531（agent-mesh `AuditLog.query` 的 `limit=0` 回傳空；`28b7bd71`） | 採用（移植） | 同一檔的 `get_entries_for_agent`、`get_entries_by_type` 一併改。這是行為契約變更：舊測試把 `limit=0` 當作「全部」釘住，PR 移除了與新契約矛盾的案例（審查者核對過只動了矛盾案例）。`git grep -E 'limit=0'` 在非測試程式碼沒有呼叫端。三個測試檔：舊碼 34 failed、58 passed；套用後 92 passed | 同上 |
+| PR #4532（dashboard `get_live_traffic`、`get_audit_log` 的 `limit=0`；`f87bc0a6`） | 採用（移植） | `tests/test_dashboard_limit.py`：舊碼 9 failed、6 passed；套用後 15 passed | 同上 |
+| PR #4533（openai-agents-trust `AuditLog.get_entries(limit=0)`；`cdab125e`） | 採用（移植） | `tests/test_core.py`：舊碼 3 failed、27 passed；套用後 30 passed | 同上 |
+| PR #4534（control-plane 四個歷史讀取點的 `limit=0` 與負值；`c5d39b41`） | 採用（移植，新增 `_limits.py`） | 只放新檔 `_limits.py`、不改讀取點時，`tests/test_history_limits.py` 11 failed（含 subtest）、24 passed；套用全部來源後 29 passed。完全不放 `_limits.py` 時是 collection 的 `ModuleNotFoundError` | 同上 |
+| PR #4535（vector store `list_documents(limit=0)` 與負的 `top_k`；`0749da88`） | 採用（移植；`.cspell-repo-terms.txt` 補 `multimodal`） | `tests/test_vector_store_limits.py`：舊碼 5 failed、9 passed；套用後 10 passed | 同上 |
+| PR #4536（`ResourceQuota` 拒絕負的上限；`cb41b6cb`） | 採用（移植） | `tests/test_resource_quota_validation.py`：舊碼 8 failed（含 subtest）；套用後 7 passed。零值仍合法且會拒絕請求，測試涵蓋 | 同上 |
+| PR #4537（`AgentResourceQuota` 拒絕負的上限；`b5251a98`） | 採用（移植；`.cspell-repo-terms.txt` 補 `mbps`） | `tests/test_agent_resource_quota_validation.py`：舊碼 12 failed、18 passed；套用後 30 passed | 同上 |
+| PR #4540（control-plane 的 `getting_started.py` 第 4 步；`80436415`） | 採用（移植） | 範例沒有測試。以 `yes '' \| python examples/getting_started.py` 實跑：舊檔在第 4 步 `get_audit_log(agent.agent_id)` 以 `TypeError: '<' not supported between instances of 'str' and 'int'` 中止；新檔印出「Found 6 audit entries」與 `Event: execution_completed`，走到第 5 步，exit 0 | 同上 |
+| PR #4524（SQL 驗證器對換行分隔的 `EXEC xp_cmdshell`／`sp_*` 的特徵測試；`ca171442`，審查者要求補範本） | 採用（只加測試；`.cspell-repo-terms.txt` 補 `addrolemember`） | 沒有程式改動，不是修正。5 個新測試在現碼就通過（`tests/test_sql_policy.py` 48 passed）。須先裝 `sqlglot`：未安裝時驗證器一律拒絕，4 個「應被擋」的測試會假綠，`test_multiline_select_still_allowed` 則紅（未裝時整檔 7 failed、38 passed，全是 `sqlglot not installed` 的 fail-safe 拒絕） | 同上 |
+
+套用後的回歸比對（HEAD 的 `git archive` 與工作樹各跑一次，比較去重後的 FAILED／ERROR 清單）：agent-sre 1347 → 1376 passed，失敗與錯誤集合相同（24 failed、15 errors，來源是本機缺 otel 等套件）；agent-mesh 2556 → 2581 passed，集合相同（104 failed、46 errors）；control-plane 411 → 492 passed，集合相同（17 failed）；openai-agents-trust 24 → 30 passed，集合相同（2 errors）；rag-governance 148 passed；marketplace 340 passed、2 skipped；agent-discovery 91 passed。
+
+### 不採用或 WATCH
+
+| 項目 | 結論 | 證據與理由 | 重看條件 |
+| --- | --- | --- | --- |
+| commit `4aa6ac3`（#4059，`fix!`：HostSession 與 AGT adapter runtime 送快照契約的鍵；已合併） | WATCH（adoption pending，本機無法驗證） | 31 個檔，跨 `policy-engine`（Python SDK `_host.py`、Rego 與 Cedar 規則庫、`AGT-SNAPSHOT-1.0.md`）、`agent-os`、`agt-policies` 與三個範例 manifest。`git show 4aa6ac3 \| git apply --check --exclude=CHANGELOG.md` 對目前工作樹乾淨通過，所以不是衝突問題。這是破壞性契約變更（`BREAKING_CHANGES.md` 新增 62 行），`AGENTS.md` 的決策升級規則把跨 3 個以上套件與公開 API 破壞性變更列為先問維護者的事。規則庫改到 `agt_ifc.rego`、`agt_ifc_test.rego`，本機沒有 `opa`（`which opa` 無輸出）；commit 訊息明說只改一半會讓 monorepo 自相矛盾、所有遷移後的 manifest 失敗關閉，所以不拆開只取 Python 側 | 本機或 CI 取得 `opa`，且能跑 `policy-engine` 的 Cedar 測試與 `sdk/python` 的 `test_host.py`（需 `_native`，見 2026-10-30 盤點），再整批取上游版本並跑 `opa test` |
+| PR #4489（trust-policy `matches` 允許有界量詞；head 變為 `0a85e63a`，仍 CHANGES_REQUESTED） | WATCH（維持不採用） | 上游依審查改成走訪 `re._parser` 的實作，審查者實測拒絕巢狀量詞與重複下的交替；但仍有未解決項目，且審查者指出兩個行為取捨：第一個無法評估條件的規則即使動作是 allow 也會拒絕；`^(\d{1,3}\.){3}\d{1,3}$`、`^(?:[a-z]+\.)*[a-z]+$` 這類現在可載入的 pattern 之後會載入失敗。fork 的釘住測試 `test_matches_rejects_nested_bounded_quantifier_redos` 保留 | 上游合併 |
+| PR #4486（cmvk 保留 HTTP 狀態與伺服器錯誤細節；head 變為 `894979b9`，仍 CHANGES_REQUESTED） | WATCH（adoption pending，本機無法驗證） | 上游已依審查改成只取字串欄位並截 500 字元。PR 沒有測試；`agent-governance-typescript/agent-os-vscode` 沒有 `node_modules`，其 `npm test` 是 `node ./out/test/runTest.js`（需要 VS Code 測試主機）。issue #4485 同 | 上游合併；或本機能跑該套件的 TypeScript 測試 |
+| PR #4490（CI 跑範例 Rego 測試；head 變為 `eac8852e`） | 不採用 | 上游改成 OPA 0.70.0（287 個測試）。仍只改 `.github/workflows/policy-validation.yml`，fork 的該 workflow 全閘在官方 repo，新 job 不會執行；理由同上一輪 | fork 要在自己的 CI 驗收範例 Rego 時，改以 fork 自己的 workflow 設計 |
+| PR #4472（agent-sre incident 訊號歸併；head 變為 `67a12c4e`）、PR #4479（MCP 成本工具拒絕負值；head 變為 `def4fd95`） | 維持採用 | 上一輪移植的 PR，上游又推了新 head。`git apply -R --check --exclude=CHANGELOG.md` 把新 head 的 diff 反向套在 fork 工作樹上，兩個都乾淨通過，表示新 head 的內容已全在 fork 裡（差異只在 CHANGELOG） | 上游合併 |
+| PR #4482（agent-os 文件連結；head `bbb2482e` 未變） | 維持採用 | 仍 open、head 未動 | 上游合併 |
+| PR #4529（MCP server DID 探索與驗證；`d2009cc7`，CHANGES_REQUESTED）與 issue #4528（`TrustGatedMCPClient` 不驗證伺服器身分） | WATCH | issue 的缺陷在 fork 存在：`agentmesh/integrations/mcp/__init__.py:446-449` 的 `_discover_server_did` 只回傳 `None`，`connect()` 在 `if server_did:` 之內才呼叫信任橋，所以不檢查就加入 `_connected_servers`（`:442`）。修正是 PR #4529：新增 `server_identity.py` 並改動約 2200 行，屬新功能與安全模型變更（`AGENTS.md` 決策升級規則）；審查者要求處理拼字與其他項目，另有一位審查者留下關於逾時的意見。fork 目前沒有呼叫端依賴這條路徑，但「沒驗證卻回報已連線」要維持列在路線圖 | 上游合併 #4529 |
+| issue #4527（`@microsoft/agent-governance-opencode` 5.0.0 在 OpenCode 2.2.5 載入失敗，V1 與 V2 外掛契約） | WATCH | 缺陷在 fork 存在：`agent-governance-opencode/package.json` 版本 5.0.0，`src/index.mjs:247` 是 `export default AgtGovernance`（V1 函式，沒有 `id`、`setup`）。沒有修正 PR；本機沒有 OpenCode，也沒有 `@opencode-ai/plugin` v2，無法驗證載入。外掛載入失敗代表治理沒有啟用 | 上游有修正 PR，或本機能安裝 OpenCode 2.2.x 重現 |
+| PR #4525（`examples/gov-substrate`，Governance Substrate 整合；`824c2d27`，2457 行） | 不收 | 新增第三方產品的整合範例，PR 本文自稱是 RFC #4298 的 Draft 實作。fork 沒有要修的缺陷；`AGENTS.md` 規定第三方整合要在整合真實、可歸屬且有用之後才進入。PR 說明含 Docker 隔離執行，本機未驗證 | 上游合併，且維護者要求這個整合 |
+| PR #4530（ATR 同步 workflow 在產生檔為新檔時開 PR；`a30fdd52`） | 不採用 | 只改 `.github/workflows/sync-atr-community-rules.yml`，fork 的該 workflow 閘在官方 repo，不會執行；`.github/` 變更要另做安全審查 | 同 #4490 |
+
+### 不採用：依賴升版
+
+22 個已合併的 Dependabot commit／PR（#4493、#4495–#4511、#4514–#4516、#4519）與 4 個 open 的 Dependabot PR（#4494、#4517、#4518、#4520）：沿用前幾輪的結論，fork 自己跑 Dependabot，鎖檔取 fork 側。上游這次的 `package.json` 沒有 fork 在 TypeScript SDK、copilot 與 mcp-server 加的 `overrides`，整檔取上游會拿掉這些安全覆寫。逐項比對 fork 現況與上游目標：
+
+| 項目 | fork 現況 | 判斷 |
+| --- | --- | --- |
+| `pypdf`（#4518，open：6.19.0 → 6.21.4） | `caas/requirements.txt:4` 與 `requirements.lock:8` 已是 `6.21.4` | 已存在 |
+| `@hono/node-server`（#4517、#4520，open：1.19.17 → 2.1.6） | `policy-engine/sdk/node`、`mastra-agentmesh`、`mcp-server` 的鎖檔皆為 `2.1.3`，正是 GHSA-rmxm-3fg6-px4f 的修補版（`< 2.1.3` 受影響） | 已存在，不追 patch |
+| `rustls`（#4514：0.23.45 → 0.23.46） | `agent-governance-rust/Cargo.lock`、`policy-engine/Cargo.lock` 皆 `0.23.46` | 已存在；`gh api '/advisories?ecosystem=rust&affects=rustls@0.23.46'` 為 0 筆 |
+| `cedar-policy`（#4515：4.11.0 → 4.11.2） | `policy-engine/Cargo.lock` 為 4.11.1 | 落後一個 patch；`affects=cedar-policy@4.11.1` 為 0 筆；`cargo` 不在 PATH，無法建置驗證 |
+| `qs`（#4516、#4519：6.15.2 → 6.17.1） | 六份鎖檔皆 `6.16.1`（高於上游舊值） | 落後一個 minor；`affects=qs@6.16.1` 為 0 筆 |
+| `axios`（#4499）、`@typescript-eslint/*`（#4500、#4501） | `axios` 1.20.0（上游 1.21.0）；`@typescript-eslint` 8.70.1（上游 8.72.1） | 落後；`affects=axios@1.20.0` 為 0 筆 |
+| .NET：`Microsoft.Agents.AI`（#4495）、`Microsoft.Extensions.DependencyInjection`（#4496）、`Microsoft.SourceLink.GitHub`（#4497）、`ModelContextProtocol`（#4498） | 1.22.0／10.0.12／10.0.401／2.2.0（上游 1.26.0／10.0.14／10.0.403／2.3.0） | 落後；本機無 .NET 測試環境驗證升版 |
+| Python 開發工具下限（#4502–#4511） | `fastapi>=0.143.0`、`hypothesis>=6.169.0`、`ruff>=0.17.0`、`pytest-asyncio>=1.4.0`、`opentelemetry-sdk>=1.44.0`、`agent-mcp-governance` 的 `setuptools>=84.0.0`（上游 0.162.0／6.170.12／0.17.3／1.4.1／1.45.1／84.2.1） | 這些是相容性承諾，不為追新而調高（PLAYBOOK §1） |
+| `docker/login-action`（#4493：4.6.0 → 4.7.0）、`actions/setup-python`（#4494，open：7.0.0 → 7.1.0） | `publish-containers.yml:120` 為 v4.6.0，該 workflow 閘在官方 repo；`setup-python` PR 改的是上游的多個 workflow | fork 自己跑 Dependabot |
+
+`gh api '/repos/SanHsien/agent-governance-toolkit/dependabot/alerts?state=open&per_page=100' --jq length` 回傳 0，所以沒有因這些落後而開啟的告警。
+
+### 順帶記錄
+
+- 計數：這一輪移植的 open PR 為 15 個修正（#4512、#4513、#4521、#4522、#4523、#4531–#4540）加 1 個測試 PR（#4524）；已合併的產品 commit 只有 #4477 需要取上游版本（三個檔）。
+- `.cspell-repo-terms.txt` 補了 `multimodal`、`mbps`、`addrolemember`；`vapt` 屬 #4480（Rego，仍 adoption pending，fork 的 Rego 檔不含上游修正），不補。
+- `monitored` 重新釘選：移除已合併的 #4477、#4478、#4483、#4484、#4487、#4488、#4491、#4492；更新 head 的 #4472、#4479、#4486、#4489、#4490；#4482 不變；新增此次移植與 WATCH 的 #4512、#4513、#4521–#4524、#4529、#4531–#4540。
+- `ROADMAP.md` 中期表補上 #4059、#4529／#4528、#4527 的重看條件。

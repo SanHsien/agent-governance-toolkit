@@ -132,3 +132,12 @@ README 衝突的解法：保留頂部 fork overlay，把上游新英文內容留
   - Commit：`d1d0ccea`（`d1d0ccea5f1cfd7ae41dda05b0b791f95739c8c1`）
   - PR：4467 → 4492
   - Issue：4426 → 4485
+
+## 2026-11-10：第七輪審查，水位推進至 `48f04e5a`
+
+- 範圍：`d1d0ccea..48f04e5a` 的 31 個 commit、PR #4493–#4540（45 個）、issue #4527、#4528。逐項結論與證據見 `DECISIONS.md` 同日段落。
+- 結果：22 個 Dependabot 依賴升版沿用 fork 自跑 Dependabot；9 個產品修正 commit 中 #4477 取上游合併版（`agent-discovery` 三個檔），其餘 7 個與上一輪移植的內容逐位元組相同，#4059（`fix!`，快照契約的鍵）記為 adoption pending（本機無 `opa`，且是破壞性契約變更）；移植 15 個 open 修正 PR（#4512、#4513、#4521、#4522、#4523、#4531–#4540）與 1 個測試 PR（#4524）；#4525（範例）、#4530（CI）不收；#4489、#4486、#4529 與 issue #4527、#4528 列 WATCH。
+- 水位更新：
+  - Commit：`48f04e5a`（`48f04e5ad1efd4f2e5692d4b67def2e0f99a6870`）
+  - PR：4492 → 4540
+  - Issue：4485 → 4528

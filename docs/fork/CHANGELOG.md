@@ -1,6 +1,6 @@
 ---
 title: Fork 維護變更紀錄
-last_reviewed: 2026-10-29
+last_reviewed: 2026-11-10
 owner: agt-maintainers
 ---
 
@@ -10,6 +10,15 @@ owner: agt-maintainers
 本檔只記錄**本 fork 的維護歷史**（2026-08-28 起）；上游
 [`microsoft/agent-governance-toolkit`](https://github.com/microsoft/agent-governance-toolkit)
 的產品演進見其自身 [`CHANGELOG.md`](../../CHANGELOG.md) 與 [`docs/fork/UPSTREAM.md`](UPSTREAM.md) 的審查清冊。
+
+## 2026-11-10
+
+### 同步與修正
+
+- 第七輪上游審查，水位推進至 `48f04e5a`、PR 4540、issue 4528；逐項結論見 [DECISIONS.md](DECISIONS.md#2026-11-10上游審查第七輪d1d0ccea--48f04e5a)。
+- 取上游 `agent-discovery` 的 `cli/main.py`、`inventory.py`、`tests/test_cli.py`（#4477 合併版）。
+- 移植 15 個上游 open 修正 PR（#4512、#4513、#4521、#4522、#4523、#4531–#4540）與 1 個測試 PR（#4524）；每個修正的新測試在 fork 舊碼失敗、套用後通過。
+- `#4059`（快照契約的鍵，破壞性變更）、`#4529`／issue `#4528`（MCP 伺服器身分驗證）、issue `#4527`（OpenCode 外掛契約）記為待辦，條件見 `ROADMAP.md`。
 
 ## 2026-10-29
 
