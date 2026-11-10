@@ -115,10 +115,6 @@ class AgentInventory:
         if self._storage_path:
             self._save()
 
-    def save(self) -> None:
-        """Persist the inventory, including in-place changes to its agents."""
-        self._save()
-
     def export_json(self) -> str:
         """Export inventory as JSON."""
         return json.dumps(
@@ -126,6 +122,14 @@ class AgentInventory:
             indent=2,
             default=str,
         )
+
+    def save(self) -> None:
+        """Persist the inventory, if it has a storage path.
+
+        ``ingest``, ``remove`` and ``clear`` save on their own. Call this
+        after changing agents in place, such as their status or tags.
+        """
+        self._save()
 
     def _save(self) -> None:
         """Persist inventory to disk."""

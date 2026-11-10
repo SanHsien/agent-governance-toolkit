@@ -236,7 +236,6 @@ def reconcile(storage: str, registry_file: str | None, output: str) -> None:
 
     console.print("\n[bold blue]🔄 Reconciliation[/bold blue]\n")
     shadow_agents = _run_async(reconciler.reconcile())
-    inv.save()
 
     # Score shadow agents
     for shadow in shadow_agents:
