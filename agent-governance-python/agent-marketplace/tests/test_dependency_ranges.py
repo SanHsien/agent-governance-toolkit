@@ -48,7 +48,7 @@ def test_install_selects_highest_satisfying_version(tmp_path, requirement, expec
 
 def test_no_matching_version_fails_before_installing_dependency(tmp_path):
     installer = installer_with_versions(tmp_path, "dep>=4.0")
-    with pytest.raises(MarketplaceError, match="satisf"):
+    with pytest.raises(MarketplaceError, match="No version of dep"):
         installer.install("app")
     assert installer.list_installed() == []
     assert not (tmp_path / "plugins" / "dep").exists()
@@ -57,7 +57,7 @@ def test_no_matching_version_fails_before_installing_dependency(tmp_path):
 def test_existing_incompatible_version_is_not_silently_accepted(tmp_path):
     installer = installer_with_versions(tmp_path, "dep>=1.0,<2.0")
     installer.install("dep", "3.0.0")
-    with pytest.raises(MarketplaceError, match="satisf"):
+    with pytest.raises(MarketplaceError, match="Installed dependency dep@3.0.0"):
         installer.install("app")
     assert {m.name: m.version for m in installer.list_installed()} == {"dep": "3.0.0"}
 

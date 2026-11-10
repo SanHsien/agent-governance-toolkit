@@ -163,35 +163,35 @@ class TestSQLPolicy:
     # ---------------------------------------------------------------
     # Newline-separated EXEC procedures - regression coverage
     #
-    # The dangerous-procedure detection matches against
-    # ``statement.sql().upper()`` using ``\s+`` between the EXEC/EXECUTE
-    # keyword and the procedure name, so whitespace that happens to be a
-    # newline in the source SQL is already handled. These tests lock in
-    # that behavior so a future refactor (e.g. switching to a
-    # single-space or line-anchored pattern) cannot silently regress it.
-    # They characterize the current, correct denial — they are not a bug
-    # report and assert no bypass exists.
+    # These pin the outcome (denied), not the mechanism. With sqlglot
+    # installed, "EXEC <newline> <proc> ..." is denied before the \s+ regex
+    # on ``statement.sql()`` is reached: sqlglot raises ParseError and the
+    # validator fails closed, and "EXECUTE <newline> <proc> ..." parses as a
+    # ``Command`` node that the Command branch denies. Replacing the
+    # whitespace with a space leaves these tests passing, so they do not
+    # guard the regex. They characterize the current denial and assert
+    # no bypass exists; they are not a bug report.
     # ---------------------------------------------------------------
 
     def test_exec_newline_xp_cmdshell_blocked(self, sql_policy):
-        """EXEC separated from xp_cmdshell by a newline should be blocked."""
+        """EXEC, newline, xp_cmdshell is denied (sqlglot ParseError, fail-closed)."""
         request = self.make_sql_request("EXEC\nxp_cmdshell 'whoami'")
         assert sql_policy.validator(request) is False
 
     def test_execute_newline_xp_cmdshell_blocked(self, sql_policy):
-        """EXECUTE separated from xp_cmdshell by a newline should be blocked."""
+        """EXECUTE, newline, xp_cmdshell is denied (Command node branch)."""
         request = self.make_sql_request("EXECUTE\nxp_cmdshell 'net user'")
         assert sql_policy.validator(request) is False
 
     def test_exec_newline_sp_configure_blocked(self, sql_policy):
-        """EXEC separated from sp_configure by a newline should be blocked."""
+        """EXEC, newline, sp_configure is denied (sqlglot ParseError, fail-closed)."""
         request = self.make_sql_request(
             "EXEC\nsp_configure 'show advanced options', 1"
         )
         assert sql_policy.validator(request) is False
 
     def test_exec_newline_sp_addrolemember_blocked(self, sql_policy):
-        """EXEC separated from sp_addrolemember by a newline should be blocked."""
+        """EXEC, newline, sp_addrolemember is denied (sqlglot ParseError, fail-closed)."""
         request = self.make_sql_request(
             "EXEC\nsp_addrolemember 'db_owner', 'attacker'"
         )
@@ -200,8 +200,8 @@ class TestSQLPolicy:
     def test_multiline_select_still_allowed(self, sql_policy):
         """A benign SELECT spanning newlines should remain allowed.
 
-        Confirms the newline-robust proc detection does not over-block
-        ordinary multi-line queries.
+        Confirms the denial paths above do not over-block ordinary
+        multi-line queries.
         """
         request = self.make_sql_request(
             "SELECT id,\n       name\nFROM users\nWHERE active = 1"
