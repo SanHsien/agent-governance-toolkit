@@ -65,6 +65,17 @@ def _verified_peer(result: Any, expected_did: str) -> Optional[Tuple[int, Tuple[
 
 
 @dataclass(frozen=True, eq=False)
+class _ConnectionBinding:
+    """What a ``connect()`` verified: the server DID and the bridge used.
+
+    A connection is valid only while ``trust_bridge`` is still that bridge.
+    ``server_did`` is ``None`` for an unverified (no-bridge) connection.
+    """
+    server_did: Optional[str]
+    bridge: Any
+
+
+@dataclass(frozen=True, eq=False)
 class _VerifiedGrant:
     """What a successful verification established about a client DID.
 
@@ -546,6 +557,25 @@ class TrustGatedMCPClient:
         self.identity = identity
         self.trust_bridge = trust_bridge
         self._connected_servers: set[str] = set()
+        # Verified DID and bridge behind each entry of _connected_servers.
+        self._connection_bindings: Dict[str, _ConnectionBinding] = {}
+
+    def _revoke_connection(self, server_url: str) -> None:
+        """Forget any earlier connected state for ``server_url``."""
+        self._connected_servers.discard(server_url)
+        self._connection_bindings.pop(server_url, None)
+
+    def _is_connected(self, server_url: str) -> bool:
+        """True only for a connection still valid under the current bridge."""
+        binding = self._connection_bindings.get(server_url)
+        if (
+            server_url not in self._connected_servers
+            or binding is None
+            or binding.bridge is not self.trust_bridge
+        ):
+            self._revoke_connection(server_url)
+            return False
+        return True
 
     async def connect(self, server_url: str) -> bool:
         """Connect to MCP server with trust verification.
@@ -556,7 +586,15 @@ class TrustGatedMCPClient:
         is still a stub that returns ``None``, so before #4529 is merged
         a client with a ``trust_bridge`` cannot connect to any server.
         Without a ``trust_bridge`` the client connects unverified, as before.
+
+        Any earlier connected state for ``server_url`` is revoked before
+        verification starts, so a failed or erroring re-connect can never
+        leave a stale "connected" entry behind. A successful connection is
+        bound to the verified server DID and to the bridge that verified it.
         """
+        self._revoke_connection(server_url)
+        bridge = self.trust_bridge
+
         # V18: Validate server URL scheme
         from urllib.parse import urlparse
         parsed = urlparse(server_url)
@@ -574,24 +612,39 @@ class TrustGatedMCPClient:
 
         # Verify server identity if a TrustBridge is configured. Presence is
         # ``is not None``: a bridge object may be falsey (empty registry).
-        if self.trust_bridge is not None:
-            # Extract server DID from URL or discovery
-            server_did = await self._discover_server_did(server_url)
-            if not server_did:
-                # Fork mitigation for upstream issue #4528: fail closed when
-                # the server identity cannot be established.
+        server_did: Optional[str] = None
+        if bridge is not None:
+            try:
+                # Extract server DID from URL or discovery
+                server_did = await self._discover_server_did(server_url)
+                if not server_did:
+                    # Fork mitigation for upstream issue #4528: fail closed
+                    # when the server identity cannot be established.
+                    logger.warning(
+                        "Server %s identity could not be discovered; refusing to "
+                        "connect because a trust bridge is configured",
+                        server_url,
+                    )
+                    return False
+                result = await bridge.verify_peer(server_did)
+            except Exception as exc:
                 logger.warning(
-                    "Server %s identity could not be discovered; refusing to "
-                    "connect because a trust bridge is configured",
-                    server_url,
+                    "Server %s verification errored with %s; refusing to connect",
+                    server_url, type(exc).__name__,
                 )
                 return False
-            result = await self.trust_bridge.verify_peer(server_did)
             if _verified_peer(result, server_did) is None:
                 logger.warning(f"Server {server_url} failed trust verification")
                 return False
+            if bridge is not self.trust_bridge:
+                logger.warning(
+                    "Server %s: trust bridge changed during verification; "
+                    "refusing to connect", server_url,
+                )
+                return False
 
         self._connected_servers.add(server_url)
+        self._connection_bindings[server_url] = _ConnectionBinding(server_did, bridge)
         logger.info(f"Connected to MCP server: {server_url}")
         return True
 
@@ -614,7 +667,7 @@ class TrustGatedMCPClient:
         Raises:
             NotImplementedError: HTTP transport is not yet available.
         """
-        if server_url not in self._connected_servers:
+        if not self._is_connected(server_url):
             if not await self.connect(server_url):
                 return {"error": "Failed to connect to server"}
 

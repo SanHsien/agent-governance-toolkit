@@ -510,3 +510,135 @@ class TestB1RequireHumanSponsorIsEnforced:
         server.register_tool("t", _handler)
         await server.verify_client(did)
         assert (await server.invoke_tool("t", {}, did)).success is True
+
+
+# ---------------------------------------------------------------------------
+# B4 — a failed or changed re-connect revokes the earlier connected state
+# ---------------------------------------------------------------------------
+
+
+class TestB4ConnectedStateIsRevoked:
+    @pytest.mark.asyncio
+    async def test_failed_reconnect_after_bridge_is_set_revokes_old_state(
+        self, identity: Any
+    ) -> None:
+        # Codex repro: reconnect_after_bridge_set=false but
+        # connected_after_failed_reconnect=true and invoke reached the transport.
+        client = TrustGatedMCPClient(identity)
+        assert await client.connect(SERVER_URL) is True
+        client.trust_bridge = _bridge(_ok("did:mesh:srv"))
+
+        assert await client.connect(SERVER_URL) is False  # no DID discoverable
+        assert SERVER_URL not in client._connected_servers
+        assert await client.invoke(SERVER_URL, "tool", {}) == {
+            "error": "Failed to connect to server"
+        }
+
+    @pytest.mark.asyncio
+    async def test_bridge_denial_on_reconnect_revokes_old_state(self, identity: Any) -> None:
+        bridge = _bridge(_ok("did:mesh:srv"))
+        client = TrustGatedMCPClient(identity, bridge)
+        client._discover_server_did = AsyncMock(return_value="did:mesh:srv")
+        assert await client.connect(SERVER_URL) is True
+
+        bridge.verify_peer.return_value = _denied("did:mesh:srv", "key rotated")
+        assert await client.connect(SERVER_URL) is False
+        assert SERVER_URL not in client._connected_servers
+        assert await client.invoke(SERVER_URL, "tool", {}) == {
+            "error": "Failed to connect to server"
+        }
+
+    @pytest.mark.asyncio
+    async def test_bridge_error_on_reconnect_revokes_and_fails_closed(
+        self, identity: Any
+    ) -> None:
+        bridge = _bridge(_ok("did:mesh:srv"))
+        client = TrustGatedMCPClient(identity, bridge)
+        client._discover_server_did = AsyncMock(return_value="did:mesh:srv")
+        assert await client.connect(SERVER_URL) is True
+
+        bridge.verify_peer.side_effect = ConnectionError("registry down")
+        assert await client.connect(SERVER_URL) is False
+        assert SERVER_URL not in client._connected_servers
+
+    @pytest.mark.asyncio
+    async def test_discovery_error_on_reconnect_revokes_and_fails_closed(
+        self, identity: Any
+    ) -> None:
+        client = TrustGatedMCPClient(identity, _bridge(_ok("did:mesh:srv")))
+        client._discover_server_did = AsyncMock(return_value="did:mesh:srv")
+        assert await client.connect(SERVER_URL) is True
+
+        client._discover_server_did = AsyncMock(side_effect=OSError("dns failure"))
+        assert await client.connect(SERVER_URL) is False
+        assert SERVER_URL not in client._connected_servers
+
+    @pytest.mark.asyncio
+    async def test_invalid_url_reconnect_revokes_old_state(self, identity: Any) -> None:
+        client = TrustGatedMCPClient(identity)
+        assert await client.connect(SERVER_URL) is True
+        # Same URL string, now rejected by an input guard (blocked-host list).
+        client._connected_servers.add("http://localhost:8080")
+        assert await client.connect("http://localhost:8080") is False
+        assert "http://localhost:8080" not in client._connected_servers
+
+    @pytest.mark.asyncio
+    async def test_connected_state_is_bound_to_the_verified_server_did(
+        self, identity: Any
+    ) -> None:
+        client = TrustGatedMCPClient(identity, _bridge(_ok("did:mesh:srv")))
+        client._discover_server_did = AsyncMock(return_value="did:mesh:srv")
+        await client.connect(SERVER_URL)
+        assert client._connection_bindings[SERVER_URL].server_did == "did:mesh:srv"
+
+    @pytest.mark.asyncio
+    async def test_changing_the_bridge_invalidates_connected_state(
+        self, identity: Any
+    ) -> None:
+        client = TrustGatedMCPClient(identity, _bridge(_ok("did:mesh:srv")))
+        client._discover_server_did = AsyncMock(return_value="did:mesh:srv")
+        assert await client.connect(SERVER_URL) is True
+
+        strict = _bridge(_denied("did:mesh:srv", "not in new registry"))
+        client.trust_bridge = strict
+        # invoke() must not trust the connection made under the old bridge.
+        assert await client.invoke(SERVER_URL, "tool", {}) == {
+            "error": "Failed to connect to server"
+        }
+        strict.verify_peer.assert_awaited_once_with("did:mesh:srv")
+        assert SERVER_URL not in client._connected_servers
+
+    @pytest.mark.asyncio
+    async def test_connection_made_under_a_bridge_is_invalid_once_bridge_is_removed(
+        self, identity: Any
+    ) -> None:
+        client = TrustGatedMCPClient(identity, _bridge(_ok("did:mesh:srv")))
+        client._discover_server_did = AsyncMock(return_value="did:mesh:srv")
+        assert await client.connect(SERVER_URL) is True
+        client.trust_bridge = None
+        assert client._is_connected(SERVER_URL) is False
+
+    @pytest.mark.asyncio
+    async def test_bridge_replaced_during_verification_is_not_recorded(
+        self, identity: Any
+    ) -> None:
+        client = TrustGatedMCPClient(identity)
+
+        async def swap_then_approve(did: str) -> HandshakeResult:
+            client.trust_bridge = _bridge(_ok(did))  # configuration changes mid-flight
+            return _ok(did)
+
+        client.trust_bridge = SimpleNamespace(verify_peer=swap_then_approve)
+        client._discover_server_did = AsyncMock(return_value="did:mesh:srv")
+        assert await client.connect(SERVER_URL) is False
+        assert SERVER_URL not in client._connected_servers
+
+    @pytest.mark.asyncio
+    async def test_verified_connection_still_reaches_the_transport(
+        self, identity: Any
+    ) -> None:
+        client = TrustGatedMCPClient(identity, _bridge(_ok("did:mesh:srv")))
+        client._discover_server_did = AsyncMock(return_value="did:mesh:srv")
+        with pytest.raises(NotImplementedError):
+            await client.invoke(SERVER_URL, "tool", {})
+        assert SERVER_URL in client._connected_servers
