@@ -597,13 +597,27 @@ server.register_tool(
 
 ### Invoking a Tool with Trust Checks
 
+> **Fork behavior (differs from upstream, see `docs/fork/DECISIONS.md`
+> 2026-11-11):** `invoke_tool()` dispatches only for a DID that already passed
+> `verify_client()`. The trust score and capabilities used for the gates are
+> the ones that verification established, taken from the bridge's
+> `HandshakeResult`; the `caller_capabilities` and `caller_trust_score`
+> arguments are untrusted claims and are ignored. A tool registered with
+> `require_human_sponsor=True` additionally needs `identity_registry=` on the
+> server so the registry can attest `sponsor_verified`. Without a
+> `trust_bridge` no client can be verified (a card's self-reported
+> `trust_score` is not accepted).
+
 ```python
+# 1. Verify the caller's identity through the trust bridge first.
+if not await server.verify_client("did:mesh:agent-1"):
+    raise PermissionError("caller identity not verified")
+
+# 2. Invoke. Score and capabilities come from step 1, not from the arguments.
 call = await server.invoke_tool(
     tool_name="sql_query",
     arguments={"query": "SELECT count(*) FROM users"},
     caller_did="did:mesh:agent-1",
-    caller_capabilities=["use:sql", "read:data"],
-    caller_trust_score=700,
 )
 
 if call.success:
@@ -611,8 +625,10 @@ if call.success:
 else:
     print(call.error)
     # Possible errors:
-    # "Insufficient trust score: 700 < 800"       (trust below tool threshold)
-    # "Missing capability: admin"                   (caller lacks required cap)
+    # "Caller identity not verified: ..."          (no valid verify_client result)
+    # "Insufficient trust score: 700 < 800"       (verified score below tool threshold)
+    # "Missing capability: admin"                   (verified caps lack required cap)
+    # "Human sponsor not verified"                 (require_human_sponsor tool)
     # "Circuit breaker open: sql_query has 5 consecutive failures"
 ```
 

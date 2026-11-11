@@ -34,14 +34,16 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Dict, List, Optional, Awaitable
+from typing import Any, Callable, Dict, List, Optional, Awaitable, Tuple
 from enum import Enum
 
 logger = logging.getLogger(__name__)
 
 
-def _peer_verified(result: Any, expected_did: str) -> bool:
-    """Return True only for an explicit, well-typed verification success.
+def _verified_peer(result: Any, expected_did: str) -> Optional[Tuple[int, Tuple[str, ...]]]:
+    """Return ``(trust_score, capabilities)`` for an explicit, well-typed success.
+
+    Returns ``None`` for every other outcome.
 
     ``TrustBridge.verify_peer()`` returns a ``HandshakeResult`` whose
     ``verified`` field carries the outcome; the object itself is always
@@ -54,10 +56,26 @@ def _peer_verified(result: Any, expected_did: str) -> bool:
     from agentmesh.trust.handshake import HandshakeResult
 
     if isinstance(result, bool):
-        return result is True
+        # A bare bool carries identity only: no score, no capabilities.
+        return (0, ()) if result is True else None
     if isinstance(result, HandshakeResult):
-        return result.verified is True and result.peer_did == expected_did
-    return False
+        if result.verified is True and result.peer_did == expected_did:
+            return (result.trust_score, tuple(result.capabilities))
+    return None
+
+
+@dataclass(frozen=True, eq=False)
+class _VerifiedGrant:
+    """What a successful verification established about a client DID.
+
+    Score, capabilities and sponsor state come from the trusted verification
+    result, never from the ``invoke_tool`` caller. The grant is bound to the
+    bridge that produced it: replacing ``trust_bridge`` invalidates it.
+    """
+    trust_score: int
+    capabilities: Tuple[str, ...]
+    sponsor_verified: bool
+    bridge: Any
 
 
 class MCPMessageType(Enum):
@@ -126,15 +144,21 @@ class TrustGatedMCPServer:
         trust_bridge: Any = None,  # TrustBridge
         min_trust_score: int = 300,
         audit_all_calls: bool = True,
+        identity_registry: Any = None,  # IdentityRegistry (sponsor evidence)
     ):
         self.identity = identity
         self.trust_bridge = trust_bridge
+        # Trusted source for ``require_human_sponsor``. Without it no client
+        # can satisfy a sponsor-gated tool (fail closed).
+        self.identity_registry = identity_registry
         self.min_trust_score = min_trust_score
         self.audit_all_calls = audit_all_calls
 
         self._tools: Dict[str, MCPTool] = {}
         self._call_history: List[MCPToolCall] = []
         self._verified_clients: Dict[str, datetime] = {}
+        # What each verification established; keyed like _verified_clients.
+        self._client_grants: Dict[str, _VerifiedGrant] = {}
         self._verification_ttl = timedelta(minutes=10)
         self._max_verified_clients = 10_000
 
@@ -199,23 +223,24 @@ class TrustGatedMCPServer:
         client_did: str,
         client_card: Optional[Any] = None,  # A2AAgentCard
     ) -> bool:
-        """Verify client identity before allowing tool access."""
-        # Check cache
-        if client_did in self._verified_clients:
-            cached_time = self._verified_clients[client_did]
-            if datetime.now(timezone.utc) - cached_time < self._verification_ttl:
-                return True
-            # Expired — remove stale entry
-            del self._verified_clients[client_did]
+        """Verify client identity before allowing tool access.
+
+        Success records a grant (trust score, capabilities, sponsor state)
+        taken from the bridge's verification result. :meth:`invoke_tool`
+        dispatches only for DIDs holding a live grant and reads those values
+        from it. ``client_card`` is accepted for compatibility but ignored: a
+        card's self-reported score is not identity proof.
+        """
+        if self._active_grant(client_did) is not None:
+            return True
 
         # V22: Evict expired entries when cache grows too large
         if len(self._verified_clients) >= self._max_verified_clients:
             self._evict_expired_clients()
 
-        # Without a trust bridge there is no trust anchor. A card's own
-        # ``trust_score`` is self-reported and carries no signature, issuer,
-        # DID binding or expiry check, so it is never accepted as identity.
-        if self.trust_bridge is None:
+        # Without a trust bridge there is no trust anchor.
+        bridge = self.trust_bridge
+        if bridge is None:
             logger.warning(
                 "Client %s rejected: no trust bridge configured; "
                 "self-reported card scores are not identity proof",
@@ -226,15 +251,58 @@ class TrustGatedMCPServer:
         # A configured bridge is final: failure, error or an unexpected
         # return type all refuse, with no fall-through to the card.
         try:
-            result = await self.trust_bridge.verify_peer(client_did)
+            result = await bridge.verify_peer(client_did)
         except Exception as e:
             logger.error(f"Trust verification failed: {e}")
             return False
-        if not _peer_verified(result, client_did):
+        verified = _verified_peer(result, client_did)
+        if verified is None or bridge is not self.trust_bridge:
             logger.warning(f"Client {client_did} failed trust verification")
             return False
+        trust_score, capabilities = verified
+        self._client_grants[client_did] = _VerifiedGrant(
+            trust_score=trust_score,
+            capabilities=capabilities,
+            sponsor_verified=self._sponsor_verified(client_did),
+            bridge=bridge,
+        )
         self._verified_clients[client_did] = datetime.now(timezone.utc)
         return True
+
+    def _sponsor_verified(self, client_did: str) -> bool:
+        """True only if the trusted registry says the client's sponsor is verified."""
+        if self.identity_registry is None:
+            return False
+        try:
+            peer = self.identity_registry.get(client_did)
+        except Exception:
+            return False
+        return peer is not None and getattr(peer, "sponsor_verified", False) is True
+
+    def _revoke_client(self, client_did: str) -> None:
+        """Drop all verification state for ``client_did``."""
+        self._verified_clients.pop(client_did, None)
+        self._client_grants.pop(client_did, None)
+
+    def _active_grant(self, client_did: str) -> Optional[_VerifiedGrant]:
+        """Return the live grant for ``client_did``, or ``None`` (and revoke).
+
+        A grant is live while it is unexpired and still bound to the current
+        ``trust_bridge``. A bare ``_verified_clients`` timestamp without a
+        grant carries no trusted score or capabilities and is not live.
+        """
+        verified_at = self._verified_clients.get(client_did)
+        grant = self._client_grants.get(client_did)
+        if (
+            verified_at is None
+            or grant is None
+            or self.trust_bridge is None
+            or grant.bridge is not self.trust_bridge
+            or datetime.now(timezone.utc) - verified_at >= self._verification_ttl
+        ):
+            self._revoke_client(client_did)
+            return None
+        return grant
 
     def _evict_expired_clients(self) -> None:
         """Remove expired entries from the verified clients cache."""
@@ -244,7 +312,7 @@ class TrustGatedMCPServer:
             if now - ts >= self._verification_ttl
         ]
         for did in expired:
-            del self._verified_clients[did]
+            self._revoke_client(did)
 
     def _check_capability(
         self,
@@ -279,12 +347,21 @@ class TrustGatedMCPServer:
         """
         Invoke a tool with trust verification.
 
+        Fork behavior, differs from upstream: the caller must already hold a
+        live verification from :meth:`verify_client`, and the trust score,
+        capabilities and sponsor state used for the gates are the ones that
+        verification established. ``caller_capabilities`` and
+        ``caller_trust_score`` are untrusted claims: they are accepted for
+        signature compatibility, ignored for every decision, and logged when
+        they claim more than the verified values. An unverified caller is
+        refused before the tool name is even looked up.
+
         Args:
             tool_name: Name of tool to invoke
             arguments: Tool arguments
-            caller_did: Caller's agent DID
-            caller_capabilities: Caller's granted capabilities
-            caller_trust_score: Caller's trust score
+            caller_did: Caller's agent DID (must have passed verify_client)
+            caller_capabilities: Ignored; capabilities come from verification
+            caller_trust_score: Ignored; the score comes from verification
 
         Returns:
             MCPToolCall with result or error
@@ -296,9 +373,31 @@ class TrustGatedMCPServer:
             tool_name=tool_name,
             caller_did=caller_did,
             arguments=arguments,
-            trust_score=caller_trust_score,
-            capabilities_checked=caller_capabilities or [],
         )
+
+        # Identity first: nothing below may run for an unverified DID.
+        grant = self._active_grant(caller_did)
+        if grant is None:
+            call.error = (
+                f"Caller identity not verified: {caller_did} has no valid "
+                "verification (call verify_client first)"
+            )
+            call.completed_at = datetime.now(timezone.utc)
+            self._record_call(call)
+            logger.warning(f"Rejected unverified caller {caller_did} for {tool_name}")
+            return call
+
+        caller_trust_score_verified = grant.trust_score
+        caller_capabilities_verified = list(grant.capabilities)
+        call.trust_score = caller_trust_score_verified
+        call.capabilities_checked = caller_capabilities_verified
+        if caller_trust_score > caller_trust_score_verified or set(
+            caller_capabilities or []
+        ) - set(caller_capabilities_verified):
+            logger.warning(
+                "Ignored caller-supplied trust claims from %s for %s; "
+                "using verified values", caller_did, tool_name,
+            )
 
         # P12: Reject oversized arguments to prevent memory DoS
         import json as _json
@@ -322,9 +421,10 @@ class TrustGatedMCPServer:
         tool = self._tools[tool_name]
 
         # Verify trust score
-        if caller_trust_score < tool.min_trust_score:
+        if caller_trust_score_verified < tool.min_trust_score:
             call.error = (
-                f"Insufficient trust score: {caller_trust_score} < {tool.min_trust_score}"
+                f"Insufficient trust score: {caller_trust_score_verified} < "
+                f"{tool.min_trust_score}"
             )
             call.completed_at = datetime.now(timezone.utc)
             tool.failed_calls += 1
@@ -334,7 +434,9 @@ class TrustGatedMCPServer:
 
         # Check capability
         if tool.required_capability:
-            if not self._check_capability(caller_capabilities or [], tool.required_capability):
+            if not self._check_capability(
+                caller_capabilities_verified, tool.required_capability
+            ):
                 call.error = f"Missing capability: {tool.required_capability}"
                 call.completed_at = datetime.now(timezone.utc)
                 tool.failed_calls += 1
@@ -342,7 +444,16 @@ class TrustGatedMCPServer:
                 logger.warning(f"Capability check failed for {caller_did} on {tool_name}")
                 return call
 
-        # Execute tool
+        # Human sponsor: only the trusted registry can attest it
+        if tool.require_human_sponsor and not grant.sponsor_verified:
+            call.error = "Human sponsor not verified"
+            call.completed_at = datetime.now(timezone.utc)
+            tool.failed_calls += 1
+            self._record_call(call)
+            logger.warning(f"Sponsor check failed for {caller_did} on {tool_name}")
+            return call
+
+        # Execute tool (identity, score, capability and sponsor all verified)
         call.trust_verified = True
 
         # P10: Circuit breaker — reject if tool has too many consecutive failures
@@ -476,7 +587,7 @@ class TrustGatedMCPClient:
                 )
                 return False
             result = await self.trust_bridge.verify_peer(server_did)
-            if not _peer_verified(result, server_did):
+            if _verified_peer(result, server_did) is None:
                 logger.warning(f"Server {server_url} failed trust verification")
                 return False
 

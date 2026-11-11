@@ -249,3 +249,264 @@ class TestB5BridgePresenceIsNotTruthiness:
         # Only an explicit None enters the (documented) unverified mode.
         client = TrustGatedMCPClient(identity, None)
         assert await client.connect(SERVER_URL) is True
+
+
+# ---------------------------------------------------------------------------
+# B1 — invoke_tool dispatches only for a verified DID, using verified data
+# ---------------------------------------------------------------------------
+
+
+class _Bridge:
+    """Bridge stub answering per DID with real HandshakeResult objects."""
+
+    def __init__(self) -> None:
+        self.answers: Dict[str, Any] = {}
+        self.verify_peer = AsyncMock(side_effect=self._answer)
+
+    async def _answer(self, did: str, *args: Any, **kwargs: Any) -> Any:
+        return self.answers.get(did, _denied(did, "unknown peer"))
+
+
+def _server_with(
+    identity: Any, registry: Any = None, min_trust_score: int = 300
+) -> tuple[TrustGatedMCPServer, _Bridge]:
+    bridge = _Bridge()
+    server = TrustGatedMCPServer(
+        identity,
+        trust_bridge=bridge,
+        min_trust_score=min_trust_score,
+        identity_registry=registry,
+    )
+    return server, bridge
+
+
+class TestB1InvokeToolRequiresVerifiedIdentity:
+    @pytest.mark.asyncio
+    async def test_unverified_did_with_self_reported_score_is_refused(
+        self, identity: Any
+    ) -> None:
+        # Codex repro: server_unverified_invoke (success=True, trust_verified=True).
+        server, bridge = _server_with(identity)
+        handler = AsyncMock(return_value="sensitive")
+        server.register_tool("protected", handler, require_human_sponsor=True)
+
+        call = await server.invoke_tool(
+            "protected", {}, "did:mesh:forged", caller_trust_score=1000
+        )
+
+        assert call.success is False
+        assert call.trust_verified is False
+        assert call.error and "not verified" in call.error.lower()
+        handler.assert_not_awaited()
+        assert server._verified_clients == {}
+
+    @pytest.mark.asyncio
+    async def test_refused_call_is_still_audited(self, identity: Any) -> None:
+        server, _ = _server_with(identity)
+        server.register_tool("t", _handler)
+        await server.invoke_tool("t", {}, "did:mesh:forged", caller_trust_score=1000)
+        assert server.get_audit_summary()["recentCalls"] == 1
+
+    @pytest.mark.asyncio
+    async def test_unknown_tool_does_not_leak_to_unverified_caller(
+        self, identity: Any
+    ) -> None:
+        server, _ = _server_with(identity)
+        call = await server.invoke_tool("nope", {}, "did:mesh:forged")
+        assert call.error and "not verified" in call.error.lower()
+
+    @pytest.mark.asyncio
+    async def test_denied_verification_does_not_enable_dispatch(
+        self, identity: Any
+    ) -> None:
+        server, bridge = _server_with(identity)
+        bridge.answers["did:mesh:bad"] = _denied("did:mesh:bad")
+        handler = AsyncMock(return_value="x")
+        server.register_tool("t", handler)
+        assert await server.verify_client("did:mesh:bad") is False
+        call = await server.invoke_tool("t", {}, "did:mesh:bad", caller_trust_score=1000)
+        assert call.success is False and call.trust_verified is False
+        handler.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_score_comes_from_verification_not_the_caller(
+        self, identity: Any
+    ) -> None:
+        server, bridge = _server_with(identity)
+        bridge.answers["did:mesh:low"] = _ok("did:mesh:low", score=100)
+        server.register_tool("t", _handler, min_trust_score=500)
+        await server.verify_client("did:mesh:low")
+        call = await server.invoke_tool("t", {}, "did:mesh:low", caller_trust_score=1000)
+        assert call.success is False and call.trust_verified is False
+        assert call.trust_score == 100  # the verified score, not the claimed one
+        assert "Insufficient trust score" in (call.error or "")
+
+    @pytest.mark.asyncio
+    async def test_capabilities_come_from_verification_not_the_caller(
+        self, identity: Any
+    ) -> None:
+        server, bridge = _server_with(identity)
+        bridge.answers["did:mesh:nocap"] = _ok("did:mesh:nocap", caps=["use:fs"])
+        bridge.answers["did:mesh:cap"] = _ok("did:mesh:cap", caps=["use:sql"])
+        handler = AsyncMock(return_value="rows")
+        server.register_tool("sql", handler, required_capability="use:sql")
+        await server.verify_client("did:mesh:nocap")
+        await server.verify_client("did:mesh:cap")
+
+        forged = await server.invoke_tool(
+            "sql", {}, "did:mesh:nocap", caller_capabilities=["use:sql", "admin:*"],
+            caller_trust_score=1000,
+        )
+        assert forged.success is False
+        assert "Missing capability" in (forged.error or "")
+        handler.assert_not_awaited()
+
+        genuine = await server.invoke_tool("sql", {}, "did:mesh:cap")
+        assert genuine.success is True and genuine.trust_verified is True
+        assert genuine.capabilities_checked == ["use:sql"]
+
+    @pytest.mark.asyncio
+    async def test_bool_only_adapter_grants_identity_but_no_score_or_capabilities(
+        self, identity: Any
+    ) -> None:
+        bridge = SimpleNamespace(verify_peer=AsyncMock(return_value=True))
+        server = TrustGatedMCPServer(identity, trust_bridge=bridge)
+        server.register_tool("scored", _handler, min_trust_score=1)
+        server.register_tool("open", _handler, min_trust_score=0)
+        assert await server.verify_client("did:mesh:b") is True
+        refused = await server.invoke_tool("scored", {}, "did:mesh:b", caller_trust_score=999)
+        assert refused.success is False
+        allowed = await server.invoke_tool("open", {}, "did:mesh:b")
+        assert allowed.success is True
+
+    @pytest.mark.asyncio
+    async def test_expired_verification_is_refused(self, identity: Any) -> None:
+        from datetime import datetime, timedelta, timezone
+
+        server, bridge = _server_with(identity)
+        bridge.answers["did:mesh:a"] = _ok("did:mesh:a")
+        server.register_tool("t", _handler)
+        await server.verify_client("did:mesh:a")
+        server._verified_clients["did:mesh:a"] = datetime.now(timezone.utc) - timedelta(
+            minutes=15
+        )
+        call = await server.invoke_tool("t", {}, "did:mesh:a")
+        assert call.success is False and call.trust_verified is False
+
+    @pytest.mark.asyncio
+    async def test_failed_reverification_revokes_the_old_grant(self, identity: Any) -> None:
+        from datetime import datetime, timedelta, timezone
+
+        server, bridge = _server_with(identity)
+        bridge.answers["did:mesh:a"] = _ok("did:mesh:a")
+        server.register_tool("t", _handler)
+        await server.verify_client("did:mesh:a")
+        server._verified_clients["did:mesh:a"] = datetime.now(timezone.utc) - timedelta(
+            minutes=15
+        )
+        bridge.answers["did:mesh:a"] = _denied("did:mesh:a", "revoked")
+        assert await server.verify_client("did:mesh:a") is False
+        call = await server.invoke_tool("t", {}, "did:mesh:a")
+        assert call.success is False
+
+    @pytest.mark.asyncio
+    async def test_cache_entry_without_a_verification_record_is_refused(
+        self, identity: Any
+    ) -> None:
+        # A bare timestamp (no trusted score/capabilities behind it) is not a grant.
+        from datetime import datetime, timezone
+
+        server, bridge = _server_with(identity)
+        server.register_tool("t", _handler, min_trust_score=0)
+        server._verified_clients["did:mesh:ghost"] = datetime.now(timezone.utc)
+        call = await server.invoke_tool("t", {}, "did:mesh:ghost")
+        assert call.success is False and call.trust_verified is False
+
+    @pytest.mark.asyncio
+    async def test_replacing_the_bridge_invalidates_existing_grants(
+        self, identity: Any
+    ) -> None:
+        server, bridge = _server_with(identity)
+        bridge.answers["did:mesh:a"] = _ok("did:mesh:a")
+        server.register_tool("t", _handler)
+        await server.verify_client("did:mesh:a")
+        assert (await server.invoke_tool("t", {}, "did:mesh:a")).success is True
+
+        server.trust_bridge = _Bridge()  # new trust configuration
+        assert (await server.invoke_tool("t", {}, "did:mesh:a")).success is False
+        server.trust_bridge = None
+        assert (await server.invoke_tool("t", {}, "did:mesh:a")).success is False
+
+    @pytest.mark.asyncio
+    async def test_verification_stays_valid_across_calls_within_ttl(
+        self, identity: Any
+    ) -> None:
+        server, bridge = _server_with(identity)
+        bridge.answers["did:mesh:a"] = _ok("did:mesh:a")
+        server.register_tool("t", _handler)
+        await server.verify_client("did:mesh:a")
+        for _ in range(3):
+            assert (await server.invoke_tool("t", {}, "did:mesh:a")).success is True
+        bridge.verify_peer.assert_awaited_once()  # invoke_tool never re-asks the bridge
+
+
+class TestB1RequireHumanSponsorIsEnforced:
+    @staticmethod
+    def _registered(sponsor_verified: bool) -> tuple[AgentIdentity, IdentityRegistry]:
+        peer = AgentIdentity.create(name="peer", sponsor="owner@test.com")
+        peer.sponsor_verified = sponsor_verified
+        registry = IdentityRegistry()
+        registry.register(peer)
+        return peer, registry
+
+    @pytest.mark.asyncio
+    async def test_sponsor_tool_refused_without_any_sponsor_evidence(
+        self, identity: Any
+    ) -> None:
+        server, bridge = _server_with(identity)  # no identity_registry
+        bridge.answers["did:mesh:a"] = _ok("did:mesh:a")
+        handler = AsyncMock(return_value="x")
+        server.register_tool("t", handler, require_human_sponsor=True)
+        await server.verify_client("did:mesh:a")
+        call = await server.invoke_tool("t", {}, "did:mesh:a", caller_trust_score=1000)
+        assert call.success is False and call.trust_verified is False
+        assert "sponsor" in (call.error or "").lower()
+        handler.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_sponsor_tool_refused_when_registry_says_unverified(
+        self, identity: Any
+    ) -> None:
+        peer, registry = self._registered(sponsor_verified=False)
+        did = str(peer.did)
+        server, bridge = _server_with(identity, registry)
+        bridge.answers[did] = _ok(did)
+        server.register_tool("t", _handler, require_human_sponsor=True)
+        await server.verify_client(did)
+        call = await server.invoke_tool("t", {}, did)
+        assert call.success is False and "sponsor" in (call.error or "").lower()
+
+    @pytest.mark.asyncio
+    async def test_sponsor_tool_allowed_when_registry_says_verified(
+        self, identity: Any
+    ) -> None:
+        peer, registry = self._registered(sponsor_verified=True)
+        did = str(peer.did)
+        server, bridge = _server_with(identity, registry)
+        bridge.answers[did] = _ok(did)
+        server.register_tool("t", _handler, require_human_sponsor=True)
+        await server.verify_client(did)
+        call = await server.invoke_tool("t", {}, did)
+        assert call.success is True and call.trust_verified is True
+
+    @pytest.mark.asyncio
+    async def test_tool_without_sponsor_requirement_ignores_sponsor_state(
+        self, identity: Any
+    ) -> None:
+        peer, registry = self._registered(sponsor_verified=False)
+        did = str(peer.did)
+        server, bridge = _server_with(identity, registry)
+        bridge.answers[did] = _ok(did)
+        server.register_tool("t", _handler)
+        await server.verify_client(did)
+        assert (await server.invoke_tool("t", {}, did)).success is True

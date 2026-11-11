@@ -57,6 +57,43 @@ async def _sql_handler(query: str = "") -> Dict[str, Any]:
     return {"rows": [], "query": query}
 
 
+class _GrantingBridge:
+    """Bridge stub that vouches for any DID with the score/capabilities given."""
+
+    def __init__(self) -> None:
+        self.answers: Dict[str, Any] = {}
+        self.verify_peer = AsyncMock(side_effect=self._answer)
+
+    async def _answer(self, did: str, *args: Any, **kwargs: Any) -> Any:
+        return self.answers[did]
+
+
+async def _verified_invoke(
+    server: TrustGatedMCPServer,
+    tool_name: str,
+    arguments: Dict[str, Any],
+    caller_did: str,
+    caller_capabilities: Optional[List[str]] = None,
+    caller_trust_score: int = 0,
+) -> MCPToolCall:
+    """Verify ``caller_did`` through a bridge as having the given score and
+    capabilities, then invoke. Since the independent-review fix B1, invoke_tool
+    takes score/capabilities only from verification, never from its arguments.
+    """
+    from agentmesh.trust.handshake import HandshakeResult
+
+    if server.trust_bridge is None:
+        server.trust_bridge = _GrantingBridge()
+    server.trust_bridge.answers[caller_did] = HandshakeResult.success(
+        peer_did=caller_did,
+        trust_score=caller_trust_score,
+        capabilities=list(caller_capabilities or []),
+    )
+    server._revoke_client(caller_did)
+    assert await server.verify_client(caller_did) is True
+    return await server.invoke_tool(tool_name, arguments, caller_did)
+
+
 @pytest.fixture()
 def server_identity() -> AgentIdentity:
     return _make_identity(name="tool-server", capabilities=["provide:sql", "provide:fs"])
@@ -200,7 +237,8 @@ class TestInvokeTool:
     @pytest.mark.asyncio
     async def test_successful_invocation(self, server: TrustGatedMCPServer) -> None:
         server.register_tool("echo", _echo_handler, required_capability="use:echo")
-        call = await server.invoke_tool(
+        call = await _verified_invoke(
+            server,
             tool_name="echo",
             arguments={"msg": "hello"},
             caller_did="did:mesh:caller1",
@@ -215,7 +253,8 @@ class TestInvokeTool:
 
     @pytest.mark.asyncio
     async def test_reject_unknown_tool(self, server: TrustGatedMCPServer) -> None:
-        call = await server.invoke_tool(
+        call = await _verified_invoke(
+            server,
             tool_name="nonexistent",
             arguments={},
             caller_did="did:mesh:caller1",
@@ -230,7 +269,8 @@ class TestInvokeTool:
         self, server: TrustGatedMCPServer
     ) -> None:
         server.register_tool("echo", _echo_handler, min_trust_score=600)
-        call = await server.invoke_tool(
+        call = await _verified_invoke(
+            server,
             tool_name="echo",
             arguments={},
             caller_did="did:mesh:lowscore",
@@ -243,7 +283,8 @@ class TestInvokeTool:
     @pytest.mark.asyncio
     async def test_reject_zero_trust_score(self, server: TrustGatedMCPServer) -> None:
         server.register_tool("echo", _echo_handler)  # default min = 300
-        call = await server.invoke_tool(
+        call = await _verified_invoke(
+            server,
             tool_name="echo",
             arguments={},
             caller_did="did:mesh:zero",
@@ -265,7 +306,8 @@ class TestInvokeTool:
         """
         server.register_tool("open", _echo_handler, min_trust_score=0)
         assert server._tools["open"].min_trust_score == 0
-        call = await server.invoke_tool(
+        call = await _verified_invoke(
+            server,
             tool_name="open",
             arguments={"msg": "hi"},
             caller_did="did:mesh:zero",
@@ -278,7 +320,8 @@ class TestInvokeTool:
     @pytest.mark.asyncio
     async def test_reject_missing_capability(self, server: TrustGatedMCPServer) -> None:
         server.register_tool("sql", _sql_handler, required_capability="use:sql")
-        call = await server.invoke_tool(
+        call = await _verified_invoke(
+            server,
             tool_name="sql",
             arguments={"query": "SELECT 1"},
             caller_did="did:mesh:nocap",
@@ -292,7 +335,8 @@ class TestInvokeTool:
     @pytest.mark.asyncio
     async def test_reject_empty_capabilities(self, server: TrustGatedMCPServer) -> None:
         server.register_tool("sql", _sql_handler, required_capability="use:sql")
-        call = await server.invoke_tool(
+        call = await _verified_invoke(
+            server,
             tool_name="sql",
             arguments={},
             caller_did="did:mesh:empty",
@@ -306,7 +350,8 @@ class TestInvokeTool:
     async def test_reject_none_capabilities(self, server: TrustGatedMCPServer) -> None:
         """When caller_capabilities is None, it defaults to [] internally."""
         server.register_tool("sql", _sql_handler, required_capability="use:sql")
-        call = await server.invoke_tool(
+        call = await _verified_invoke(
+            server,
             tool_name="sql",
             arguments={},
             caller_did="did:mesh:nocap",
@@ -322,7 +367,8 @@ class TestInvokeTool:
     ) -> None:
         """Tools with no required_capability accept any caller with sufficient trust."""
         server.register_tool("open_tool", _echo_handler)
-        call = await server.invoke_tool(
+        call = await _verified_invoke(
+            server,
             tool_name="open_tool",
             arguments={"x": 1},
             caller_did="did:mesh:any",
@@ -336,7 +382,8 @@ class TestInvokeTool:
         self, server: TrustGatedMCPServer
     ) -> None:
         server.register_tool("bomb", _failing_handler)
-        call = await server.invoke_tool(
+        call = await _verified_invoke(
+            server,
             tool_name="bomb",
             arguments={},
             caller_did="did:mesh:caller1",
@@ -352,7 +399,8 @@ class TestInvokeTool:
         self, server: TrustGatedMCPServer
     ) -> None:
         server.register_tool("bomb", _failing_handler)
-        await server.invoke_tool(
+        await _verified_invoke(
+            server,
             tool_name="bomb",
             arguments={},
             caller_did="did:mesh:caller1",
@@ -367,7 +415,8 @@ class TestInvokeTool:
         self, server: TrustGatedMCPServer
     ) -> None:
         server.register_tool("echo", _echo_handler)
-        await server.invoke_tool(
+        await _verified_invoke(
+            server,
             tool_name="echo",
             arguments={},
             caller_did="did:mesh:caller1",
@@ -382,7 +431,8 @@ class TestInvokeTool:
         self, server: TrustGatedMCPServer
     ) -> None:
         server.register_tool("echo", _echo_handler, min_trust_score=999)
-        await server.invoke_tool(
+        await _verified_invoke(
+            server,
             tool_name="echo",
             arguments={},
             caller_did="did:mesh:low",
@@ -396,7 +446,8 @@ class TestInvokeTool:
         self, server: TrustGatedMCPServer
     ) -> None:
         server.register_tool("sql", _sql_handler, required_capability="use:sql")
-        await server.invoke_tool(
+        await _verified_invoke(
+            server,
             tool_name="sql",
             arguments={},
             caller_did="did:mesh:nocap",
@@ -409,7 +460,8 @@ class TestInvokeTool:
     @pytest.mark.asyncio
     async def test_call_metadata_populated(self, server: TrustGatedMCPServer) -> None:
         server.register_tool("echo", _echo_handler, required_capability="use:echo")
-        call = await server.invoke_tool(
+        call = await _verified_invoke(
+            server,
             tool_name="echo",
             arguments={"k": "v"},
             caller_did="did:mesh:agent42",
@@ -429,7 +481,8 @@ class TestInvokeTool:
     ) -> None:
         """Trust score exactly equal to minimum should pass."""
         server.register_tool("echo", _echo_handler, min_trust_score=500)
-        call = await server.invoke_tool(
+        call = await _verified_invoke(
+            server,
             tool_name="echo",
             arguments={},
             caller_did="did:mesh:boundary",
@@ -443,7 +496,8 @@ class TestInvokeTool:
     ) -> None:
         """Trust score one below minimum should fail."""
         server.register_tool("echo", _echo_handler, min_trust_score=500)
-        call = await server.invoke_tool(
+        call = await _verified_invoke(
+            server,
             tool_name="echo",
             arguments={},
             caller_did="did:mesh:boundary",
@@ -457,7 +511,8 @@ class TestInvokeTool:
         """Successful invocation updates the tool's last_called timestamp."""
         server.register_tool("echo", _echo_handler)
         assert server._tools["echo"].last_called is None
-        await server.invoke_tool(
+        await _verified_invoke(
+            server,
             "echo", {}, caller_did="did:mesh:a", caller_trust_score=500,
         )
         assert server._tools["echo"].last_called is not None
@@ -533,9 +588,20 @@ class TestVerifyClient:
     @pytest.mark.asyncio
     async def test_cache_hit_within_ttl(self, server: TrustGatedMCPServer) -> None:
         """A recently verified client should be served from cache."""
+        bridge = AsyncMock()
+        bridge.verify_peer = AsyncMock(return_value=True)
+        server.trust_bridge = bridge
+        assert await server.verify_client("did:mesh:cached") is True
+        assert await server.verify_client("did:mesh:cached") is True
+        bridge.verify_peer.assert_awaited_once_with("did:mesh:cached")
+
+    @pytest.mark.asyncio
+    async def test_bare_cache_timestamp_is_not_a_verification(
+        self, server: TrustGatedMCPServer
+    ) -> None:
+        """A timestamp with no recorded verification result must not pass."""
         server._verified_clients["did:mesh:cached"] = datetime.now(timezone.utc)
-        result = await server.verify_client("did:mesh:cached")
-        assert result is True
+        assert await server.verify_client("did:mesh:cached") is False
 
     @pytest.mark.asyncio
     async def test_cache_miss_expired_ttl(self, server: TrustGatedMCPServer) -> None:
@@ -630,10 +696,10 @@ class TestVerifyClient:
         bridge = AsyncMock()
         bridge.verify_peer = AsyncMock(return_value=True)
         server = TrustGatedMCPServer(server_identity, trust_bridge=bridge)
-        server._verified_clients["did:mesh:cached"] = datetime.now(timezone.utc)
+        assert await server.verify_client("did:mesh:cached") is True
+        bridge.verify_peer.reset_mock()
 
-        result = await server.verify_client("did:mesh:cached")
-        assert result is True
+        assert await server.verify_client("did:mesh:cached") is True
         bridge.verify_peer.assert_not_awaited()
 
 
@@ -703,15 +769,18 @@ class TestAuditSummary:
         server.register_tool("bomb", _failing_handler)
 
         # Successful call
-        await server.invoke_tool(
+        await _verified_invoke(
+            server,
             "echo", {}, "did:mesh:a", caller_trust_score=500
         )
         # Handler failure
-        await server.invoke_tool(
+        await _verified_invoke(
+            server,
             "bomb", {}, "did:mesh:b", caller_trust_score=500
         )
         # Unknown tool
-        await server.invoke_tool(
+        await _verified_invoke(
+            server,
             "ghost", {}, "did:mesh:c", caller_trust_score=500
         )
 
@@ -1041,8 +1110,16 @@ class TestEndToEndServerWorkflow:
         )
 
         # Verify client through the trust bridge
+        from agentmesh.trust.handshake import HandshakeResult
+
         bridge = AsyncMock()
-        bridge.verify_peer = AsyncMock(return_value=True)
+        bridge.verify_peer = AsyncMock(
+            return_value=HandshakeResult.success(
+                peer_did="did:mesh:agent-a",
+                trust_score=500,
+                capabilities=["use:sql"],
+            )
+        )
         server.trust_bridge = bridge
         verified = await server.verify_client("did:mesh:agent-a")
         assert verified is True
@@ -1052,8 +1129,6 @@ class TestEndToEndServerWorkflow:
             tool_name="sql_query",
             arguments={"query": "SELECT 1"},
             caller_did="did:mesh:agent-a",
-            caller_capabilities=["use:sql"],
-            caller_trust_score=500,
         )
         assert call.success is True
         assert call.result == {"rows": [], "query": "SELECT 1"}
@@ -1073,21 +1148,24 @@ class TestEndToEndServerWorkflow:
         server.register_tool("sql", _sql_handler, required_capability="use:sql")
 
         # Caller with use:sql → accepted
-        call1 = await server.invoke_tool(
+        call1 = await _verified_invoke(
+            server,
             "sql", {"query": "SELECT 1"}, "did:mesh:a",
             caller_capabilities=["use:sql"], caller_trust_score=500,
         )
         assert call1.success is True
 
         # Caller without use:sql → rejected
-        call2 = await server.invoke_tool(
+        call2 = await _verified_invoke(
+            server,
             "sql", {"query": "DROP TABLE"}, "did:mesh:b",
             caller_capabilities=["use:echo"], caller_trust_score=500,
         )
         assert call2.success is False
 
         # Caller with enough trust for echo (no capability required)
-        call3 = await server.invoke_tool(
+        call3 = await _verified_invoke(
+            server,
             "echo", {"msg": "hi"}, "did:mesh:b",
             caller_capabilities=[], caller_trust_score=300,
         )
@@ -1107,7 +1185,8 @@ class TestEndToEndServerWorkflow:
         server.register_tool("fs", _echo_handler, required_capability="use:fs")
 
         for tool in ("sql", "fs"):
-            call = await server.invoke_tool(
+            call = await _verified_invoke(
+                server,
                 tool_name=tool,
                 arguments={},
                 caller_did="did:mesh:admin",

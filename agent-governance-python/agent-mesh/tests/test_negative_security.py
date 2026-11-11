@@ -41,6 +41,38 @@ def _create_agent(name="agent", caps=None, sponsor="admin@corp.com"):
     )
 
 
+class _GrantingBridge:
+    """Bridge stub that vouches for any DID with the score/capabilities given."""
+
+    def __init__(self):
+        self.answers = {}
+        self.verify_peer = AsyncMock(side_effect=self._answer)
+
+    async def _answer(self, did, *args, **kwargs):
+        return self.answers[did]
+
+
+async def _verified_invoke(
+    server, tool_name, arguments, caller_did,
+    caller_capabilities=None, caller_trust_score=0,
+):
+    """Verify the caller through a bridge, then invoke.
+
+    Since the independent-review fix B1, invoke_tool takes score and
+    capabilities only from verification, never from its arguments.
+    """
+    if server.trust_bridge is None:
+        server.trust_bridge = _GrantingBridge()
+    server.trust_bridge.answers[caller_did] = HandshakeResult.success(
+        peer_did=caller_did,
+        trust_score=caller_trust_score,
+        capabilities=list(caller_capabilities or []),
+    )
+    server._revoke_client(caller_did)
+    assert await server.verify_client(caller_did) is True
+    return await server.invoke_tool(tool_name, arguments, caller_did)
+
+
 def _setup_handshake():
     """Create two registered agents and a handshake instance."""
     agent_a = _create_agent("agent-a", ["read:data", "write:data"])
@@ -839,14 +871,16 @@ class TestMCPCircuitBreaker:
 
         # Fail 3 times to open the circuit
         for _ in range(3):
-            call = await server.invoke_tool(
+            call = await _verified_invoke(
+                server,
                 "broken_tool", {}, "did:mesh:caller",
                 caller_trust_score=500,
             )
             assert call.success is not True
 
         # 4th call should be blocked by circuit breaker
-        call = await server.invoke_tool(
+        call = await _verified_invoke(
+            server,
             "broken_tool", {}, "did:mesh:caller",
             caller_trust_score=500,
         )
@@ -879,16 +913,19 @@ class TestMCPCircuitBreaker:
         server._circuit_breaker_threshold = 5
 
         # 2 failures
-        await server.invoke_tool(
+        await _verified_invoke(
+            server,
             "flaky_tool", {}, "did:mesh:caller", caller_trust_score=500,
         )
-        await server.invoke_tool(
+        await _verified_invoke(
+            server,
             "flaky_tool", {}, "did:mesh:caller", caller_trust_score=500,
         )
         assert server._tool_failures.get("flaky_tool", 0) == 2
 
         # 1 success should reset the counter
-        call = await server.invoke_tool(
+        call = await _verified_invoke(
+            server,
             "flaky_tool", {}, "did:mesh:caller", caller_trust_score=500,
         )
         assert call.success is True
@@ -923,7 +960,8 @@ class TestPIISanitizationInErrors:
             min_trust_score=0,
         )
 
-        call = await server.invoke_tool(
+        call = await _verified_invoke(
+            server,
             "pii_tool", {}, "did:mesh:caller", caller_trust_score=500,
         )
         assert call.error is not None
