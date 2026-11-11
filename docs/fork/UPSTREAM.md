@@ -141,3 +141,12 @@ README 衝突的解法：保留頂部 fork overlay，把上游新英文內容留
   - Commit：`48f04e5a`（`48f04e5ad1efd4f2e5692d4b67def2e0f99a6870`）
   - PR：4492 → 4540
   - Issue：4485 → 4528
+
+## 2026-11-11：第八輪審查，水位推進至 `81a399b8`
+
+- 範圍：`48f04e5a..81a399b8` 的 13 個 commit（全為依賴升版）、PR #4542–#4558（17 個）、issue #4559。逐項結論與證據見 `DECISIONS.md` 同日段落。
+- 結果：依賴升版沿用 fork 自跑 Dependabot，不採用；採用 PR #4542（`agent-marketplace` 的 `plugin.json` author 物件，先紅後綠）與 #4531 新 head 的測試與型別註記；#4472、#4479、#4524 新 head 的內容已在 fork 內或為註解，維持採用；#4489 仍 CHANGES_REQUESTED 維持 WATCH；#4521–#4523 轉 draft、內容未變；#4543、#4544、#4554 不收；issue #4559 延後。
+- 水位更新：
+  - Commit：`81a399b8`（`81a399b82be359d3cb5e5024be6d7bcca764ba8e`）
+  - PR：4540 → 4558
+  - Issue：4528 → 4559

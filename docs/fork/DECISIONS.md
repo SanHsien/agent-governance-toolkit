@@ -1099,3 +1099,76 @@ open PR 的採用規則：fork 存在同一缺陷、新測試在 fork 現碼失�
 **未涵蓋與殘餘風險**：(1) `verify_peer(did)` 本身只證明註冊表與 handshake 結果，不證明「請求者控制該 DID 的私鑰」；`invoke_tool` 的呼叫端若把未受信請求的 `caller_did` 直接傳入，仍需自己的請求層證明（簽章或 session）。這是 `TrustBridge` 契約，不是本次範圍。(2) 沒有 bridge 的 client 仍是「未驗證連線」（既有文件行為），connected 不等於已驗證。(3) card 簽章驗證沒有實作，是移除而非補強。(4) `tools\dev_check.ps1` 不列入這些測試：它們需要 `python-dateutil`、`email-validator`、agent-hypervisor 原始碼路徑，沿用上一節的理由。
 
 **合併 #4529 時**：取上游的 `server_identity.py` 與 client 的 registry 路徑；`TrustGatedMCPServer` 整段（`verify_client`、`_VerifiedGrant`、`invoke_tool`）保留 fork 版；`connect()` 保留「先撤銷、例外回 `False`、`_verified_peer`、`is not None`、綁定」，把 #4529 的 `peer.verified if hasattr(...) else bool(peer)` 換成 `_verified_peer`。上游 registry 分支成功時只做 `self._connected_servers.add(server_url)`，合併時**必須同時寫入 `self._connection_bindings[server_url] = _ConnectionBinding(server_did, bridge)`**（registry 路徑的 `bridge` 可為 `None`），否則 `_is_connected` 會把它判為未連線。`test_mcp_identity_enforcement.py` 在合併後仍應全過；#4529 的 `test_mcp_server_verification.py` 若用 `bool(peer)` 假設的 mock 需改用 `HandshakeResult`。
+
+## 2026-11-11：上游審查第八輪（48f04e5a → 81a399b8）
+
+**範圍**：13 個 commit（`48f04e5a..81a399b8`，全部是依賴升版）、PR #4542–#4558 共 17 個、issue #4559。水位：commit `48f04e5a` → `81a399b8`、PR 4540 → 4558、issue 4528 → 4559。PR #4541 在 GitHub API 回 404，不計入。
+
+**monitored 重新釘選**（`check_upstream_updates.py --strict` 報告的 8 個變動）：#4472 head `67a12c4e` → `05543705`；#4479 `def4fd95` → `1115f600`；#4489 `0a85e63a` → `22b485a0`；#4524 `ca171442` → `5f9d1afc`；#4531 `28b7bd71` → `9e9f02a5`；#4521、#4522、#4523 head 未變，狀態由 open 轉 draft。#4529 head `d2009cc7` 未變。
+
+**方法**：`gh pr diff` 唯讀取得 diff 存入暫存目錄；掃描長空白、`eval`／`new Function(`／`child_process`／`curl |`、長 base64／hex、零寬與雙向控制字元、`ignore previous` 類句型：除了 `#4472`、`#4479`、`#4531`、`#4542` 的正常程式文字外沒有命中。新 head 以 `git fetch upstream pull/<n>/head`（唯讀，只寫 FETCH_HEAD）取得後比對 fork 檔案。
+
+### 採用：PR #4542（plugin.json 的 `author` 為物件時 marketplace 崩潰；head `a8eb366a`）
+
+**問題在 fork 存在**：`agent-marketplace/src/agent_marketplace/schema_adapters.py` 的 `adapt_to_canonical` 直接把 `author` 原值傳給 `PluginManifest`，物件或 `null` 會丟出 pydantic `ValidationError`；`plugin verify`／`plugin evaluate` 只接 `MarketplaceError`，所以是 traceback 而不是報告。審查者 CHANGES_REQUESTED 只針對 PR 本文的 AI 揭露勾選，審查者自己確認「fix reads right」，依 2026-11-10 的採用規則處理。CHANGELOG 不動。
+
+- 先紅：只套測試檔。`pytest tests/test_schema_adapters.py`：6 failed、33 passed（失敗項為 author 物件 ×2 格式、無 name 取 email、`null`、不可用型別、CLI verify 物件作者）。
+- 後綠：再套 `schema_adapters.py`。同檔 39 passed；`pytest tests`（agent-marketplace 全套）346 passed、2 skipped。
+
+### 採用：PR #4531 新 head（`9e9f02a5`，三個 commit：`3d350615`、`260878ee`、`9e9f02a5`）
+
+fork 已有 `_tail` 與 `limit=0`／負值的行為（2026-11-10 採用的舊 head），新 head 的實質差異只有兩處：
+
+- 測試：`test_audit_index_consistency.py`、`test_audit_reader_consistency.py` 的 limit 參數加入 `None` 與 `0`，並改用與契約一致的期望值。這兩個測試 fork 現碼本來就通過，屬於把契約釘住，**不是紅綠修正**（沒有紅燈可拍）。
+- 型別註記：`audit.py` 三處 `Optional[int]` 改為 `int | None`，與上游一致；行為不變。
+
+採用方式是取上游新 head 的 `audit.py`、兩個測試檔。`tests/test_audit_index_consistency.py`、`tests/test_audit_reader_consistency.py`、`tests/governance/test_audit_query_limit.py` 合計 101 passed。為回歸，對 agent-mesh 所有引用 AuditLog 讀取器的測試（25 檔、排除需要 fastapi 的 `engine_api`）做修前（`git archive HEAD` 解到暫存目錄）與修後比對：FAILED／ERROR 去重清單逐行相同（7 行，屬本機缺套件的既有失敗），修後 465 passed、33 skipped。
+
+### 維持採用：PR #4472（`05543705`）、#4479（`1115f600`）
+
+上一輪移植的內容。`git apply -R --check --exclude=CHANGELOG.md` 把新 head 的 diff 反向套在 fork 工作樹上，兩者 exit 0，表示新 head 內容已全在 fork 裡（差異只在 CHANGELOG）。
+
+### 維持採用：PR #4524（`5f9d1af`，head 只改註解）
+
+fork 已把 `tests/test_sql_policy.py` 的區塊註解與四個 docstring 改成描述實測的拒絕路徑（ParseError fail-close 與 Command 分支）。新 head 的註解描述相同事實的不同版本，`git diff` 對比後只有註解與 docstring 行不同，斷言行一致。**保留 fork 的註解**，不回退到上游文字。`.cspell-repo-terms.txt` 保留 fork 補上的 `multimodal`、`mbps`、`addrolemember`；上游新 head 多了 `vapt`（屬 #4480，fork 不補，同 2026-11-10 的記載）。
+
+### 維持不採用：PR #4489（WATCH，head `22b485a0`）
+
+仍 CHANGES_REQUESTED（上游審查者：spell-check 在新 head 仍紅，`subpattern`、`SUBPATTERN`、`unevaluable`；PR 本文未說明兩個行為取捨）。新 head 的取捨是：無法評估的條件即使該規則的動作是 allow 也會直接拒絕，而既有的 `^(\d{1,3}\.){3}\d{1,3}$` 這類 pattern 會在載入時失敗。這是安全模型的行為變更，`AGENTS.md` 的決策升級規則要先問維護者，所以不採用。fork 的釘住測試 `test_matches_rejects_nested_bounded_quantifier_redos` 保留。重看條件：上游合併。
+
+### 維持：PR #4521、#4522、#4523（轉 draft，head 未變）
+
+內容與 2026-11-10 的採用相同，head 未動，只改狀態。維持採用，`monitored` 的 state 改為 `draft`。上游轉 draft 不代表內容失效；fork 的程式已在 2026-11-10 紅綠驗證過。
+
+### 維持 WATCH：PR #4529（head `d2009cc7` 未變）
+
+沿用 2026-11-10 與 2026-11-11 的合併步驟，不重複。
+
+### 不採用：依賴升版（13 個 commit 與 PR #4545–#4558 中已合併的部分）
+
+commit `e6adb0e`（cedar-policy 4.14.1）、`b2948b6`（Microsoft.Agents.AI 1.27.0）、`a2090c3`（ModelContextProtocol 2.3.1）、`0b61661`（JavaScript 開發工具群組）、`c6c7d18`（jest 30.x 測試依賴）、`a57eba2`（@modelcontextprotocol/sdk）、`d9bf132`（Python 開發工具群組）、`14a03ff`、`3bb736b`、`74d5e4f`、`79d8781`、`2bff9e8`、`81a399b`（pydantic、hypothesis 的相容性下限）。
+
+沿用依賴升版的規則：fork 自己跑 Dependabot，鎖檔取 fork 側；開發依賴的下限是相容性承諾，不為追新而調高（`docs/PLAYBOOK.md` §1）。fork 現況（實際 grep 結果）：`agent-governance-rust/Cargo.toml` 的 `cedar-policy = "=4.13.0"`；`agent-governance-dotnet` 的 `Microsoft.Agents.AI` 為 `1.22.0`、`ModelContextProtocol` 為 `2.2.0`；`agent-os/extensions/mcp-server/package.json` 的 `@modelcontextprotocol/sdk` 為 `^1.32.1`；`agent-mesh/pyproject.toml` 的 `python-dateutil>=2.9.0.post0,<3.0`。
+
+### 不採用：PR #4543、#4544、#4554（open）
+
+- #4543（`actions/setup-dotnet` 6.0.0 → 6.1.0）：只改 `.github/workflows/`。fork 的 workflow 閘在官方 repo，不會執行；`.github/` 變更要另做安全審查。
+- #4544（`regorus` 0.13.0 → 0.14.1，`agent-governance-rust`）：依賴升版。fork 的 `regorus = "=0.12.0"` 由 fork 的 Dependabot 處理。
+- #4554（`python-dateutil` 範圍改為 `>=4.0.0,<5.0`，agent-mesh 的開發依賴）：主版本跳升，fork 的 `pyproject.toml` 仍是 `<3.0`。依賴升版規則，由 fork 的 Dependabot 決定。
+
+### 延後：issue #4559（protocol-facets UNKNOWN 動詞契約在三個 port 不一致）
+
+**觸發條件**：上游開出修正 PR（作者自己說會跟進 Go 修正），或維護者確認跨 port 契約。
+
+**fork 的缺陷存在**（靜態核對，未實跑）：
+
+- Go：`agent-governance-golang/packages/agentmesh/protocol_facets.go` 第 252 行 `verb = "UNKNOWN"` 之後，第 255 行仍 `tables := extractTables(query, verb)`，UNKNOWN 動詞會帶出表名，與 TS 的 `UNKNOWN_SQL_FACETS` 契約不符。
+- CTE：`agent-governance-typescript/src/protocol-facets.ts` 第 166–169 行，`WITH` 走 `detectCteInnerVerb`，後面的無法辨識動詞不會被歸為 UNKNOWN。
+
+**延後的理由**：issue 只指出契約不一致，沒有修正 PR，作者也說契約要先確認。這一輪的審查範圍是上游已有的 PR 與 commit。fork 的 Go 與 TS 修正屬於產品碼分歧，要先決定契約，再決定由 fork 先修或等上游。
+
+### 順帶記錄
+
+- 水位推進：`reviewed_through` → `81a399b82be359d3cb5e5024be6d7bcca764ba8e`、`reviewed_pr_through` → 4558、`reviewed_issue_through` → 4559。
+- `monitored` 重新釘選同上方；新增的審查結果（採用 #4542、#4531 新 head）不需要新增 monitored 項目。
+- `ROADMAP.md` 中期表補上 #4559 的重看條件。
