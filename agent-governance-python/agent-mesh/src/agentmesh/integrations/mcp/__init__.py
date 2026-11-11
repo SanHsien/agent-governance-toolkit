@@ -23,8 +23,10 @@ Example:
     ...     capabilities=["provide:sql", "provide:filesystem"]
     ... )
     >>>
-    >>> server = TrustGatedMCPServer(identity, min_trust_score=400)
+    >>> # A trust_bridge is required: without one no client can be verified.
+    >>> server = TrustGatedMCPServer(identity, trust_bridge=bridge, min_trust_score=400)
     >>> server.register_tool("sql_query", sql_handler, required_capability="use:sql")
+    >>> await server.verify_client(client_did)  # then invoke_tool(..., client_did)
     >>> await server.start()
 """
 
@@ -79,13 +81,13 @@ class _ConnectionBinding:
 class _VerifiedGrant:
     """What a successful verification established about a client DID.
 
-    Score, capabilities and sponsor state come from the trusted verification
-    result, never from the ``invoke_tool`` caller. The grant is bound to the
-    bridge that produced it: replacing ``trust_bridge`` invalidates it.
+    Score and capabilities come from the trusted verification result, never
+    from the ``invoke_tool`` caller. The grant is bound to the bridge that
+    produced it: replacing ``trust_bridge`` invalidates it. Sponsor state is
+    deliberately NOT stored here; it is read from the registry at invoke time.
     """
     trust_score: int
     capabilities: Tuple[str, ...]
-    sponsor_verified: bool
     bridge: Any
 
 
@@ -236,12 +238,15 @@ class TrustGatedMCPServer:
     ) -> bool:
         """Verify client identity before allowing tool access.
 
-        Success records a grant (trust score, capabilities, sponsor state)
+        Success records a grant (trust score, capabilities)
         taken from the bridge's verification result. :meth:`invoke_tool`
         dispatches only for DIDs holding a live grant and reads those values
         from it. ``client_card`` is accepted for compatibility but ignored: a
         card's self-reported score is not identity proof.
         """
+        if not isinstance(client_did, str):
+            logger.warning("Client rejected: DID is not a string")
+            return False
         if self._active_grant(client_did) is not None:
             return True
 
@@ -274,7 +279,6 @@ class TrustGatedMCPServer:
         self._client_grants[client_did] = _VerifiedGrant(
             trust_score=trust_score,
             capabilities=capabilities,
-            sponsor_verified=self._sponsor_verified(client_did),
             bridge=bridge,
         )
         self._verified_clients[client_did] = datetime.now(timezone.utc)
@@ -360,7 +364,7 @@ class TrustGatedMCPServer:
 
         Fork behavior, differs from upstream: the caller must already hold a
         live verification from :meth:`verify_client`, and the trust score,
-        capabilities and sponsor state used for the gates are the ones that
+        capabilities used for the gates are the ones that
         verification established. ``caller_capabilities`` and
         ``caller_trust_score`` are untrusted claims: they are accepted for
         signature compatibility, ignored for every decision, and logged when
@@ -382,12 +386,15 @@ class TrustGatedMCPServer:
         call = MCPToolCall(
             call_id=call_id,
             tool_name=tool_name,
-            caller_did=caller_did,
+            caller_did=caller_did if isinstance(caller_did, str) else repr(caller_did)[:100],
             arguments=arguments,
         )
 
-        # Identity first: nothing below may run for an unverified DID.
-        grant = self._active_grant(caller_did)
+        # Identity first: nothing below may run for an unverified DID. A
+        # non-string DID (e.g. an unhashable object) is refused, not raised on.
+        grant = (
+            self._active_grant(caller_did) if isinstance(caller_did, str) else None
+        )
         if grant is None:
             call.error = (
                 f"Caller identity not verified: {caller_did} has no valid "
@@ -456,7 +463,9 @@ class TrustGatedMCPServer:
                 return call
 
         # Human sponsor: only the trusted registry can attest it
-        if tool.require_human_sponsor and not grant.sponsor_verified:
+        # Evaluated now, not snapshotted at verify time: a registry revocation
+        # or a replaced identity_registry takes effect on the very next call.
+        if tool.require_human_sponsor and not self._sponsor_verified(caller_did):
             call.error = "Human sponsor not verified"
             call.completed_at = datetime.now(timezone.utc)
             tool.failed_calls += 1

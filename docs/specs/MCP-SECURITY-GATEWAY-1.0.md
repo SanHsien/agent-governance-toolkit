@@ -1961,6 +1961,12 @@ When:  invoke_tool("sql_query", {"query": "SELECT 1"},
                    caller_capabilities=[],
                    caller_trust_score=500)
 Then:  MCPToolCall(success=false, error="Missing capability: use:sql")
+
+Fork note (docs/fork/DECISIONS.md 2026-11-11): in the SanHsien fork the
+caller_capabilities / caller_trust_score arguments above are NOT trusted. The
+caller DID must first pass verify_client() through a trust_bridge, and the
+score and capabilities come from that verification result, so these examples
+only hold after verify_client() returned true with the stated values.
 ```
 
 ---

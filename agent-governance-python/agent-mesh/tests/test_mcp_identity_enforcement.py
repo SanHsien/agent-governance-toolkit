@@ -285,7 +285,7 @@ class TestB1InvokeToolRequiresVerifiedIdentity:
     async def test_unverified_did_with_self_reported_score_is_refused(
         self, identity: Any
     ) -> None:
-        # Codex repro: server_unverified_invoke (success=True, trust_verified=True).
+        # Independent-review repro: server_unverified_invoke (success=True, trust_verified=True).
         server, bridge = _server_with(identity)
         handler = AsyncMock(return_value="sensitive")
         server.register_tool("protected", handler, require_human_sponsor=True)
@@ -522,7 +522,7 @@ class TestB4ConnectedStateIsRevoked:
     async def test_failed_reconnect_after_bridge_is_set_revokes_old_state(
         self, identity: Any
     ) -> None:
-        # Codex repro: reconnect_after_bridge_set=false but
+        # Independent-review repro: reconnect_after_bridge_set=false but
         # connected_after_failed_reconnect=true and invoke reached the transport.
         client = TrustGatedMCPClient(identity)
         assert await client.connect(SERVER_URL) is True
@@ -642,3 +642,64 @@ class TestB4ConnectedStateIsRevoked:
         with pytest.raises(NotImplementedError):
             await client.invoke(SERVER_URL, "tool", {})
         assert SERVER_URL in client._connected_servers
+
+
+class TestReviewFollowUps:
+    """Findings from the review of the B1-B5 fix itself."""
+
+    @pytest.mark.asyncio
+    async def test_sponsor_revocation_takes_effect_on_the_next_call(
+        self, identity: Any
+    ) -> None:
+        peer, registry = TestB1RequireHumanSponsorIsEnforced._registered(True)
+        did = str(peer.did)
+        server, bridge = _server_with(identity, registry)
+        bridge.answers[did] = _ok(did)
+        server.register_tool("t", _handler, require_human_sponsor=True)
+        await server.verify_client(did)
+        assert (await server.invoke_tool("t", {}, did)).success is True
+
+        peer.sponsor_verified = False  # registry revokes within the grant TTL
+        call = await server.invoke_tool("t", {}, did)
+        assert call.success is False and call.trust_verified is False
+        assert "sponsor" in (call.error or "").lower()
+
+    @pytest.mark.asyncio
+    async def test_replacing_identity_registry_takes_effect_on_the_next_call(
+        self, identity: Any
+    ) -> None:
+        peer, registry = TestB1RequireHumanSponsorIsEnforced._registered(True)
+        did = str(peer.did)
+        server, bridge = _server_with(identity, registry)
+        bridge.answers[did] = _ok(did)
+        server.register_tool("t", _handler, require_human_sponsor=True)
+        await server.verify_client(did)
+        server.identity_registry = IdentityRegistry()  # does not know the peer
+        assert (await server.invoke_tool("t", {}, did)).success is False
+        server.identity_registry = None
+        assert (await server.invoke_tool("t", {}, did)).success is False
+
+    @pytest.mark.asyncio
+    async def test_bridge_replaced_during_server_verification_is_not_granted(
+        self, identity: Any
+    ) -> None:
+        server = TrustGatedMCPServer(identity)
+
+        async def swap_then_approve(did: str) -> HandshakeResult:
+            server.trust_bridge = _Bridge()  # configuration changes mid-flight
+            return _ok(did)
+
+        server.trust_bridge = SimpleNamespace(verify_peer=swap_then_approve)
+        assert await server.verify_client("did:mesh:a") is False
+        assert server._verified_clients == {} and server._client_grants == {}
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("bad", [["did:mesh:a"], {"a": 1}, None, 5], ids=["list", "dict", "none", "int"])
+    async def test_non_string_caller_did_is_refused_not_raised(
+        self, identity: Any, bad: Any
+    ) -> None:
+        server, _ = _server_with(identity)
+        server.register_tool("t", _handler, min_trust_score=0)
+        call = await server.invoke_tool("t", {}, bad)
+        assert call.success is False and call.trust_verified is False
+        assert await server.verify_client(bad) is False

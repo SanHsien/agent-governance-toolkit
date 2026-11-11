@@ -666,15 +666,6 @@ class TestVerifyClient:
         assert "did:mesh:card" not in server._verified_clients
 
     @pytest.mark.asyncio
-    async def test_card_based_verification_insufficient_score(
-        self, server: TrustGatedMCPServer
-    ) -> None:
-        card = MagicMock()
-        card.trust_score = 100  # < server min of 300
-        result = await server.verify_client("did:mesh:lowcard", client_card=card)
-        assert result is False
-
-    @pytest.mark.asyncio
     async def test_card_without_trust_score_attr(
         self, server: TrustGatedMCPServer
     ) -> None:

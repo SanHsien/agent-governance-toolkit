@@ -576,7 +576,7 @@ from agentmesh.integrations.mcp import TrustGatedMCPServer
 
 server = TrustGatedMCPServer(
     identity=my_agent_identity,        # AgentIdentity instance
-    trust_bridge=my_trust_bridge,      # Optional TrustBridge
+    trust_bridge=my_trust_bridge,      # Required TrustBridge (no bridge: every client is refused)
     min_trust_score=400,
     audit_all_calls=True,
 )
