@@ -1,6 +1,6 @@
 ---
 title: Fork 維護變更紀錄
-last_reviewed: 2026-11-10
+last_reviewed: 2026-11-11
 owner: agt-maintainers
 ---
 
@@ -10,6 +10,14 @@ owner: agt-maintainers
 本檔只記錄**本 fork 的維護歷史**（2026-08-28 起）；上游
 [`microsoft/agent-governance-toolkit`](https://github.com/microsoft/agent-governance-toolkit)
 的產品演進見其自身 [`CHANGELOG.md`](../../CHANGELOG.md) 與 [`docs/fork/UPSTREAM.md`](UPSTREAM.md) 的審查清冊。
+
+## 2026-11-11
+
+### 安全修正
+
+- 獨立覆核（另一個模型家族的唯讀審查）在 `agentmesh/integrations/mcp/__init__.py` 發現 5 個既有身分驗證缺口，全數在 fork 修正並以真實 `HandshakeResult` 寫成回歸測試（`tests/test_mcp_identity_enforcement.py`，55 項，修前紅）。逐項設計、與上游 #4529 的關係、行為變更與殘餘風險見 [DECISIONS.md](DECISIONS.md#2026-11-11mcp-身分驗證缺口-b1b5獨立覆核發現fork-修正)。
+- B1（高）`invoke_tool` 只對已通過 `verify_client` 的 DID 執行，分數／capability／sponsor 取自驗證結果而非呼叫者自報，`require_human_sponsor` 開始強制（新增選用 `identity_registry`）。B2（高）以 `HandshakeResult.verified is True` 判斷。B3（高）bridge 拒絕為終局、移除 card 分數 fallback。B4（中）`connect()` 先撤銷舊連線、連線綁定已驗證 DID 與 bridge。B5（低）bridge 存在判斷改 `is not None`。
+- 對外行為變更：`invoke_tool` 前必須 `verify_client`；無 `trust_bridge` 的 server 拒絕所有 client。
 
 ## 2026-11-10
 

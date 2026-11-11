@@ -9,14 +9,14 @@
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
-| 上游 #4529 合併後，把 `TrustGatedMCPClient` 的 fork 失敗關閉緩解換成上游版本 | 上游合併 #4529（目前仍 open，CHANGES_REQUESTED） | 取上游 `integrations/mcp/` 與測試，`test_mcp_server_verification.py`、`test_mcp_integration.py` 通過，並移除 FORK.md 差異表該列 | Claude Opus | `docs/fork/DECISIONS.md` 2026-11-10 緩解段；`agent-governance-python/agent-mesh/src/agentmesh/integrations/mcp/__init__.py` |
+| 上游 #4529 合併後，把 `TrustGatedMCPClient` 的 server DID 探索與註冊表驗證換成上游版本，保留 fork 的 server 端與 `connect()` 強化 | 上游合併 #4529（目前仍 open，head `d2009cc7`，CHANGES_REQUESTED）。2026-11-11 的獨立覆核修正（B1–B5）已讓 fork 的 `TrustGatedMCPServer` 與 client 撤銷／型別判斷超出 #4529：#4529 只改 client，不涵蓋 server、撤銷與 `is not None`，所以不能整檔取上游 | 取上游 `server_identity.py` 與 client registry 路徑；`TrustGatedMCPServer`、`_verified_peer`、先撤銷與連線綁定保留；`test_mcp_server_verification.py`、`test_mcp_integration.py`、`test_mcp_identity_enforcement.py` 全過，FORK.md 差異表該列改成只描述剩下的差異 | Claude Opus | `docs/fork/DECISIONS.md` 2026-11-11（含合併步驟）；`agent-governance-python/agent-mesh/src/agentmesh/integrations/mcp/__init__.py` |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
 | `fork-product-windows` 加 policy Python SDK job | 再次動到 `policy-engine/sdk/python` 的 fork 分歧碼，或維護者要求 | CI 能建出 `_native` 並跑 `test_run_tool_unbound_post.py`、`test_orchestration.py` | Antigravity | `docs/fork/DECISIONS.md` 2026-10-30；`tools/dev_check.ps1` 不裝產品套件 |
 | 驗證並採用上游 #4480（india Rego 政策修正）、#4059（快照契約的鍵，破壞性）與 #4486（cmvk 錯誤細節，TypeScript） | 本機或 CI 取得 `opa`（`opa test examples/policies`；#4059 另需能跑 `policy-engine` 的 Cedar 測試與 `sdk/python` 的 `test_host.py`），或能跑 `agent-os-vscode` 的 TypeScript 測試 | 重現舊碼失敗、套用後通過；#4480、#4059 整批取上游版本並跑 `opa test`，#4486 移植；順帶重看 issue #4481、#4485 | Codex | `docs/fork/DECISIONS.md` 2026-11-02 第六輪、2026-11-10 第七輪 |
-| 採用上游 #4529（MCP server DID 探索與驗證）以修 issue #4528（`TrustGatedMCPClient` 不驗證伺服器身分） | 上游合併 #4529 | 取上游版本，`agent-mesh` 的 `test_mcp_server_verification.py` 與 `test_mcp_integration.py` 通過，`connect()` 對未驗證的伺服器回傳失敗 | Claude Opus | `docs/fork/DECISIONS.md` 2026-11-10 第七輪 |
+| 採用上游 #4529（MCP server DID 探索與驗證）以修 issue #4528（`TrustGatedMCPClient` 不驗證伺服器身分） | 上游合併 #4529。現況：fork 已有失敗關閉的最小緩解，且 2026-11-11 起 server 端（B1／B3）、client 撤銷（B4）、型別判斷（B2／B5）也修了，這些 #4529 都不涵蓋；剩下等 #4529 的是 server DID 探索（`_discover_server_did` 仍回傳 `None`）與註冊表簽章驗證。步驟見上方近期表同主題列 | `agent-mesh` 的 `test_mcp_server_verification.py`、`test_mcp_integration.py`、`test_mcp_identity_enforcement.py` 通過，`connect()` 對未驗證的伺服器回傳失敗 | Claude Opus | `docs/fork/DECISIONS.md` 2026-11-10 第七輪、2026-11-11 |
 | 處理 issue #4527（OpenCode 外掛 5.0.0 在 OpenCode 2.2.x 載入失敗，V1／V2 外掛契約） | 上游有修正 PR，或本機能安裝 OpenCode 2.2.x 重現 | 重現載入錯誤，套用後外掛載入且 `agt_policy_status` 註冊 | Codex | `docs/fork/DECISIONS.md` 2026-11-10 第七輪；`agent-governance-opencode/src/index.mjs:247` |
 | 重新裁決既有 WATCH 提案 | 各項已記錄的合併、遷移說明、實機可測或威脅模型條件成立 | 逐項連回既有裁決，只採用能在 Windows 重現問題且修後通過的變更；不重開已採用項目 | Claude Opus | `docs/fork/DECISIONS.md:639-645` |
 | 重新評估 workflow 生成器同步 | 生成器可保留 fork guard，且無符號連結權限時測試可合理處理 | `generate_workflows.py --check` 通過，重新生成前後所有官方 repo guard 保留，相關測試通過 | Codex | docs/fork/DECISIONS.md:679 |

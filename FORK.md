@@ -30,7 +30,7 @@
 | `docker-compose.yml` | dashboard 埠綁 `127.0.0.1:8501` |
 | `examples/demos/openclaw-governed/docker-compose.yaml` | sidecar 埠綁 `127.0.0.1:8081` |
 | `docs/fork/` | Windows 開發、上游審查、裁決、本線 changelog |
-| `agent-governance-python/agent-mesh/src/agentmesh/integrations/mcp/__init__.py` | `TrustGatedMCPClient.connect` 在設了 `trust_bridge` 卻發現不到伺服器 DID 時回傳 `False`（上游為放行）；上游 #4529 合併前，接上 `trust_bridge` 將連不上任何伺服器。見 `docs/fork/DECISIONS.md` 2026-11-10 |
+| `agent-governance-python/agent-mesh/src/agentmesh/integrations/mcp/__init__.py` | 失敗關閉的 MCP 身分驗證（上游為放行或信任自報值）。client：設了 `trust_bridge` 卻發現不到伺服器 DID 時 `connect` 回傳 `False`，`connect` 先撤銷舊連線並把連線綁定已驗證 DID 與 bridge；上游 #4529 合併前，接上 `trust_bridge` 將連不上任何伺服器。server：`verify_client` 以 `HandshakeResult.verified is True` 判斷、移除 card 分數 fallback，`invoke_tool` 只對已驗證的 DID 執行並用驗證結果的分數／capability，強制 `require_human_sponsor`（新增選用 `identity_registry`）。見 `docs/fork/DECISIONS.md` 2026-11-10 與 2026-11-11（獨立覆核發現 B1–B5） |
 
 產品程式碼（`agent-governance-python/`、各語言 SDK、`policy-engine/`、上游 `docs/`）以上游為準，除非 `REVIEW.md`／`docs/fork/DECISIONS.md` 已記錄 fork overlay。本機 overlay：根目錄 dashboard 與 OpenClaw demo 的 Compose 埠綁 `127.0.0.1`。
 

@@ -1,6 +1,6 @@
 ---
 title: 維護決策
-last_reviewed: 2026-11-10
+last_reviewed: 2026-11-11
 owner: agt-maintainers
 ---
 
@@ -1074,3 +1074,28 @@ open PR 的採用規則：fork 存在同一缺陷、新測試在 fork 現碼失�
 **證據**：既有測試 `test_connect_with_bridge_no_server_did` 把失敗開放的行為釘成 `True`；改名為 `test_connect_with_bridge_no_server_did_is_refused` 並改成斷言 `False`、`_connected_servers` 為空、`verify_peer` 未被呼叫。先紅後綠：改測試後 `tests/test_mcp_integration.py` 1 failed、79 passed；改程式後 80 passed。`git grep TrustGatedMCPClient` 顯示 `agent-mesh` 以外只有文件提及，沒有其他呼叫端。
 
 **登記**：`FORK.md` 的差異表新增一列；`ROADMAP.md` 近期表新增「上游 #4529 合併後換成上游版本」。`tools/dev_check.ps1` 的分歧產品碼測試清單不加入此測試：該測試需要 `python-dateutil`、`email-validator` 與 agent-hypervisor、agent-os 的原始碼路徑，而 dev_check 的原則是只裝 `requirements-dev.txt`、不安裝產品套件。
+
+
+## 2026-11-11：MCP 身分驗證缺口 B1–B5（獨立覆核發現，fork 修正）
+
+**來源**：獨立覆核（另一個模型家族的唯讀審查，未改 repo）對 `5e97e0d6` 的 `agentmesh/integrations/mcp/__init__.py` 回報 5 個既有缺口，附重現腳本（對 fork 現碼逐項印出 `success=true`／`connected=true` 等結果）。上一節的 `connect()` 失敗關閉緩解只改了 client 的缺 DID 分支，沒有碰這些路徑。5 項都在 fork 重現（修前 `audit_mcp.py`：`server_unverified_invoke.success=true`、`server_card_fallback_despite_bridge_denial=true`、`client_rejected_handshake_result_connect=true`、`connected_after_failed_reconnect=true`、`falsey_bridge_connect=true`）。
+
+**與上游 #4529 的關係**（`gh pr diff 4529`，head `d2009cc7`，仍 CHANGES_REQUESTED）：#4529 只改 `TrustGatedMCPClient`（server DID 探索、註冊表繫結、簽章與挑戰），**沒有動 `TrustGatedMCPServer`**，所以 B1、B3 完全不涵蓋；B2 只在 client 的 bridge 路徑涵蓋一半（`peer.verified if hasattr(peer, "verified") else bool(peer)`，仍接受任何有 `verified` 屬性或真值的物件，server 端不變）；B4 沒有涵蓋（失敗不撤銷 `_connected_servers`）；B5 沒有涵蓋（沿用 `if self.trust_bridge:`）。因此 fork 這次不移植 #4529 的做法，只自行設計，並刻意保持 client 的 `connect()` 結構與 #4529 的 bridge 路徑相近以利日後合併。
+
+| 編號 | 嚴重度 | 修正 | 紅 → 綠 |
+| --- | --- | --- | --- |
+| B2 | 高 | `verify_peer()` 回傳真實 `HandshakeResult`（`verified=False` 仍 truthy）。改以共用函式 `_verified_peer` 判斷：只接受 `HandshakeResult` 且 `verified is True`、`peer_did` 等於被查的 DID，或最簡 adapter 回傳的純 `bool True`；其他型別（`None`、字串、dict、mock、仿冒物件）一律拒絕。server `verify_client` 與 client `connect` 共用 | 新測試 `tests/test_mcp_identity_enforcement.py`（用真實 `HandshakeResult` 與真實 `TrustBridge`）：B2/B3/B5 三組合計修前 22 failed、7 passed，修後全過 |
+| B3 | 高 | bridge 拒絕、例外或型別不符一律終局，**移除 card `trust_score` fallback**。沒有 bridge 時 `verify_client` 也拒絕：card 的自報分數沒有簽章、issuer、DID 綁定、有效期，不是身分證明。`client_card` 參數保留但忽略 | 同上 |
+| B5 | 低 | server 與 client 兩處「bridge 是否存在」改 `is not None`；空容器型（`__bool__` 為 False）bridge 仍會被詢問，拒絕仍然有效 | 同上 |
+| B1 | 高 | `verify_client` 成功時記錄一筆 grant（trust score、capabilities、sponsor 狀態，取自 `HandshakeResult`），綁定產生它的 bridge 並隨 10 分鐘 TTL 失效；`invoke_tool` 在查工具名稱之前先要求有效 grant，所有閘門（分數、capability、sponsor）都用 grant 內的值，`caller_trust_score`／`caller_capabilities` 參數保留簽名但被忽略（較大的自報值只記 warning）。`trust_verified` 只在身分、分數、capability、sponsor 全過後才設。`require_human_sponsor` 現在強制：新增選用參數 `identity_registry`（放在建構子最後，不破壞位置參數），以註冊表的 `sponsor_verified is True` 為唯一依據，沒給就是所有人都過不了 sponsor 工具。換掉 `trust_bridge` 使既有 grant 失效；單獨寫進 `_verified_clients` 的時間戳不算 grant | 16 failed、29 passed（含已通過的 B2/B3/B5）→ 全過 |
+| B4 | 中 | `connect()` 一開始就撤銷該 URL 的舊狀態，之後任何失敗路徑（缺 DID、bridge 拒絕、bridge／探索例外、URL 檢查失敗）都不會留下舊的連線；驗證例外改為回傳 `False`（原本直接往外丟）。連線綁定已驗證的 server DID 與 bridge（`_connection_bindings`），`invoke()` 用 `_is_connected`，bridge 被換掉就視為未連線；驗證期間 bridge 被換掉不記錄連線 | 9 failed、46 passed → 全過 |
+
+**行為變更（對外部呼叫者）**：(1) `invoke_tool` 不再憑自報分數執行，呼叫端必須先 `await server.verify_client(did)`；(2) 沒有 `trust_bridge` 的 server 拒絕所有 client；(3) `require_human_sponsor=True` 的工具需要 `identity_registry`；(4) `connect()` 遇到 bridge 例外回 `False`。純 `bool` bridge adapter 仍可通過 `verify_client`，但沒有分數也沒有 capability（只能呼叫 `min_trust_score=0` 且不要求 capability 的工具）。`docs/integrations/mcp-trust-guide.md` 的 server 一節已改寫；`docs/specs/MCP-SECURITY-GATEWAY-1.0.md` 第 21.10 節的 invoke 範例仍是上游契約，未改。
+
+**既有測試的處理**：`test_mcp_integration.py`、`test_negative_security.py` 的 `invoke_tool` 呼叫改走測試 helper `_verified_invoke`（先經 bridge 以 `HandshakeResult.success` 驗證該 DID 的分數與 capability，再呼叫），其餘斷言不變；三個把 card 當身分證明的測試改成斷言拒絕或改走 bridge；兩個直接寫 `_verified_clients` 的快取測試改成先經 bridge 驗證，並新增「單獨的快取時間戳不算驗證」。
+
+**驗證**：`pytest tests/test_mcp_identity_enforcement.py tests/test_mcp_integration.py tests/test_negative_security.py tests/test_http_middleware.py`：316 passed、35 skipped（其中新檔 55 passed、`test_mcp_integration.py` 81 passed）。agent-mesh 全套（`--continue-on-collection-errors`，本機缺 fastapi、otel 等套件）：修前（`git archive 5e97e0d6`）68 failed、3663 passed、21 errors，修後 68 failed、3719 passed、21 errors；去重後 FAILED／ERROR 清單逐行相同（89 行），多出的 56 個 passed 是新增測試。獨立覆核的重現腳本在修後全部翻轉：`server_unverified_invoke.success=false`、`server_card_fallback_despite_bridge_denial=false`、`client_rejected_handshake_result_connect=false`、`server_rejected_handshake_result_cached=false`、`connected_after_failed_reconnect=false`、`falsey_bridge_connect=false`；`no_bridge_connect=true` 是文件載明的未驗證模式。
+
+**未涵蓋與殘餘風險**：(1) `verify_peer(did)` 本身只證明註冊表與 handshake 結果，不證明「請求者控制該 DID 的私鑰」；`invoke_tool` 的呼叫端若把未受信請求的 `caller_did` 直接傳入，仍需自己的請求層證明（簽章或 session）。這是 `TrustBridge` 契約，不是本次範圍。(2) 沒有 bridge 的 client 仍是「未驗證連線」（既有文件行為），connected 不等於已驗證。(3) card 簽章驗證沒有實作，是移除而非補強。(4) `tools\dev_check.ps1` 不列入這些測試：它們需要 `python-dateutil`、`email-validator`、agent-hypervisor 原始碼路徑，沿用上一節的理由。
+
+**合併 #4529 時**：取上游的 `server_identity.py` 與 client 的 registry 路徑；`TrustGatedMCPServer` 整段（`verify_client`、`_VerifiedGrant`、`invoke_tool`）保留 fork 版；`connect()` 保留「先撤銷、例外回 `False`、`_verified_peer`、`is not None`、綁定」，把 #4529 的 `peer.verified if hasattr(...) else bool(peer)` 換成 `_verified_peer`。`test_mcp_identity_enforcement.py` 在合併後仍應全過；#4529 的 `test_mcp_server_verification.py` 若用 `bool(peer)` 假設的 mock 需改用 `HandshakeResult`。
