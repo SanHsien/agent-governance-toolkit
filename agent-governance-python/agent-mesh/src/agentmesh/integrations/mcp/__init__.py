@@ -40,6 +40,26 @@ from enum import Enum
 logger = logging.getLogger(__name__)
 
 
+def _peer_verified(result: Any, expected_did: str) -> bool:
+    """Return True only for an explicit, well-typed verification success.
+
+    ``TrustBridge.verify_peer()`` returns a ``HandshakeResult`` whose
+    ``verified`` field carries the outcome; the object itself is always
+    truthy, so ``if result:`` would accept a rejected handshake. Only two
+    shapes are accepted, both compared with ``is True``: a real
+    ``HandshakeResult`` (which must also be about ``expected_did``) and a
+    plain ``bool`` from a minimal bridge adapter. Anything else - ``None``,
+    strings, mocks, look-alike objects - is refused.
+    """
+    from agentmesh.trust.handshake import HandshakeResult
+
+    if isinstance(result, bool):
+        return result is True
+    if isinstance(result, HandshakeResult):
+        return result.verified is True and result.peer_did == expected_did
+    return False
+
+
 class MCPMessageType(Enum):
     """MCP message types."""
     REQUEST = "request"
@@ -192,26 +212,29 @@ class TrustGatedMCPServer:
         if len(self._verified_clients) >= self._max_verified_clients:
             self._evict_expired_clients()
 
-        # Use TrustBridge if available
-        if self.trust_bridge:
-            try:
-                result = await self.trust_bridge.verify_peer(client_did)
-                if result:
-                    self._verified_clients[client_did] = datetime.now(timezone.utc)
-                    return True
-            except Exception as e:
-                logger.error(f"Trust verification failed: {e}")
-                return False
+        # Without a trust bridge there is no trust anchor. A card's own
+        # ``trust_score`` is self-reported and carries no signature, issuer,
+        # DID binding or expiry check, so it is never accepted as identity.
+        if self.trust_bridge is None:
+            logger.warning(
+                "Client %s rejected: no trust bridge configured; "
+                "self-reported card scores are not identity proof",
+                client_did,
+            )
+            return False
 
-        # Basic verification via card
-        if client_card:
-            if hasattr(client_card, "trust_score"):
-                if client_card.trust_score >= self.min_trust_score:
-                    self._verified_clients[client_did] = datetime.now(timezone.utc)
-                    return True
-
-        logger.warning(f"Client {client_did} failed trust verification")
-        return False
+        # A configured bridge is final: failure, error or an unexpected
+        # return type all refuse, with no fall-through to the card.
+        try:
+            result = await self.trust_bridge.verify_peer(client_did)
+        except Exception as e:
+            logger.error(f"Trust verification failed: {e}")
+            return False
+        if not _peer_verified(result, client_did):
+            logger.warning(f"Client {client_did} failed trust verification")
+            return False
+        self._verified_clients[client_did] = datetime.now(timezone.utc)
+        return True
 
     def _evict_expired_clients(self) -> None:
         """Remove expired entries from the verified clients cache."""
@@ -438,8 +461,9 @@ class TrustGatedMCPClient:
             logger.warning("Rejected internal/loopback server URL: %s", server_url)
             return False
 
-        # Verify server identity if TrustBridge available
-        if self.trust_bridge:
+        # Verify server identity if a TrustBridge is configured. Presence is
+        # ``is not None``: a bridge object may be falsey (empty registry).
+        if self.trust_bridge is not None:
             # Extract server DID from URL or discovery
             server_did = await self._discover_server_did(server_url)
             if not server_did:
@@ -451,7 +475,8 @@ class TrustGatedMCPClient:
                     server_url,
                 )
                 return False
-            if not await self.trust_bridge.verify_peer(server_did):
+            result = await self.trust_bridge.verify_peer(server_did)
+            if not _peer_verified(result, server_did):
                 logger.warning(f"Server {server_url} failed trust verification")
                 return False
 

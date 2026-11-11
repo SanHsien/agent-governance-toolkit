@@ -584,14 +584,20 @@ class TestVerifyClient:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_card_based_verification_sufficient_score(
+    async def test_card_score_alone_is_not_identity(
         self, server: TrustGatedMCPServer
     ) -> None:
+        """A self-reported card score must not authenticate a client.
+
+        Fork fix for the independent-review finding B3: the card carries no
+        signature, issuer, DID binding or expiry check, so the old
+        "score >= minimum" fallback is gone (see test_mcp_identity_enforcement).
+        """
         card = MagicMock()
         card.trust_score = 500  # >= server min of 300
         result = await server.verify_client("did:mesh:card", client_card=card)
-        assert result is True
-        assert "did:mesh:card" in server._verified_clients
+        assert result is False
+        assert "did:mesh:card" not in server._verified_clients
 
     @pytest.mark.asyncio
     async def test_card_based_verification_insufficient_score(
@@ -719,10 +725,11 @@ class TestAuditSummary:
     async def test_verified_clients_count(
         self, server: TrustGatedMCPServer
     ) -> None:
-        card = MagicMock()
-        card.trust_score = 999
-        await server.verify_client("did:mesh:a", client_card=card)
-        await server.verify_client("did:mesh:b", client_card=card)
+        bridge = AsyncMock()
+        bridge.verify_peer = AsyncMock(return_value=True)
+        server.trust_bridge = bridge
+        await server.verify_client("did:mesh:a")
+        await server.verify_client("did:mesh:b")
         summary = server.get_audit_summary()
         assert summary["verifiedClients"] == 2
 
@@ -1033,10 +1040,11 @@ class TestEndToEndServerWorkflow:
             min_trust_score=400,
         )
 
-        # Verify client via card
-        card = MagicMock()
-        card.trust_score = 500
-        verified = await server.verify_client("did:mesh:agent-a", client_card=card)
+        # Verify client through the trust bridge
+        bridge = AsyncMock()
+        bridge.verify_peer = AsyncMock(return_value=True)
+        server.trust_bridge = bridge
+        verified = await server.verify_client("did:mesh:agent-a")
         assert verified is True
 
         # Invoke
