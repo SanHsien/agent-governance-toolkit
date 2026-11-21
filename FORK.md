@@ -26,7 +26,7 @@
 | `.github/workflows/fork-maintenance.yml` | fork 文件與連結檢查，以及分歧產品碼的測試（僅支援 Windows，分支保護之必要檢查為 fork gate (windows-latest)） |
 | `.github/workflows/fork-product-windows.yml` | 有限 Rust workspace、Copilot extension、原生 policy Node SDK、TypeScript SDK、Mastra adapter、agent-sre 與 agent-lightning 的 Windows 產品驗收；驗收以該 workflow 實際 Windows job 結果為準 |
 | `.github/workflows/upstream-check.yml` | 每週對 `upstream/main` 做未審查 commit 檢查 |
-| 上游 CI／發佈／Pages／AI 掃描／自動合併等 workflow | 加上只在官方 `microsoft/agent-governance-toolkit` 執行的 guard |
+| 上游 CI／發佈／Pages／AI 掃描／自動合併等 workflow | 加上只在官方 `microsoft/agent-governance-toolkit` 執行的 guard；2026-11-21 起這 42 支另以 `gh workflow disable` 在 GitHub 端停用（guard 留著當第二層），從檔案看不出來，見 `docs/fork/DECISIONS.md` 2026-11-21 |
 | `docker-compose.yml` | dashboard 埠綁 `127.0.0.1:8501` |
 | `examples/demos/openclaw-governed/docker-compose.yaml` | sidecar 埠綁 `127.0.0.1:8081` |
 | `docs/fork/` | Windows 開發、上游審查、裁決、本線 changelog |

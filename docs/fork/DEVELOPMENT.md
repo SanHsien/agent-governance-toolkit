@@ -62,6 +62,12 @@ pytest
 
 不要把完整 monorepo 測試矩陣當成 fork 一鍵驗收。官方 TypeScript／.NET／Rust／Go 矩陣保留上游 repo 閘門；本 fork 的有限 Windows 產品驗收另由下列 workflow 執行。
 
+本 fork 在 GitHub 上實際會跑的 workflow 只有 fork 自己的四支：`fork-maintenance.yml`（必要檢查
+`fork gate (windows-latest)`）、`fork-product-windows.yml`、`upstream-check.yml`、
+`dependency-freshness.yml`。其餘 42 支上游 workflow 除了 job 層的 repository guard，自
+2026-11-21 起也在 GitHub 端停用（`disabled_manually`），不會再建立 skipped run；理由與還原方式見
+[`DECISIONS.md`](DECISIONS.md) 2026-11-21。
+
 可選 dashboard（本線 overlay 只聽本機）：
 
 ```powershell

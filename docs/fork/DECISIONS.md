@@ -1172,3 +1172,38 @@ commit `e6adb0e`（cedar-policy 4.14.1）、`b2948b6`（Microsoft.Agents.AI 1.27
 - 水位推進：`reviewed_through` → `81a399b82be359d3cb5e5024be6d7bcca764ba8e`、`reviewed_pr_through` → 4558、`reviewed_issue_through` → 4559。
 - `monitored` 重新釘選同上方；新增的審查結果（採用 #4542、#4531 新 head）不需要新增 monitored 項目。
 - `ROADMAP.md` 中期表補上 #4559 的重看條件。
+
+## 2026-11-21：GitHub 停用本 fork 的 Actions 後，在 API 層停用 42 支有 guard 的上游 workflow
+
+**背景**：GitHub 以「scale of GitHub Actions usage」為由停用本 fork 的 workflow（Actions 頁 banner；
+API 的 `actions/permissions` 仍是 `enabled`、workflow `state` 仍是 `active`，API 看不出來）。最後一次
+completed 的 run 是 11-11 13:10Z；11-12 23:44Z 起 Dependabot run 全部 queued，每天 06:00 的 CI 排程
+從 11-12 起沒有 run。
+
+**量測**（10-31～11-17，job 時長進位到整分鐘，Windows ×2）：399 個 run、683 加權分鐘，約 281／週，
+幾乎全是 fork 自己的 Windows 驗收（`fork-product-windows.yml` 254／週、`fork-maintenance.yml` 16／週）。
+有 guard 的上游 workflow 算力是 0（所有 job skipped），但仍產生約 330 個 run（約 135／週），其中約 42
+個是排程觸發（CI 每天 06:00、stale 每天 01:30，另有 9 支每週）。
+
+**決定**：以 `gh workflow disable` 停用全部 42 支有 `if: github.repository == 'microsoft/agent-governance-toolkit'`
+guard 的上游 workflow，檔案不改；job 層 guard 留著當第二層防線。fork 自己的 `fork-maintenance.yml`、
+`fork-product-windows.yml`、`upstream-check.yml`、`dependency-freshness.yml` 維持啟用。
+
+**理由**：這 42 支在 fork 上本來就一個 job 都不跑，停用不損失任何覆蓋。用量已經很精簡卻仍被停，表示
+算力不是唯一條件；banner 點名的是「繼承自上游、在 fork 上沒用的排程與事件」，最像的就是這些每週約 135 個
+skipped run（推論，未證實）。
+
+**停用清單（workflow id）**：`ai-contributor-guide.yml`（344332303）、`ai-owasp-compliance.yml`（344332304）、`ai-pr-review.yml`（344332305）、`ai-release-notes.yml`（344332306）、`ai-repo-health.yml`（344332308）、`ai-security-scan.yml`（344332309）、`ai-spec-drafter.yml`（344332311）、`benchmarks.yml`（344332314）、`cflite.yml`（344332316）、`ci-generation-check.yml`（344332317）、`ci.yml`（344332318）、`codeql.yml`（344332319）、`contributor-check.yml`（344332320）、`dco.yml`（344332321）、`dependency-review.yml`（344332323）、`docs-quality.yml`（344332324）、`docs.yml`（344332325）、`e2e-python.yml`（344332326）、`labeler.yml`（344332328）、`license-check.yml`（344332329）、`license-headers.yml`（344332330）、`policy-engine-ci.yml`（344332331）、`policy-validation.yml`（344332332）、`pr-size.yml`（344332333）、`pr-title-check.yml`（344332334）、`publish-containers.yml`（344332335）、`publish.yml`（344332336）、`quality-gates.yml`（344332337）、`redteam-benchmark.yml`（376910165）、`sbom-diff-comment.yml`（344332338）、`sbom-diff.yml`（344332339）、`sbom.yml`（344332341）、`scorecard.yml`（344332343）、`secret-scanning.yml`（344332344）、`spell-check.yml`（344332345）、`stale.yml`（344332346）、`supply-chain-check.yml`（344332347）、`sync-atr-community-rules.yml`（344332348）、`v4-removal-ratchet.yml`（344332350）、`weekly-security-audit.yml`（344332351）、`welcome.yml`（344332353）、`workflow-lint.yml`（344332355）。
+
+**預估效果**：加權分鐘不變（約 280／週，幾乎全是 Windows 驗收）；run 數從每週約 165 降到約 30。
+
+**還原**：單支 `gh workflow enable <id 或檔名> -R SanHsien/agent-governance-toolkit`；全部還原：
+`gh api repos/SanHsien/agent-governance-toolkit/actions/workflows --paginate --jq '.workflows[] | select(.state=="disabled_manually") | .id' | ForEach-Object { gh workflow enable $_ -R SanHsien/agent-governance-toolkit }`（PowerShell）。
+
+**何時重新檢視**：(1) 同步上游帶進新的 workflow 時，新檔照舊加 guard，並同樣在 API 層停用（否則它會是
+唯一一支仍在建立 run 的上游 workflow）；(2) Actions 重新啟用後兩週，每天看
+`gh run list -R SanHsien/agent-governance-toolkit -L 5` 最新 run 的時間——停用門檻沒有官方數字，
+做完這些不保證不再被停；(3) 決定要在 fork 上跑某支上游 workflow 時，要同時移除 guard 與 `enable`。
+
+**限制**：本次 commit 推上去時本 fork 的 Actions 仍在停用狀態，不會有任何 CI run；驗證只有本機
+`tools/dev_check.ps1`。
