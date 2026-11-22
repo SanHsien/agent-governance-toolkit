@@ -97,7 +97,21 @@ class VerifyCodeSafetyTool:
     """
     
     name = "verify_code_safety"
-    description = "Check if code is safe to execute before running it"
+    description = (
+        "Scan code for dangerous patterns before you run it. Matches the code "
+        "against a fixed list of case-insensitive regular expressions: "
+        "destructive SQL (DROP, TRUNCATE, DELETE without a WHERE clause), "
+        "rm -rf and deletes from / or home, shutil.rmtree, hardcoded API keys, "
+        "passwords, AWS keys, private keys and GitHub tokens, sudo, chmod 777, "
+        "setuid(0), eval(), exec(), fork bombs, dd to a disk device, and drive "
+        "format commands. The same rules apply to every language; `language` "
+        "is only echoed back and `context` is not used. Returns JSON with "
+        "`safe` (false when any rule matches), `violations` (rule, severity, "
+        "message, and an `alternative` when one exists), `blocked_reason` for "
+        "the first violation, `rules_checked`, and `code_length`. An unsafe "
+        "result is still a normal result, not a tool error. Pattern matching "
+        "is not a sandbox: code with no match is not proven safe."
+    )
     
     input_schema = {
         "type": "object",
@@ -327,7 +341,18 @@ class CMVKVerifyTool:
     """
     
     name = "cmvk_verify"
-    description = "Verify a claim across multiple AI models to detect hallucinations"
+    description = (
+        "Return a simulated multi-model agreement score for a claim. This "
+        "implementation calls no model: it derives drift values from a hash "
+        "of `claim`, always reports the models gpt-4, claude-sonnet-4, and "
+        "gemini-pro, ignores `models` and `context`, and gives the same "
+        "result for the same claim and threshold. `threshold` (0-1, default "
+        "from the server config, normally 0.85) sets the required agreement. "
+        "Returns JSON with `verified`, `confidence`, `drift_score` (maximum "
+        "pairwise drift), `avg_drift`, `drift_details`, "
+        "`disagreement_detected`, and a text `interpretation`. Do not treat "
+        "`verified` as evidence that the claim is true."
+    )
     
     input_schema = {
         "type": "object",
@@ -471,7 +496,21 @@ class KernelExecuteTool:
     """
     
     name = "kernel_execute"
-    description = "Execute an action through the Agent OS kernel with policy enforcement"
+    description = (
+        "Check an action against Agent OS policies, then run it through the "
+        "kernel's action stub. Policies: `read_only` blocks `file_write`, "
+        "`send_email`, and a `database_query` whose `params.query` starts with "
+        "INSERT, UPDATE, or DELETE; `no_pii` blocks params that contain ssn, "
+        "social_security, credit_card, or password. `file_write` and "
+        "`send_email` always require approval from a trusted approval "
+        "provider that the host configures; an `approved` flag in `params` is "
+        "ignored, so without that provider these actions are denied. A "
+        "denied action returns a tool error that starts with \"SIGKILL: "
+        "Policy violation\" and the reason; when you get it, stop and do not "
+        "retry the same action. An allowed action does not do real work in "
+        "this server: it returns JSON with `status` \"executed\", the action "
+        "name, and the names of the params received."
+    )
     
     input_schema = {
         "type": "object",
@@ -680,7 +719,16 @@ class IATPSignTool:
     """
     
     name = "iatp_sign"
-    description = "Sign content with cryptographic trust attestation for inter-agent communication"
+    description = (
+        "Produce an IATP attestation for content from an agent. The "
+        "`signature` is the SHA-256 hex digest of the content, `agent_id`, "
+        "and the sorted `capabilities`; it uses no key, so anyone with the "
+        "same inputs can produce it and it does not prove who signed. "
+        "`metadata` is accepted but not included. Returns JSON with "
+        "`signature`, `agent_id`, `capabilities`, `content_hash` (first 16 "
+        "hex characters of the content's SHA-256), `timestamp`, and "
+        "`protocol_version` \"iatp-1.0\"."
+    )
     
     input_schema = {
         "type": "object",
@@ -753,7 +801,22 @@ class IATPVerifyTool:
     """
     
     name = "iatp_verify"
-    description = "Verify trust relationship with another agent before communication"
+    description = (
+        "Check whether a remote agent meets a trust level, scope list, and "
+        "data-classification rule before you share data with it. The agent's "
+        "manifest comes from the server's configured agent registry; an agent "
+        "that is not in the registry gets a built-in simulated manifest "
+        "(trust level standard, scopes data:read and data:write, ephemeral "
+        "retention), so an unknown agent passes `standard` and `trusted` "
+        "checks. No network request is made. The trust score (0-10) must "
+        "reach 10 for `verified_partner`, 7 for `trusted`, 5 for `standard` "
+        "(the default), or 0 for `any`. All `required_scopes` must be in the "
+        "manifest, and `data_classification` \"pii\" also requires ephemeral "
+        "retention. On success returns JSON with `verified` true, "
+        "`trust_score`, `trust_level`, and `scopes`. A failed check returns "
+        "a tool error that names the cause: a score below the required "
+        "level, missing scopes, or PII with non-ephemeral retention."
+    )
     
     input_schema = {
         "type": "object",
@@ -942,7 +1005,20 @@ class IATPReputationTool:
     """
     
     name = "iatp_reputation"
-    description = "Query or slash agent reputation in the IATP network"
+    description = (
+        "Read or lower an agent's reputation score. Scores are kept only in "
+        "this server process's memory: every agent starts at 5.0, and scores "
+        "reset when the server restarts. `action` \"query\" returns "
+        "`reputation_score` and the derived `trust_level` (8 or more "
+        "verified_partner, 6 or more trusted, 4 or more standard, 2 or more "
+        "unknown, below 2 "
+        "untrusted). `action` \"slash\" lowers the score immediately by "
+        "`slash_severity` (critical 2.0, high 1.0, medium 0.5, low 0.25; "
+        "default medium), never below 0, and returns the previous and new "
+        "scores with `slash_reason` and `evidence`. A slash cannot be undone, "
+        "so use it only for a confirmed violation. Any other `action` returns "
+        "a tool error."
+    )
     
     input_schema = {
         "type": "object",
@@ -1069,7 +1145,22 @@ class CMVKReviewCodeTool:
     """
     
     name = "cmvk_review"
-    description = "Multi-model code review for security, bugs, and best practices"
+    description = (
+        "Run a regex-based code review and report it as simulated "
+        "multi-model results. This implementation calls no model. Issues "
+        "come from fixed checks that `focus` selects (default security and "
+        "bugs): security finds SQL built by string concatenation, eval(), "
+        "and innerHTML assignment; bugs finds await without try and "
+        "possible division by zero; performance finds *Sync( calls and a "
+        "loop that awaits queries; \"style\" has no checks. Each name in "
+        "`models` (default gpt-4, claude-sonnet-4, gemini-pro) gets a "
+        "hash-selected subset of those issues that can differ between "
+        "server runs, so `consensus` (the share of models that found no "
+        "issue) is not a real agreement measure. Returns JSON with "
+        "`consensus`, `reviews`, `issues` (category, severity, issue, fix), "
+        "and a `recommendation` that lists up to five issues. `language` is "
+        "only echoed back."
+    )
     
     input_schema = {
         "type": "object",
@@ -1238,7 +1329,18 @@ class GetAuditLogTool:
     """
     
     name = "get_audit_log"
-    description = "Retrieve Agent OS audit trail"
+    description = (
+        "Return entries from the in-memory Agent OS audit log, newest first. "
+        "The log holds at most 1000 entries and is lost when the server "
+        "stops. No tool in this server writes to it, so it is empty unless "
+        "the host process adds entries through `GetAuditLogTool.log_entry`; "
+        "an empty result does not mean that no actions ran. `limit` "
+        "(default 20) caps the entries returned. `filter` can match "
+        "`agent_id`, `type` (blocked, allowed, cmvk_review, or all), and "
+        "`since` (an ISO timestamp, compared as a string). Returns JSON with "
+        "`logs`, `returned`, `total`, and `stats` (`blocked_total`, "
+        "`allowed_total`)."
+    )
     
     input_schema = {
         "type": "object",

@@ -85,13 +85,6 @@ IMPORTANT RULES:
 3. If the kernel returns a SIGKILL, stop immediately
 4. All actions are logged to the audit trail
 
-Available Tools:
-- kernel_execute: Execute actions with policy enforcement
-- cmvk_verify: Verify claims across multiple models
-- iatp_sign: Sign trust attestations for other agents
-- iatp_verify: Verify trust relationships
-- iatp_reputation: Query agent reputation network
-
 Example usage:
 ```
 Use kernel_execute with:

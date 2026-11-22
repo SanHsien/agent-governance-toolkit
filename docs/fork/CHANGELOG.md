@@ -1,6 +1,6 @@
 ---
 title: Fork 維護變更紀錄
-last_reviewed: 2026-11-11
+last_reviewed: 2026-11-22
 owner: agt-maintainers
 ---
 
@@ -10,6 +10,13 @@ owner: agt-maintainers
 本檔只記錄**本 fork 的維護歷史**（2026-08-28 起）；上游
 [`microsoft/agent-governance-toolkit`](https://github.com/microsoft/agent-governance-toolkit)
 的產品演進見其自身 [`CHANGELOG.md`](../../CHANGELOG.md) 與 [`docs/fork/UPSTREAM.md`](UPSTREAM.md) 的審查清冊。
+
+## 2026-11-22
+
+### 文件與提示詞
+
+- `.github/copilot-instructions.md` 的架構與建置指令改成 repo 實際路徑（上游寫的 `packages/`、root `pyproject.toml`、`requirements/docs.txt` 都不存在）；Rust crate 名改為 `agentmesh`、`agentmesh-mcp`。
+- `mcp-kernel-server`：`governed_agent` prompt 移除與註冊工具不符的手寫清單；8 個 MCP tool description 改寫成依實作的契約（標明哪些是模擬結果）。只改字串。見 [DECISIONS.md](DECISIONS.md) 2026-11-22。
 
 ## 2026-11-11
 

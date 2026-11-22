@@ -1207,3 +1207,17 @@ skipped run（推論，未證實）。
 
 **限制**：本次 commit 推上去時本 fork 的 Actions 仍在停用狀態，不會有任何 CI run；驗證只有本機
 `tools/dev_check.ps1`。
+
+## 2026-11-22：copilot-instructions 路徑校正與 mcp-kernel-server 工具契約（prompt 稽核）
+
+**背景**：prompt 稽核（批次 7）指出三件事，逐項以 repo 實查後套用：
+
+1. `.github/copilot-instructions.md` 的架構與建置段寫 `packages/…`、root `pip install -e ".[full]"`、`requirements/docs.txt`、`demo/`、`pipelines/`、root `fuzz/`、`notebooks/`，repo 都沒有；Rust crate 名寫 `agent-governance`、`agent-governance-mcp`，實際（`agent-governance-rust/*/Cargo.toml`）與同檔已註冊清單都是 `agentmesh`、`agentmesh-mcp`。上游 HEAD 一樣錯。改成實際位置：`agent-governance-python/`、`agent-governance-typescript/`、`agent-governance-rust/`、`agent-governance-python/agent-os/extensions/mcp-server/`、`agent-governance-python/requirements/ci-docs.txt`、`examples/demos/`、`.github/pipelines/`、`agent-governance-python/{fuzz,notebooks}/`；Python 安裝改成在各套件目錄跑 `pip install -e ".[dev]"`（只確認過 `agent-os` 有 `dev` extra，所以註明 extras 依套件而異）。
+2. `mcp-kernel-server` 的 `governed_agent` prompt 手寫 5 個工具，實際註冊 8 個（缺 `verify_code_safety`、`cmvk_review`、`get_audit_log`）；工具清單由 MCP `tools/list` 提供，刪掉這段。
+3. `tools.py` 8 個 tool description 都只有一行。逐一讀實作後改寫成契約，重點是呼叫端讀了會做錯的地方：`cmvk_verify` 不呼叫任何模型、結果由 claim 的雜湊決定、忽略 `models`／`context`；`cmvk_review` 是 regex 檢查加雜湊挑選的「模型」結果，`consensus` 不是真的一致度；`kernel_execute` 允許的動作只回 stub、`file_write`／`send_email` 沒有 host 的 approval provider 一律拒絕、拒絕時回 `SIGKILL:` 開頭的錯誤；`iatp_sign` 的簽章是無金鑰的 SHA-256；`iatp_verify` 對未登錄的 agent 用內建模擬 manifest（分數 8，會通過 `trusted`）；`iatp_reputation` 只存在行程記憶體、slash 不能復原；`get_audit_log` 沒有任何工具寫入，空結果不代表沒有動作。只改字串，不改行為。
+
+**不套**：稽核另提的「200 words max per review」拿掉字數上限——不套。這條來自上游 `b475d04a`（#1600）刻意為 AI review bot 太冗長而加的字數上限，與 `ai-pr-review.yml` 一致，讀者是 Copilot code review，不是本次目標模型；有出處的規則不靠稽核意見拿掉。
+
+**驗證**：`mcp-kernel-server` 的 `pytest tests`（`.[dev]`）142 passed；沒有測試斷言 prompt 或 description 內容。
+
+**同步上游**：三個檔都是上游檔。上游若修正同一段，以上游版為準，再核對本段列的事實是否仍成立。

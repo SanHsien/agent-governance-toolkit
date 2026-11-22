@@ -4,7 +4,7 @@
 
 Multi-language monorepo for runtime governance of AI agents. Core is Python, with SDKs in TypeScript, Rust, .NET, and Go.
 
-**Core Python packages** live under `packages/`:
+**Core Python packages** live under `agent-governance-python/`:
 
 | Package | Purpose |
 |---------|---------|
@@ -24,12 +24,12 @@ Multi-language monorepo for runtime governance of AI agents. Core is Python, wit
 
 | Language | Path | Package name |
 |----------|------|--------------|
-| TypeScript | `packages/agent-mesh/sdks/typescript/` | `@microsoft/agent-governance-sdk` |
-| Rust | `packages/agent-mesh/sdks/rust/` | `agent-governance`, `agent-governance-mcp` |
+| TypeScript | `agent-governance-typescript/` | `@microsoft/agent-governance-sdk` |
+| Rust | `agent-governance-rust/` | `agentmesh`, `agentmesh-mcp` |
 | .NET | `agent-governance-dotnet/` | `Microsoft.AgentGovernance` |
 | Go | `agent-governance-golang/` | (standalone top-level) |
 
-**Other top-level directories:** `docs/` (MkDocs site), `examples/` (runnable integrations), `demo/` (live dashboards), `pipelines/` (ESRP release automation), `benchmarks/`, `fuzz/` (ClusterFuzzLite), `notebooks/`.
+**Other directories:** `docs/` (MkDocs site), `examples/` (runnable integrations), `examples/demos/` (live dashboards), `.github/pipelines/` (ESRP release automation), `benchmarks/`, `agent-governance-python/fuzz/` (ClusterFuzzLite), `agent-governance-python/notebooks/`.
 
 Each subdirectory with an `AGENTS.md` has area-specific commands and boundaries: read it before changing code there.
 
@@ -37,9 +37,11 @@ Each subdirectory with an `AGENTS.md` has area-specific commands and boundaries:
 
 ### Python
 
+Run these from the package directory you changed (for example `agent-governance-python/agent-os/`); the repository root has no `pyproject.toml`, and extras differ per package.
+
 ```bash
-# Install (editable, all extras)
-pip install -e ".[full]"
+# Install (editable, with that package's dev extra)
+pip install -e ".[dev]"
 
 # Lint
 ruff check --select E,F,W --ignore E501
@@ -57,7 +59,7 @@ pytest -k "test_policy_deny_dangerous_tools"
 python -m build
 ```
 
-### TypeScript (`packages/agent-mesh/sdks/typescript/`)
+### TypeScript (`agent-governance-typescript/`)
 
 ```bash
 npm run build
@@ -65,7 +67,7 @@ npm test           # runs jest
 npm run lint
 ```
 
-### Rust (`packages/agent-mesh/sdks/rust/`)
+### Rust (`agent-governance-rust/`)
 
 ```bash
 cargo build --release --workspace
@@ -85,7 +87,7 @@ dotnet test AgentGovernance.sln
 dotnet test --filter "FullyQualifiedName~TestClassName.TestMethodName"
 ```
 
-### MCP Server (`packages/agent-os/extensions/mcp-server/`)
+### MCP Server (`agent-governance-python/agent-os/extensions/mcp-server/`)
 
 ```bash
 npm run build
@@ -96,7 +98,7 @@ npm run test:coverage
 ### Docs (`docs/`)
 
 ```bash
-pip install -r requirements/docs.txt
+pip install -r agent-governance-python/requirements/ci-docs.txt
 mkdocs serve       # local preview
 mkdocs build       # build static site
 ```
