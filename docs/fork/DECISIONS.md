@@ -1221,3 +1221,21 @@ skipped run（推論，未證實）。
 **驗證**：`mcp-kernel-server` 的 `pytest tests`（`.[dev]`）142 passed；沒有測試斷言 prompt 或 description 內容。
 
 **同步上游**：三個檔都是上游檔。上游若修正同一段，以上游版為準，再核對本段列的事實是否仍成立。
+
+## 2026-11-23：mcp-kernel-server 的工具寫入 audit log；dnspython 升 2.9.2
+
+**背景**：prompt 稽核順帶發現 `get_audit_log` 永遠回空。實查根因：`GetAuditLogTool.log_entry` 是唯一的寫入點，但 `src/` 內沒有任何呼叫端（`grep log_entry` 只有定義與測試）；`audit://{agent_id}/log` 資源則是寫死的 `"entries": []`。上游 HEAD 相同。
+
+**改法**（行為變更，fork 分歧產品碼）：
+
+- `tools.py` 新增 `_record_audit()`，會做判定或改狀態的工具每次呼叫寫一筆：`kernel_execute`、`verify_code_safety`、`iatp_verify` 寫 `allowed`／`blocked`；`cmvk_verify` 寫 `cmvk_verify`；`cmvk_review` 寫 `cmvk_review`；`iatp_reputation` 的 slash 寫 `reputation_slash`。`iatp_sign`（無狀態、無判定）、reputation query 與 `get_audit_log` 本身不寫。
+- 只記識別碼、判定、大小與理由，不記送進來的程式碼、claim 或簽署內容（`cmvk_verify` 只記 claim 的 SHA-256 前 16 碼）——audit log 會經 `get_audit_log` 回給任何呼叫端。
+- `stats.allowed_total` 原本是 `total - blocked`，有了其他型別後會把 `cmvk_review` 等算成 allowed；改成只數 `type == "allowed"`。`filter.type` 的 enum 加 `cmvk_verify`、`reputation_slash`。`log_entry` 改為複製傳入的 dict 再加時間戳，不再改寫呼叫端物件。
+- `server.py` 的 `audit://{agent_id}/log` 改讀同一份記憶體 log、依 `agent_id` 過濾。仍只存在行程記憶體、上限 1000 筆、重啟即失。tool description 依此改寫。
+- `tools/dev_check.ps1` 加跑整個 `mcp-kernel-server/tests`（只用標準函式庫）；`requirements-dev.txt` 加 `pytest-asyncio>=1`。
+
+**驗證**：先跑基準 142 passed；改後 150 passed（新增 `tests/test_audit_writes.py` 8 條；`test_integration.py` 原本手動呼叫 `log_entry` 後才查得到，改成斷言 server 自己寫入）。`dev_check.ps1` 全綠。
+
+**dnspython**（Dependabot #346，high，`agent-hypervisor/uv.lock`，2.9.0 → 2.9.2）：`uv lock --upgrade-package dnspython` 會因 lock 與 pyproject 脫節而重鎖整份（860 行），所以比照 `a515cd22` 只換 dnspython 一個 block。驗證：hypervisor `.venv` 換成 2.9.2 後 `email_validator.validate_email` 正常；`pytest tests` 在 2.8.0 與 2.9.2 都是 93 failed／571 passed／9 errors，數字相同，失敗是既有的（`'coroutine' object has no attribute 'sso'` 等，`.venv` 裝的 core 與測試不同步），與這次升級無關。其餘 31 個告警（medium／low，hono、@hono/node-server、rustls、opentelemetry-api）記在 ROADMAP。
+
+**同步上游**：`tools.py`、`server.py`、兩個測試檔是上游檔。上游若自己接上 audit 寫入，以上游版為準，再核對「不記內容」與 `allowed_total` 兩點是否仍成立。

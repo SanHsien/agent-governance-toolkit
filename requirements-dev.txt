@@ -4,3 +4,5 @@ ruff>=0.16
 # 經 agent_os/__init__.py 匯入 agents_compat，而它需要 yaml。乾淨 venv 實測：
 # 裝了 pytest 與 pyyaml 之後 21 條全過，沒有其他缺的依賴。
 pyyaml>=6
+# mcp-kernel-server 的測試（本 fork 分歧：工具寫 audit log）全是 async 測試。
+pytest-asyncio>=1

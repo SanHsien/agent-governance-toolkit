@@ -1,6 +1,6 @@
 ---
 title: Fork 維護變更紀錄
-last_reviewed: 2026-11-22
+last_reviewed: 2026-11-23
 owner: agt-maintainers
 ---
 
@@ -10,6 +10,13 @@ owner: agt-maintainers
 本檔只記錄**本 fork 的維護歷史**（2026-08-28 起）；上游
 [`microsoft/agent-governance-toolkit`](https://github.com/microsoft/agent-governance-toolkit)
 的產品演進見其自身 [`CHANGELOG.md`](../../CHANGELOG.md) 與 [`docs/fork/UPSTREAM.md`](UPSTREAM.md) 的審查清冊。
+
+## 2026-11-23
+
+### 修正
+
+- `mcp-kernel-server`：會做判定或改狀態的工具每次呼叫寫一筆 audit entry（原本 `log_entry` 沒有呼叫端，`get_audit_log` 與 `audit://` 永遠空）；不記送進來的程式碼或 claim。fork gate 加跑整個模組的測試。見 [DECISIONS.md](DECISIONS.md) 2026-11-23。
+- `agent-hypervisor/uv.lock`：dnspython 2.9.0 → 2.9.2（Dependabot #346，high）。
 
 ## 2026-11-22
 

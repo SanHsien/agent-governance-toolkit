@@ -57,4 +57,13 @@ Invoke-PythonStep -Label "Pytest (fork-divergent product code)" -Arguments @(
     "-q"
 )
 
+# 2026-11-23：mcp-kernel-server 的工具改成會寫 audit log（上游的 log_entry 沒有呼叫端，
+# get_audit_log 永遠回空）。這是分歧產品碼，整個模組的測試放這裡；只用標準函式庫，
+# 另需 pytest-asyncio（requirements-dev.txt）。
+Invoke-PythonStep -Label "Pytest (fork-divergent mcp-kernel-server)" -Arguments @(
+    "-m", "pytest",
+    "agent-governance-python/agent-os/modules/mcp-kernel-server/tests",
+    "-q", "-p", "no:cacheprovider"
+)
+
 Write-Host "WINDOWS DEV CHECK GREEN"

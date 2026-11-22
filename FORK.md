@@ -22,7 +22,7 @@
 | `AGENTS.md` | 開頭加上本 fork overlay，明定僅支援 Windows 與繁體中文為主；下文仍是上游產品規則 |
 | `SECURITY.md` / `CONTRIBUTING.md` | 開頭 overlay：本線 PR／overlay 問題走 SanHsien；產品漏洞與產品貢獻仍指向上游 |
 | `NOTICE.md` | 本 fork 的來源與授權說明。根目錄 `NOTICE` 仍是上游第三方清單 |
-| `tools/dev_check.ps1` | Windows 本機一鍵 fork gate：維護工具的檢查，加上**本 fork 分歧產品碼**的測試（目前是 `agent-os` 的 MCP 認證強制）。不安裝產品套件，只需 `requirements-dev.txt` |
+| `tools/dev_check.ps1` | Windows 本機一鍵 fork gate：維護工具的檢查，加上**本 fork 分歧產品碼**的測試（目前是 `agent-os` 的 MCP 認證強制與 `mcp-kernel-server` 整個模組）。不安裝產品套件，只需 `requirements-dev.txt` |
 | `.github/workflows/fork-maintenance.yml` | fork 文件與連結檢查，以及分歧產品碼的測試（僅支援 Windows，分支保護之必要檢查為 fork gate (windows-latest)） |
 | `.github/workflows/fork-product-windows.yml` | 有限 Rust workspace、Copilot extension、原生 policy Node SDK、TypeScript SDK、Mastra adapter、agent-sre 與 agent-lightning 的 Windows 產品驗收；驗收以該 workflow 實際 Windows job 結果為準 |
 | `.github/workflows/upstream-check.yml` | 每週對 `upstream/main` 做未審查 commit 檢查 |
@@ -32,7 +32,7 @@
 | `docs/fork/` | Windows 開發、上游審查、裁決、本線 changelog |
 | `agent-governance-python/agent-mesh/src/agentmesh/integrations/mcp/__init__.py` | 失敗關閉的 MCP 身分驗證（上游為放行或信任自報值）。client：設了 `trust_bridge` 卻發現不到伺服器 DID 時 `connect` 回傳 `False`，`connect` 先撤銷舊連線並把連線綁定已驗證 DID 與 bridge；上游 #4529 合併前，接上 `trust_bridge` 將連不上任何伺服器。server：`verify_client` 以 `HandshakeResult.verified is True` 判斷、移除 card 分數 fallback，`invoke_tool` 只對已驗證的 DID 執行並用驗證結果的分數／capability，強制 `require_human_sponsor`（新增選用 `identity_registry`）。見 `docs/fork/DECISIONS.md` 2026-11-10 與 2026-11-11（獨立覆核發現 B1–B5） |
 | `.github/copilot-instructions.md` | 架構與建置指令段改成 repo 實際結構（上游仍寫不存在的 `packages/`、root `pyproject.toml`、`requirements/docs.txt`，Rust crate 名也與同檔已註冊清單矛盾）。見 `docs/fork/DECISIONS.md` 2026-11-22 |
-| `agent-governance-python/agent-os/modules/mcp-kernel-server/src/mcp_kernel_server/{server,tools}.py` | `governed_agent` prompt 移除與實際註冊工具不符的手寫工具清單；8 個 MCP tool description 改寫成依實作的契約（含哪些是模擬結果、哪些狀態只存在記憶體）。只改字串，不改行為。見 `docs/fork/DECISIONS.md` 2026-11-22 |
+| `agent-governance-python/agent-os/modules/mcp-kernel-server/src/mcp_kernel_server/{server,tools}.py` | `governed_agent` prompt 移除與實際註冊工具不符的手寫工具清單；8 個 MCP tool description 改寫成依實作的契約（含哪些是模擬結果、哪些狀態只存在記憶體）。2026-11-22 只改字串；2026-11-23 起會做判定或改狀態的工具寫 audit log（上游 `log_entry` 沒有呼叫端），`audit://` 資源讀同一份 log，`allowed_total` 只數 `allowed`。見 `docs/fork/DECISIONS.md` 2026-11-22、2026-11-23 |
 
 產品程式碼（`agent-governance-python/`、各語言 SDK、`policy-engine/`、上游 `docs/`）以上游為準，除非 `REVIEW.md`／`docs/fork/DECISIONS.md` 已記錄 fork overlay。本機 overlay：根目錄 dashboard 與 OpenClaw demo 的 Compose 埠綁 `127.0.0.1`。
 
