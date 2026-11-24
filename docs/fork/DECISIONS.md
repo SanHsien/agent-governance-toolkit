@@ -1,6 +1,6 @@
 ---
 title: 維護決策
-last_reviewed: 2026-11-11
+last_reviewed: 2026-11-25
 owner: agt-maintainers
 ---
 
@@ -1239,3 +1239,48 @@ skipped run（推論，未證實）。
 **dnspython**（Dependabot #346，high，`agent-hypervisor/uv.lock`，2.9.0 → 2.9.2）：`uv lock --upgrade-package dnspython` 會因 lock 與 pyproject 脫節而重鎖整份（860 行），所以比照 `a515cd22` 只換 dnspython 一個 block。驗證：hypervisor `.venv` 換成 2.9.2 後 `email_validator.validate_email` 正常；`pytest tests` 在 2.8.0 與 2.9.2 都是 93 failed／571 passed／9 errors，數字相同，失敗是既有的（`'coroutine' object has no attribute 'sso'` 等，`.venv` 裝的 core 與測試不同步），與這次升級無關。其餘 31 個告警（medium／low，hono、@hono/node-server、rustls、opentelemetry-api）記在 ROADMAP。
 
 **同步上游**：`tools.py`、`server.py`、兩個測試檔是上游檔。上游若自己接上 audit 寫入，以上游版為準，再核對「不記內容」與 `allowed_total` 兩點是否仍成立。
+
+## 2026-11-25：Dependabot 分流與 ruff 下限更新
+
+**範圍**：僅工作分支 `codex/deps-1125`，基準 `d2c294b8`；不推送、不改其他分支、不執行遠端 CI。原 31 筆是歷史快照，這次 `gh api repos/SanHsien/agent-governance-toolkit/dependabot/alerts?state=open --paginate` 回傳 27 筆（medium 23、low 4）。本地修補覆蓋 20 筆，延後 7 筆；遠端仍是 open，未宣稱關閉。
+
+**歸屬**：依本輪定義，固定讀取 microsoft 上游 main `3233be2338816257700a8dbdf531a21b9f359582`，由 Contents API 取 blob SHA，與本地 `git hash-object --path=<path> <path>` 比對。五個檔案都不同，皆為 fork-owned；此詞只表示逐檔不同，不表示整個產品由 fork 原創。upstream-owned 為 0，因此沒有 follow upstream 項目。日後遇到與上游完全相同的告警檔案時不修改，待上游修補合併、同步上游或檔案開始分歧再重查。
+
+| 告警 manifest | 本地 blob | 上游 blob |
+| --- | --- | --- |
+| `agent-governance-python/agent-mesh/packages/mcp-proxy/package-lock.json` | `5b41beda32991ef0f256e2a71b4be086f7239c11` | `56d35789e2cc619946f18e58a9c6adb6244d0570` |
+| `agent-governance-python/agent-os/extensions/mcp-server/package-lock.json` | `1d7918194ecea6cd8b0f13742c4d572cbb164da1` | `755be228bc3858fb6f43cb6cb997650a0021595d` |
+| `agent-governance-python/agentmesh-integrations/mastra-agentmesh/package-lock.json` | `1e80d26292a61685aeaeb346492c178dab8efede` | `29b3540967a437a1821e048f575034e342950de1` |
+| `policy-engine/sdk/node/package-lock.json` | `d40f1e1e10626a433496f3424df6bd5f80c4dde5` | `d73f52049a1a6f1069f293939321881f267a4487` |
+| `agent-governance-python/agent-os/services/cloud-board/requirements.txt` | `75bbac8e41ae42005e51f144d5c89dc53966c9d1` | `55e177b6cffe0f18b9450279730b75c2c1697e3f` |
+
+**分流表**：同 manifest／package 的告警合併一列，保留全部編號與嚴重度；所有列皆 fork-owned。
+
+| Package | Ecosystem | Manifest path | Severity／告警編號 | Fixed version | 決定 |
+| --- | --- | --- | --- | --- | --- |
+| hono | npm | `agent-governance-python/agent-mesh/packages/mcp-proxy/package-lock.json` | medium #341 #337 #329 #325；low #333 | 4.13.16 | 升為 4.13.21 |
+| @hono/node-server | npm | `agent-governance-python/agent-mesh/packages/mcp-proxy/package-lock.json` | medium #324 #320 | 2.1.6 | 升為 2.1.6 |
+| hono | npm | `agent-governance-python/agent-os/extensions/mcp-server/package-lock.json` | medium #342 #338 #330 #326；low #334 | 4.13.16 | 升為 4.13.21 |
+| @hono/node-server | npm | `agent-governance-python/agent-os/extensions/mcp-server/package-lock.json` | medium #323 #319 | 2.1.6 | 升為 2.1.6 |
+| hono | npm | `agent-governance-python/agentmesh-integrations/mastra-agentmesh/package-lock.json` | medium #344 #340 #332 #328；low #336 | 4.13.16 | 升為 4.13.21 |
+| @hono/node-server | npm | `agent-governance-python/agentmesh-integrations/mastra-agentmesh/package-lock.json` | medium #318 | 2.1.6 | 升為 2.1.6 |
+| hono | npm | `policy-engine/sdk/node/package-lock.json` | medium #343 #339 #331 #327；low #335 | 4.13.16 | 延後，需原生驗收 |
+| @hono/node-server | npm | `policy-engine/sdk/node/package-lock.json` | medium #317 | 2.1.6 | 延後，需原生驗收 |
+| opentelemetry-api | pip | `agent-governance-python/agent-os/services/cloud-board/requirements.txt` | medium #345 | 1.45.2 | 延後，SDK 綁版衝突 |
+
+**安全機械更新**：三個 Node 套件的 override 2.1.3 → 2.1.6；`npm update hono @hono/node-server --package-lock-only --ignore-scripts --no-audit --no-fund` 僅改兩個 package block，hono 4.13.13 → 4.13.21（同 major/minor 的修補版，超過最低修補版 4.13.16）。沒有改公開 API、其他依賴或產品程式碼。
+
+**延後原因與觸發條件**：
+
+- Node SDK 6 筆不修改。`cl`、`cargo`、`opa` 在此工作環境的 PATH 均不可用；既有 runbook 要求原生建置、OPA 與 hosted Windows 證據。本輪禁止推送，不能取得本次 hosted CI 實證，不能用 fork gate 替代。觸發條件為具備 Windows 原生工具與 OPA，且獲准取得對應提交 hosted 驗收後，再升兩項並跑 `npm run test:ci`。
+- Cloud Board 1 筆不修改。PyPI 1.45.1 metadata 明定 `opentelemetry-sdk==1.45.1` 依賴 `opentelemetry-api==1.45.1` 和 `opentelemetry-semantic-conventions==0.66b1`。現有 instrumentation-fastapi 同樣綁 semantic-conventions 0.66b1；API 單升 1.45.2 會衝突，不能當成單點機械修補。觸發條件為同步選定相容 SDK／semantic-conventions／instrumentation 版本，解析並完成服務測試；`requirements.txt` 與 `requirements.lock` 都保持不變。
+
+**ruff**：PyPI 與官方 release `https://github.com/astral-sh/ruff/releases/tag/0.17.6` 確認現行版 0.17.6，requires-python >=3.7；release notes 包含 F823／F841 修正。`requirements-dev.txt` 下限 0.16 → 0.17.6，安裝於本工作樹 `.venv`；`ruff check --select E9,F --target-version py310 tools` exit 0。此為該宣告實際服務的 fork lint 範圍，不宣稱全產品樹 lint。無需建立 ruff deferral。
+
+**套件驗證**（依賴均在此工作樹，npm 使用 `npm ci --ignore-scripts`；保留全部 Git hooks 與 source build/test pre-hooks）：
+
+- MCP proxy：`npm run build`、`npm test` exit 0，11 passed。
+- MCP server：`npm run build`、`npm test` exit 0；原命令含 `--passWithNoTests`，實際沒有測試檔，只能主張建置及測試命令通過。
+- Mastra：既有 provider-utils backport patch／`--check`、`npm run build`、`npm run lint` exit 0。`npm test` 首次 30 passed、1 failed，原因為 Git 的 GNU tar 將 C: 誤判為遠端主機。僅本次程序 PATH 優先使用 `C:/Windows/System32/tar.exe` 後，重跑 `npm test -- tests/pack-contract.test.ts` 1 passed、exit 0；合計 31 項均有通過證據，沒有改測試或系統設定。
+- `python tools/check_dependency_freshness.py --strict --output .venv/dependency-freshness-report.md` exit 0，四個直接開發依賴皆 OK；open Dependabot PR 查詢為空。未執行遠端 workflow。
+- Canonical gate：`pwsh -NoProfile -File tools/dev_check.ps1` exit 0（67 個工具測試、41 個 MCP 認證測試、150 個 MCP kernel 測試；compile、ruff 與 9 份 overlay 文件連結均通過）。此證據僅涵蓋 gate 列出的範圍。

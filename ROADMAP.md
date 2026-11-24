@@ -1,10 +1,10 @@
 # 路線圖
 
 > 本 repo 後續工作的單一真相源。做完一項，就在同一個 commit 刪掉那一列；新工作只加在這裡。
-> 現況段的數字是 2026-10-29 依 `main` `a515cd224d7f` 查的快照，開工前先重查 GitHub。
+> 現況快照：2026-11-25，工作分支基準 `d2c294b8`；上游 main `3233be2338816257700a8dbdf531a21b9f359582`。
 
 ## 現況
-這是 Agent Governance Toolkit 的 Windows 維護型 fork，提供代理執行期政策、身分與沙箱治理（[FORK.md](FORK.md)）。2026-10-29 `gh` 查詢顯示 Fork maintenance、Fork product Windows、Upstream check 最近結果成功；Dependabot 仍有 deepmerge 的低風險告警 2 筆，尚無修補版，本次重查確認仍只經 Jest 開發依賴引入，理由與證據見 [DECISIONS](docs/fork/DECISIONS.md#2026-10-29deepmerge-延後項目重查)；Code scanning 未查到分析，不能當成零告警（2026-10-29 `gh` 查詢）。2026-10-30 完成 policy Python SDK `_native` 原生擴充 Windows 建置能力盤點，確認具備建置與驗收能力（[DECISIONS](docs/fork/DECISIONS.md#2026-10-30policy-python-sdk-原生擴充_nativewindows-建置能力盤點)）。2026-10-31 採用 PR #4428 移植 AgentControl.run_tool 在 post_tool_call 未綁定時提前拒絕修正，新增回歸 13 項與 test_orchestration 12 項通過；SDK 全套 312 passed、42 skipped、6 failed（皆在 test_validation，缺 opa.exe，與 10-30 基準相同）（[DECISIONS](docs/fork/DECISIONS.md#2026-10-31採用-pr-4428run_tool-提前拒絕修正)）。
+這是 Agent Governance Toolkit 的 Windows 維護型 fork（[FORK.md](FORK.md)）。2026-11-25 在工作分支基準 `d2c294b8` 重查 Dependabot open alerts：27 筆（medium 23、low 4），取代 2026-11-23 的 31 筆歷史快照。5 個告警 manifest 均與當日上游 main 不同，按本輪逐檔定義皆為 fork-owned，upstream-owned 為 0。此次在 MCP proxy、MCP server 與 Mastra 的 lockfile 修補 20 筆對應依賴，7 筆延後；ruff 下限升為 0.17.6。這是本地修補與分類結果，未推送，不能宣稱 GitHub 告警已關閉或遠端 CI 已轉綠。逐筆編號、檔案比對與驗證見 [DECISIONS](docs/fork/DECISIONS.md#2026-11-25dependabot-分流與-ruff-下限更新)。
 
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
@@ -14,7 +14,7 @@
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
-| 處理其餘 31 個 Dependabot 告警（medium 24、low 7）：hono 4.13.16、@hono/node-server 2.1.6（`mcp-proxy`、`agent-os/extensions/mcp-server` 為 runtime，`mastra-agentmesh`、`policy-engine/sdk/node` 為 dev）、rustls 0.23.46（`benchmarks/prompt-injection/harness/agt-rules-baseline`）、opentelemetry-api 1.45.2（`agent-os/services/cloud-board/requirements.txt`） | 下一輪依賴更新，或任一 runtime 用到的 lockfile 有人動 | 各 lockfile 升到修補版、受影響套件的建置與測試通過，告警關閉 | Codex | 2026-11-23 `gh api repos/SanHsien/agent-governance-toolkit/dependabot/alerts?state=open`：32 筆，high 的 #346 dnspython 已於同日升級（DECISIONS 2026-11-23） |
+| 處理延後的 7 筆 Dependabot：Node SDK 的 hono／@hono/node-server 6 筆，Cloud Board opentelemetry-api 1 筆 | Node SDK 可取得完整 Windows 原生建置與 OPA 驗收；Cloud Board 可同步升級 OpenTelemetry SDK／semantic-conventions／instrumentation 並完成服務測試 | Node SDK `npm run test:ci` exit 0；Cloud Board 解析無衝突且服務測試通過，再核對告警狀態 | Codex | `docs/fork/DECISIONS.md` 2026-11-25；此輪未推送 |
 | `fork-product-windows` 加 policy Python SDK job | 再次動到 `policy-engine/sdk/python` 的 fork 分歧碼，或維護者要求 | CI 能建出 `_native` 並跑 `test_run_tool_unbound_post.py`、`test_orchestration.py` | Antigravity | `docs/fork/DECISIONS.md` 2026-10-30；`tools/dev_check.ps1` 不裝產品套件 |
 | 驗證並採用上游 #4480（india Rego 政策修正）、#4059（快照契約的鍵，破壞性）與 #4486（cmvk 錯誤細節，TypeScript） | 本機或 CI 取得 `opa`（`opa test examples/policies`；#4059 另需能跑 `policy-engine` 的 Cedar 測試與 `sdk/python` 的 `test_host.py`），或能跑 `agent-os-vscode` 的 TypeScript 測試 | 重現舊碼失敗、套用後通過；#4480、#4059 整批取上游版本並跑 `opa test`，#4486 移植；順帶重看 issue #4481、#4485 | Codex | `docs/fork/DECISIONS.md` 2026-11-02 第六輪、2026-11-10 第七輪 |
 | 採用上游 #4529（MCP server DID 探索與驗證）以修 issue #4528（`TrustGatedMCPClient` 不驗證伺服器身分） | 上游合併 #4529。現況：fork 已有失敗關閉的最小緩解，且 2026-11-11 起 server 端（B1／B3）、client 撤銷（B4）、型別判斷（B2／B5）也修了，這些 #4529 都不涵蓋；剩下等 #4529 的是 server DID 探索（`_discover_server_did` 仍回傳 `None`）與註冊表簽章驗證。步驟見上方近期表同主題列 | `agent-mesh` 的 `test_mcp_server_verification.py`、`test_mcp_integration.py`、`test_mcp_identity_enforcement.py` 通過，`connect()` 對未驗證的伺服器回傳失敗 | Claude Opus | `docs/fork/DECISIONS.md` 2026-11-10 第七輪、2026-11-11 |
