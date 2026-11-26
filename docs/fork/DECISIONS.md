@@ -1240,6 +1240,15 @@ skipped run（推論，未證實）。
 
 **同步上游**：`tools.py`、`server.py`、兩個測試檔是上游檔。上游若自己接上 audit 寫入，以上游版為準，再核對「不記內容」與 `allowed_total` 兩點是否仍成立。
 
+## 2026-11-26：Node SDK 採用 Hono 安全更新
+
+`8ae1294e` 將 `hono` 升至 4.13.22、`@hono/node-server` 升至 2.1.6，處理
+Dependabot #343／#339／#331／#327／#335／#317。鎖檔只動這兩個套件。
+本機 Windows 以 MSVC x64 建出 N-API 模組並核對 OPA 0.70.0 雜湊。npm 子 shell 找不到 `node`，
+所以改用絕對路徑執行套件的 TypeScript 建置和同一組 Node 測試，125 項通過、1 項略過，
+兩項 bundled OPA 測試都通過。GitHub Windows job 139885590870 以 Node 22 跑原封不動的
+`npm run test:ci`，並確認兩項 bundled OPA 測試未略過，結果通過。
+
 ## 2026-11-26：Cloud Board 採用成套 OpenTelemetry 安全更新
 
 Dependabot #345：將 `opentelemetry-api` 與 `opentelemetry-sdk` 一起升到 1.45.2，並將
