@@ -14,7 +14,7 @@
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
-| 處理延後的 7 筆 Dependabot：Node SDK 的 hono／@hono/node-server 6 筆，Cloud Board opentelemetry-api 1 筆 | Node SDK 可取得完整 Windows 原生建置與 OPA 驗收；Cloud Board 可同步升級 OpenTelemetry SDK／semantic-conventions／instrumentation 並完成服務測試 | Node SDK `npm run test:ci` exit 0；Cloud Board 解析無衝突且服務測試通過，再核對告警狀態 | Codex | `docs/fork/DECISIONS.md` 2026-11-25；此輪未推送 |
+| 處理延後的 6 筆 Node SDK Dependabot：hono／@hono/node-server | Node SDK 可取得完整 Windows 原生建置與 OPA 驗收 | `npm run test:ci` exit 0，取得對應提交的 Windows hosted 驗收，再核對告警狀態 | Codex | `docs/fork/DECISIONS.md` 2026-11-25 |
 | `fork-product-windows` 加 policy Python SDK job | 再次動到 `policy-engine/sdk/python` 的 fork 分歧碼，或維護者要求 | CI 能建出 `_native` 並跑 `test_run_tool_unbound_post.py`、`test_orchestration.py` | Antigravity | `docs/fork/DECISIONS.md` 2026-10-30；`tools/dev_check.ps1` 不裝產品套件 |
 | 驗證並採用上游 #4480（india Rego 政策修正）、#4059（快照契約的鍵，破壞性）與 #4486（cmvk 錯誤細節，TypeScript） | 本機或 CI 取得 `opa`（`opa test examples/policies`；#4059 另需能跑 `policy-engine` 的 Cedar 測試與 `sdk/python` 的 `test_host.py`），或能跑 `agent-os-vscode` 的 TypeScript 測試 | 重現舊碼失敗、套用後通過；#4480、#4059 整批取上游版本並跑 `opa test`，#4486 移植；順帶重看 issue #4481、#4485 | Codex | `docs/fork/DECISIONS.md` 2026-11-02 第六輪、2026-11-10 第七輪 |
 | 採用上游 #4529（MCP server DID 探索與驗證）以修 issue #4528（`TrustGatedMCPClient` 不驗證伺服器身分） | 上游合併 #4529。現況：fork 已有失敗關閉的最小緩解，且 2026-11-11 起 server 端（B1／B3）、client 撤銷（B4）、型別判斷（B2／B5）也修了，這些 #4529 都不涵蓋；剩下等 #4529 的是 server DID 探索（`_discover_server_did` 仍回傳 `None`）與註冊表簽章驗證。步驟見上方近期表同主題列 | `agent-mesh` 的 `test_mcp_server_verification.py`、`test_mcp_integration.py`、`test_mcp_identity_enforcement.py` 通過，`connect()` 對未驗證的伺服器回傳失敗 | Claude Opus | `docs/fork/DECISIONS.md` 2026-11-10 第七輪、2026-11-11 |

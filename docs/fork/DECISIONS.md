@@ -1240,6 +1240,15 @@ skipped run（推論，未證實）。
 
 **同步上游**：`tools.py`、`server.py`、兩個測試檔是上游檔。上游若自己接上 audit 寫入，以上游版為準，再核對「不記內容」與 `allowed_total` 兩點是否仍成立。
 
+## 2026-11-26：Cloud Board 採用成套 OpenTelemetry 安全更新
+
+Dependabot #345：將 `opentelemetry-api` 與 `opentelemetry-sdk` 一起升到 1.45.2，並將
+`opentelemetry-instrumentation-fastapi` 升到 0.66b2。SDK 與 instrumentation 都要求
+semantic conventions 0.66b2。三個直接依賴的版號與 PyPI 雜湊也寫入 `requirements.lock`。
+Docker 使用 `requirements.txt`，因此驗收依該檔案在 Windows Python 3.11 隔離環境安裝 58 個套件，
+`uv pip check` 通過，`tests/cloud_board` 39 項通過。未以舊的 `requirements.lock` 全量安裝，
+其中與此次更新無關的版本差異仍在。Node SDK 的 6 筆仍等 Windows 原生工具與 OPA 驗收。
+
 ## 2026-11-25：Dependabot 分流與 ruff 下限更新
 
 **範圍**：僅工作分支 `codex/deps-1125`，基準 `d2c294b8`；不推送、不改其他分支、不執行遠端 CI。原 31 筆是歷史快照，這次 `gh api repos/SanHsien/agent-governance-toolkit/dependabot/alerts?state=open --paginate` 回傳 27 筆（medium 23、low 4）。本地修補覆蓋 20 筆，延後 7 筆；遠端仍是 open，未宣稱關閉。
